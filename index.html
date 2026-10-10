@@ -45,647 +45,691 @@
   <!-- Custom Styles -->
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col md:flex-row">
+<body class="bg-slate-900 text-slate-800 antialiased min-h-screen">
 
-  <!-- ==================== SIDEBAR ==================== -->
-  <aside id="sidebar" class="bg-navy-900 text-slate-200 w-full md:w-64 md:min-h-screen flex flex-col justify-between shadow-2xl z-30 transition-all duration-300">
-    <div>
-      <!-- Brand Header -->
-      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <img src="assets/logo-skrg.png" alt="Logo SK Ranggu" class="w-10 h-10 object-contain drop-shadow" onerror="this.src='https://ui-avatars.com/api/?name=SK+Ranggu&background=0284c7&color=fff'">
-          <div>
-            <h1 class="font-extrabold text-sm tracking-wide text-white leading-tight flex items-center gap-1.5">
-              <span>Sistem e-RPH</span>
-              <span class="text-[10px] bg-sky-500 text-white font-semibold px-1.5 py-0.5 rounded">2026</span>
-            </h1>
-            <p class="text-[11px] text-slate-400 font-medium">SK Ranggu • XBA3037</p>
-          </div>
+  <!-- ============================================================== -->
+  <!-- 1. HALAMAN LOG MASUK UTAMA (LOGIN GATEWAY)                     -->
+  <!-- Wajib log masuk dahulu sebelum boleh melihat sebarang data     -->
+  <!-- ============================================================== -->
+  <div id="login-gateway" class="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 p-4 relative z-50">
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden modal-animate">
+      
+      <!-- Logo & Header Sekolah -->
+      <div class="bg-gradient-to-r from-navy-950 via-slate-900 to-navy-900 text-white p-6 text-center relative">
+        <div class="flex items-center justify-center space-x-3 mb-3">
+          <img src="assets/logo-kpm.png" alt="Logo KPM" class="h-12 w-auto object-contain drop-shadow" onerror="this.style.display='none'">
+          <img src="assets/logo-skrg.png" alt="Logo SK Ranggu" class="h-14 w-auto object-contain drop-shadow" onerror="this.src='https://ui-avatars.com/api/?name=SK+Ranggu&background=0284c7&color=fff'">
         </div>
-        <button id="mobile-menu-close" class="md:hidden text-slate-400 hover:text-white p-1">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
+        <span class="text-[10px] font-black tracking-widest uppercase bg-sky-500/20 text-sky-300 px-2.5 py-0.5 rounded-full border border-sky-400/30">
+          XBA3037 • SESI PERSEKOLAHAN 2026
+        </span>
+        <h1 class="font-black text-lg text-white mt-2 leading-tight tracking-wide">
+          SEKOLAH KEBANGSAAN RANGGU
+        </h1>
+        <p class="text-xs text-slate-300 font-medium">PPD Tawau • Zon Balung, Tawau Sabah</p>
+        <div class="mt-3 pt-2.5 border-t border-slate-800">
+          <p class="text-xs font-bold text-sky-400 uppercase tracking-wide">SISTEM PEMANTAUAN e-RPH MINGGUAN</p>
+          <p class="text-[11px] text-slate-400">Penghantaran Setiap Hari Jumaat</p>
+        </div>
       </div>
 
-      <!-- Navigation Links -->
-      <nav class="p-3 space-y-1">
-        <!-- 1. Pemantauan Lajur Pentadbir -->
-        <button data-tab="pemantauan" class="nav-link active w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition bg-sky-600 text-white shadow-sm">
-          <i data-lucide="columns-3" class="w-4 h-4"></i>
-          <span>Pemantauan Lajur Pentadbir</span>
-        </button>
+      <!-- Tab Pilihan Jenis Pengguna -->
+      <div class="p-6 space-y-4">
+        <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+          <button id="tab-login-btn-guru" class="flex-1 py-2 rounded-lg transition bg-white text-sky-700 shadow-xs">
+            Portal Guru
+          </button>
+          <button id="tab-login-btn-admin" class="flex-1 py-2 rounded-lg transition text-slate-600 hover:text-slate-900">
+            Pentadbir
+          </button>
+          <button id="tab-login-btn-super" class="flex-1 py-2 rounded-lg transition text-slate-600 hover:text-slate-900">
+            Super Admin
+          </button>
+        </div>
 
-        <!-- 2. Portal Peribadi Guru -->
-        <button data-tab="portal-guru" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
-          <i data-lucide="user-check" class="w-4 h-4"></i>
-          <span>Portal Guru (Hantar e-RPH)</span>
-        </button>
+        <!-- 1. Form Log Masuk Guru -->
+        <form id="gateway-form-guru" class="space-y-3.5 text-xs">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Nombor Kad Pengenalan (No. K/P)</label>
+            <div class="relative">
+              <input type="text" id="gateway-guru-ic" placeholder="cth: 730926-12-5494 atau 730926125494" required class="w-full border border-slate-300 rounded-xl p-3 bg-slate-50 font-mono text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              <span class="absolute right-3 top-3 text-slate-400"><i data-lucide="user" class="w-4 h-4"></i></span>
+            </div>
+          </div>
 
-        <!-- 3. Carta Organisasi e-RPH -->
-        <button data-tab="carta-organisasi" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
-          <i data-lucide="network" class="w-4 h-4"></i>
-          <span>Carta Organisasi e-RPH</span>
-        </button>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Kata Laluan</label>
+            <div class="relative">
+              <input type="password" id="gateway-guru-pwd" placeholder="Masukkan kata laluan anda" required class="w-full border border-slate-300 rounded-xl p-3 bg-slate-50 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              <span class="absolute right-3 top-3 text-slate-400"><i data-lucide="lock" class="w-4 h-4"></i></span>
+            </div>
+            <div class="mt-2 p-2.5 bg-sky-50 border border-sky-200 rounded-lg text-[11px] text-sky-900 leading-relaxed">
+              💡 <strong>Panduan Guru Pertama Kali:</strong> Gunakan kata laluan sementara rasmi <strong class="text-sky-700 font-mono font-black">P3nd1d1kan</strong>. Anda boleh menjana kata laluan peribadi anda di dalam portal.
+            </div>
+          </div>
 
-        <!-- 4. Kalendar Semasa & Jumaat -->
-        <button data-tab="kalendar" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
-          <i data-lucide="calendar" class="w-4 h-4"></i>
-          <span>Kalendar Jumaat 2026</span>
-        </button>
+          <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-black py-3 rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-xs">
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            <span>Log Masuk Portal Guru</span>
+          </button>
+        </form>
 
-        <!-- 5. Jadual Waktu Rujukan -->
-        <button data-tab="jadual-rujukan" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
-          <i data-lucide="clock" class="w-4 h-4"></i>
-          <span>Jadual Waktu Rujukan</span>
-        </button>
+        <!-- 2. Form Log Masuk Pentadbir Sekolah -->
+        <div id="gateway-form-admin" class="hidden space-y-2.5 text-xs">
+          <p class="text-[11px] text-slate-500 font-semibold mb-2">Pilih pentadbir sekolah untuk log masuk:</p>
+          
+          <button data-gateway-admin-id="1" class="btn-gateway-admin-select w-full text-left p-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 transition flex items-center justify-between">
+            <div>
+              <span class="font-black text-amber-950 block text-xs">YUNUS BIN PATARAI</span>
+              <span class="text-[10px] text-amber-800 font-medium">Guru Besar (Akses Keseluruhan Sekolah)</span>
+            </div>
+            <span class="text-[11px] bg-amber-500 text-white font-black px-2 py-0.5 rounded">GB</span>
+          </button>
 
-        <!-- 6. Konsol Pentadbir Sistem (Ts. Fikrey) -->
-        <button data-tab="konsol-admin" id="nav-btn-admin-console" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-amber-300 hover:bg-amber-950/60 hover:text-amber-200 border border-amber-500/20">
-          <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
-          <span class="flex-1 text-left">Konsol Pentadbir Sistem</span>
-          <span class="text-[9px] bg-amber-500/30 text-amber-300 px-1.5 py-0.2 rounded font-mono">TS</span>
-        </button>
+          <button data-gateway-admin-id="2" class="btn-gateway-admin-select w-full text-left p-2.5 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 transition flex items-center justify-between">
+            <div>
+              <span class="font-black text-sky-950 block text-xs">PN. HJH. RAHMATIAH MOHD JUDA</span>
+              <span class="text-[10px] text-sky-800 font-medium">GPK Pentadbiran (Seliaan Kurikulum & Pagi)</span>
+            </div>
+            <span class="text-[11px] bg-sky-600 text-white font-black px-2 py-0.5 rounded">PK 1</span>
+          </button>
 
-        <!-- 7. Eksport & Sandaran -->
-        <button data-tab="eksport" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
-          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-          <span>Eksport / Import Excel</span>
-        </button>
-      </nav>
+          <button data-gateway-admin-id="3" class="btn-gateway-admin-select w-full text-left p-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 transition flex items-center justify-between">
+            <div>
+              <span class="font-black text-emerald-950 block text-xs">PN. KOMALA JOSEPH</span>
+              <span class="text-[10px] text-emerald-800 font-medium">GPK Hal Ehwal Murid (Seliaan HEM & Disiplin)</span>
+            </div>
+            <span class="text-[11px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded">PK HEM</span>
+          </button>
+
+          <button data-gateway-admin-id="4" class="btn-gateway-admin-select w-full text-left p-2.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 transition flex items-center justify-between">
+            <div>
+              <span class="font-black text-rose-950 block text-xs">PN. WARNAH BINTI SIRA</span>
+              <span class="text-[10px] text-rose-800 font-medium">GPK Kokurikulum (Seliaan Sukan & Koku)</span>
+            </div>
+            <span class="text-[11px] bg-rose-600 text-white font-black px-2 py-0.5 rounded">PK KOKU</span>
+          </button>
+
+          <button data-gateway-admin-id="5" class="btn-gateway-admin-select w-full text-left p-2.5 rounded-xl border border-purple-300 bg-purple-50 hover:bg-purple-100 transition flex items-center justify-between">
+            <div>
+              <span class="font-black text-purple-950 block text-xs">TN. HJ. EMRAN HJ. SELAMAT</span>
+              <span class="text-[10px] text-purple-800 font-medium">GPK Sidang Petang (Seliaan Tahap 1)</span>
+            </div>
+            <span class="text-[11px] bg-purple-600 text-white font-black px-2 py-0.5 rounded">PK PTG</span>
+          </button>
+        </div>
+
+        <!-- 3. Form Log Masuk Pentadbir Sistem (Super Admin) -->
+        <form id="gateway-form-super" class="hidden space-y-3.5 text-xs">
+          <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+            <span class="text-[10px] font-black text-amber-800 uppercase block">Konsol Pembangun Sistem</span>
+            <p class="text-[11px] text-amber-900 font-medium">Khusus untuk <strong>Ts. Mohammad Fikrey bin Abdul Gapar</strong> (Pentadbir Sistem & Penyelaras ICT).</p>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Kod Akses Rahsia Super Admin</label>
+            <div class="relative">
+              <input type="password" id="gateway-super-code" placeholder="Masukkan kod rahsia anda" required class="w-full border border-amber-300 rounded-xl p-3 bg-amber-50 font-mono text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              <span class="absolute right-3 top-3 text-amber-500"><i data-lucide="key" class="w-4 h-4"></i></span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">Kod Akses Piawai: <strong class="text-amber-700 font-mono">TS.FIKREY37</strong></p>
+          </div>
+
+          <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-3 rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-xs">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Sahkan & Buka Konsol Super Admin</span>
+          </button>
+        </form>
+
+        <div class="pt-3 border-t border-slate-100 text-center">
+          <p class="text-[10px] text-slate-400">
+            Hak Cipta Terpelihara © 2026 Sekolah Kebangsaan Ranggu, Tawau.<br>
+            Sistem e-RPH KPM Versi 2.0 Web Edition.
+          </p>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Active User & Authentication Footer -->
-    <div class="p-3 border-t border-slate-800 bg-slate-900/80">
-      <div class="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/60 mb-2">
-        <div class="flex items-center justify-between">
+
+  <!-- ============================================================== -->
+  <!-- 2. ANTARA MUKA SISTEM UTAMA (DISEMBUNYIKAN SEHINGGA LOG MASUK) -->
+  <!-- ============================================================== -->
+  <div id="app-layout" class="hidden min-h-screen flex flex-col md:flex-row w-full flex-1 bg-slate-50">
+
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside id="sidebar" class="bg-navy-900 text-slate-200 w-full md:w-64 md:min-h-screen flex flex-col justify-between shadow-2xl z-30 transition-all duration-300">
+      <div>
+        <!-- Brand Header -->
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <img src="assets/logo-skrg.png" alt="Logo SK Ranggu" class="w-10 h-10 object-contain drop-shadow" onerror="this.src='https://ui-avatars.com/api/?name=SK+Ranggu&background=0284c7&color=fff'">
+            <div>
+              <h2 class="font-extrabold text-sm tracking-wide text-white leading-tight flex items-center gap-1.5">
+                <span>Sistem e-RPH</span>
+                <span class="text-[10px] bg-sky-500 text-white font-semibold px-1.5 py-0.5 rounded">2026</span>
+              </h2>
+              <p class="text-[11px] text-slate-400 font-medium">SK Ranggu • XBA3037</p>
+            </div>
+          </div>
+          <button id="mobile-menu-close" class="md:hidden text-slate-400 hover:text-white p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="p-3 space-y-1">
+          <!-- 1. Pemantauan Lajur Pentadbir -->
+          <button data-tab="pemantauan" id="nav-btn-pemantauan" class="nav-link active w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition bg-sky-600 text-white shadow-sm">
+            <i data-lucide="columns-3" class="w-4 h-4"></i>
+            <span>Pemantauan Lajur Pentadbir</span>
+          </button>
+
+          <!-- 2. Portal Peribadi Guru -->
+          <button data-tab="portal-guru" id="nav-btn-portal-guru" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
+            <i data-lucide="user-check" class="w-4 h-4"></i>
+            <span>Portal Guru (Hantar e-RPH)</span>
+          </button>
+
+          <!-- 3. Carta Organisasi e-RPH -->
+          <button data-tab="carta-organisasi" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
+            <i data-lucide="network" class="w-4 h-4"></i>
+            <span>Carta Organisasi e-RPH</span>
+          </button>
+
+          <!-- 4. Kalendar Semasa & Jumaat -->
+          <button data-tab="kalendar" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
+            <i data-lucide="calendar" class="w-4 h-4"></i>
+            <span>Kalendar Jumaat 2026</span>
+          </button>
+
+          <!-- 5. Jadual Waktu Rujukan -->
+          <button data-tab="jadual-rujukan" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+            <span>Jadual Waktu Rujukan</span>
+          </button>
+
+          <!-- 6. Konsol Pentadbir Sistem (Ts. Fikrey) -->
+          <button data-tab="konsol-admin" id="nav-btn-admin-console" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-amber-300 hover:bg-amber-950/60 hover:text-amber-200 border border-amber-500/20">
+            <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
+            <span class="flex-1 text-left">Konsol Pentadbir Sistem</span>
+            <span class="text-[9px] bg-amber-500/30 text-amber-300 px-1.5 py-0.2 rounded font-mono">TS</span>
+          </button>
+
+          <!-- 7. Eksport & Sandaran -->
+          <button data-tab="eksport" class="nav-link w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition text-slate-300 hover:bg-slate-800 hover:text-white">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            <span>Eksport / Import Excel</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Active User & Authentication Footer -->
+      <div class="p-3 border-t border-slate-800 bg-slate-900/80 space-y-2">
+        <div class="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/60">
           <div class="flex items-center space-x-2 min-w-0">
             <div id="user-badge-icon" class="w-7 h-7 rounded-lg bg-amber-500 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
               GB
             </div>
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <p id="auth-display-name" class="text-xs font-bold text-white truncate">Yunus bin Patarai</p>
               <p id="auth-display-role" class="text-[10px] text-amber-300 font-medium truncate">Guru Besar (Peneraju)</p>
             </div>
           </div>
-          <button id="btn-open-login-modal" title="Tukar Pengguna / Log Masuk" class="text-slate-300 hover:text-white p-1 rounded-md hover:bg-slate-700 transition flex-shrink-0">
-            <i data-lucide="log-in" class="w-4 h-4"></i>
+        </div>
+
+        <!-- Butang Log Keluar Rasmi -->
+        <button id="btn-app-logout" class="w-full text-xs font-bold text-rose-300 hover:text-white py-2 px-3 rounded-lg bg-rose-950/50 hover:bg-rose-900/80 border border-rose-800/60 transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="log-out" class="w-3.5 h-3.5 text-rose-400"></i>
+          <span>Log Keluar Sistem</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+
+      <!-- Top Header -->
+      <header class="bg-white border-b border-slate-200 sticky top-0 z-20 px-4 py-3 flex items-center justify-between shadow-xs">
+        <div class="flex items-center space-x-3">
+          <button id="mobile-menu-toggle" class="md:hidden text-slate-600 hover:text-slate-900 p-1.5 rounded-lg border border-slate-200">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <h2 id="page-title" class="font-extrabold text-base sm:text-lg text-slate-900 leading-snug">
+              Pemantauan Lajur Pentadbir e-RPH
+            </h2>
+            <p id="page-subtitle" class="text-[11px] text-slate-500 hidden sm:block">
+              Penghantaran Mingguan Setiap Jumaat • SK Ranggu, Tawau Sesi 2026
+            </p>
+          </div>
+        </div>
+
+        <!-- Header Tools & Week Filter -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Week Selector Dropdown -->
+          <div class="flex items-center space-x-1.5 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-700">
+            <i data-lucide="calendar-days" class="w-3.5 h-3.5 text-sky-600"></i>
+            <span class="hidden sm:inline">Minggu:</span>
+            <select id="header-week-select" class="bg-transparent font-extrabold text-sky-800 focus:outline-none cursor-pointer">
+              <!-- Dynamically populated 1 to 43 -->
+            </select>
+          </div>
+
+          <!-- Friday Deadline Banner Badge -->
+          <div class="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-rose-600"></i>
+            <span>Jumaat:</span>
+            <span id="header-friday-date" class="font-black text-rose-900">20 Feb 2026</span>
+          </div>
+
+          <!-- Print View -->
+          <button id="btn-print-screen" title="Cetak Paparan" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Refresh Data -->
+          <button id="btn-refresh-app" title="Muat Semula Pangkalan Data" class="p-2 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 border border-sky-200 transition">
+            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Header Logout -->
+          <button id="btn-header-logout" title="Log Keluar" class="p-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1 text-xs font-bold">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Keluar</span>
           </button>
         </div>
-      </div>
+      </header>
 
-      <!-- Quick Super Admin Access Link -->
-      <button id="btn-quick-admin-auth" class="w-full text-[11px] font-bold text-slate-300 hover:text-amber-300 py-1.5 px-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 border border-slate-700 transition flex items-center justify-center space-x-1.5">
-        <i data-lucide="key" class="w-3 h-3 text-amber-400"></i>
-        <span>Kod Akses: TS.FIKREY37</span>
-      </button>
-    </div>
-  </aside>
+      <!-- Main Content Container -->
+      <main class="flex-1 p-3 sm:p-5 lg:p-6 max-w-7xl w-full mx-auto space-y-6">
 
-  <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
-  <div class="flex-1 flex flex-col min-w-0 overflow-y-auto">
-
-    <!-- Top Header -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-20 px-4 py-3 flex items-center justify-between shadow-xs">
-      <div class="flex items-center space-x-3">
-        <button id="mobile-menu-toggle" class="md:hidden text-slate-600 hover:text-slate-900 p-1.5 rounded-lg border border-slate-200">
-          <i data-lucide="menu" class="w-5 h-5"></i>
-        </button>
-        <div>
-          <h2 id="page-title" class="font-extrabold text-base sm:text-lg text-slate-900 leading-snug">
-            Pemantauan Lajur Pentadbir e-RPH
-          </h2>
-          <p id="page-subtitle" class="text-[11px] text-slate-500 hidden sm:block">
-            Penghantaran Mingguan Setiap Jumaat • SK Ranggu, Tawau Sesi 2026
-          </p>
-        </div>
-      </div>
-
-      <!-- Header Tools & Week Filter -->
-      <div class="flex items-center space-x-2 sm:space-x-3">
-        <!-- Week Selector Dropdown -->
-        <div class="flex items-center space-x-1.5 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-700">
-          <i data-lucide="calendar-days" class="w-3.5 h-3.5 text-sky-600"></i>
-          <span class="hidden sm:inline">Minggu:</span>
-          <select id="header-week-select" class="bg-transparent font-extrabold text-sky-800 focus:outline-none cursor-pointer">
-            <!-- Dynamically populated 1 to 43 -->
-          </select>
-        </div>
-
-        <!-- Friday Deadline Banner Badge -->
-        <div class="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
-          <i data-lucide="clock" class="w-3.5 h-3.5 text-rose-600"></i>
-          <span>Jumaat:</span>
-          <span id="header-friday-date" class="font-black text-rose-900">20 Feb 2026</span>
-        </div>
-
-        <!-- Print View -->
-        <button id="btn-print-screen" title="Cetak Paparan" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition">
-          <i data-lucide="printer" class="w-4 h-4"></i>
-        </button>
-
-        <!-- Refresh Data -->
-        <button id="btn-refresh-app" title="Muat Semula Pangkalan Data" class="p-2 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 border border-sky-200 transition">
-          <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-        </button>
-      </div>
-    </header>
-
-    <!-- Main Content Container -->
-    <main class="flex-1 p-3 sm:p-5 lg:p-6 max-w-7xl w-full mx-auto space-y-6">
-
-      <!-- ============================================================== -->
-      <!-- TAB 1: PEMANTAUAN LAJUR PENTADBIR (5 LAJUR UTAMA)              -->
-      <!-- ============================================================== -->
-      <section id="tab-pemantauan" class="tab-content space-y-5">
-        
-        <!-- Status Indicator Legend & KPI Overview -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
-          <div class="flex flex-wrap items-center gap-4 text-xs font-semibold">
-            <span class="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Petunjuk Status:</span>
-            <div class="flex items-center space-x-1.5">
-              <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block shadow-xs"></span>
-              <span class="font-bold text-slate-800">HIJAU = Berjaya Upload</span>
-            </div>
-            <div class="flex items-center space-x-1.5">
-              <span class="w-3.5 h-3.5 rounded-full bg-rose-500 inline-block shadow-xs"></span>
-              <span class="font-bold text-slate-800">MERAH = Belum Upload</span>
-            </div>
-          </div>
-
-          <!-- Overall School Submission Stats -->
-          <div class="flex items-center space-x-3 text-xs">
-            <div class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1.5">
-              <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
-              <span id="stat-total-hijau">0 Guru Hijau</span>
-            </div>
-            <div class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 font-bold flex items-center gap-1.5">
-              <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-rose-600"></i>
-              <span id="stat-total-merah">0 Guru Merah</span>
-            </div>
-            <div class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-bold hidden sm:inline-block">
-              Peratus: <span id="stat-total-pct" class="text-sky-700 font-black">0%</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 5 COLUMNS CONTAINER (GURU BESAR & 4 GPK) -->
-        <div id="pentadbir-columns-wrapper" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-start">
-          <!-- Dynamically Generated by JavaScript (5 Columns) -->
-        </div>
-
-      </section>
-
-      <!-- ============================================================== -->
-      <!-- TAB 2: PORTAL PERIBADI GURU (LOG MASUK / HANTAR e-RPH)         -->
-      <!-- ============================================================== -->
-      <section id="tab-portal-guru" class="tab-content hidden space-y-5">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-            <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 rounded-xl bg-sky-600 text-white font-extrabold flex items-center justify-center text-lg shadow-sm" id="portal-teacher-avatar">
-                G
+        <!-- ============================================================== -->
+        <!-- TAB 1: PEMANTAUAN LAJUR PENTADBIR (5 LAJUR UTAMA)              -->
+        <!-- ============================================================== -->
+        <section id="tab-pemantauan" class="tab-content space-y-5">
+          
+          <!-- Status Indicator Legend & KPI Overview -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-4 text-xs font-semibold">
+              <span class="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Petunjuk Status:</span>
+              <div class="flex items-center space-x-1.5">
+                <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block shadow-xs"></span>
+                <span class="font-bold text-slate-800">HIJAU = Berjaya Upload</span>
               </div>
-              <div>
-                <h3 class="font-extrabold text-base text-slate-900" id="portal-teacher-name">Nama Guru</h3>
-                <p class="text-xs text-slate-500 font-medium" id="portal-teacher-details">No. K/P: - • Gred & Jawatan: -</p>
+              <div class="flex items-center space-x-1.5">
+                <span class="w-3.5 h-3.5 rounded-full bg-rose-500 inline-block shadow-xs"></span>
+                <span class="font-bold text-slate-800">MERAH = Belum Upload</span>
               </div>
             </div>
 
-            <!-- Change Password Button -->
-            <button id="btn-portal-change-pwd" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-300 transition flex items-center space-x-1.5">
-              <i data-lucide="key" class="w-3.5 h-3.5 text-sky-600"></i>
-              <span>Jana / Tukar Kata Laluan</span>
-            </button>
+            <!-- Overall School Submission Stats -->
+            <div class="flex items-center space-x-3 text-xs">
+              <div class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1.5">
+                <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span id="stat-total-hijau">0 Guru Hijau</span>
+              </div>
+              <div class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 font-bold flex items-center gap-1.5">
+                <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-rose-600"></i>
+                <span id="stat-total-merah">0 Guru Merah</span>
+              </div>
+              <div class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-bold hidden sm:inline-block">
+                Peratus: <span id="stat-total-pct" class="text-sky-700 font-black">0%</span>
+              </div>
+            </div>
           </div>
 
-          <!-- Upload Form for Active Week -->
-          <div class="bg-gradient-to-br from-sky-50 to-blue-50/50 p-5 rounded-xl border border-sky-200 space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <span class="text-[10px] font-extrabold text-sky-700 uppercase tracking-wider block">Borang Muat Naik e-RPH Mingguan</span>
-                <h4 class="font-black text-sm text-sky-950" id="portal-upload-week-title">Penghantaran e-RPH Minggu 7 (Jumaat, 20 Feb 2026)</h4>
+          <!-- 5 COLUMNS CONTAINER (GURU BESAR & 4 GPK) -->
+          <div id="pentadbir-columns-wrapper" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-start">
+            <!-- Dynamically Generated by JavaScript (5 Columns) -->
+          </div>
+
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 2: PORTAL PERIBADI GURU (LOG MASUK / HANTAR e-RPH)         -->
+        <!-- ============================================================== -->
+        <section id="tab-portal-guru" class="tab-content hidden space-y-5">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-xl bg-sky-600 text-white font-extrabold flex items-center justify-center text-lg shadow-sm" id="portal-teacher-avatar">
+                  G
+                </div>
+                <div>
+                  <h3 class="font-extrabold text-base text-slate-900" id="portal-teacher-name">Nama Guru</h3>
+                  <p class="text-xs text-slate-500 font-medium" id="portal-teacher-details">No. K/P: - • Gred & Jawatan: -</p>
+                </div>
               </div>
-              <span id="portal-current-status-badge" class="px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300">
-                MERAH (Belum Upload)
+
+              <!-- Change Password Button -->
+              <button id="btn-portal-change-pwd" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-300 transition flex items-center space-x-1.5">
+                <i data-lucide="key" class="w-3.5 h-3.5 text-sky-600"></i>
+                <span>Jana / Tukar Kata Laluan</span>
+              </button>
+            </div>
+
+            <!-- Upload Form for Active Week -->
+            <div class="bg-gradient-to-br from-sky-50 to-blue-50/50 p-5 rounded-xl border border-sky-200 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] font-extrabold text-sky-700 uppercase tracking-wider block">Borang Muat Naik e-RPH Mingguan</span>
+                  <h4 class="font-black text-sm text-sky-950" id="portal-upload-week-title">Penghantaran e-RPH Minggu 7 (Jumaat, 20 Feb 2026)</h4>
+                </div>
+                <span id="portal-current-status-badge" class="px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300">
+                  MERAH (Belum Upload)
+                </span>
+              </div>
+
+              <form id="form-teacher-upload" class="space-y-3.5 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label class="block font-bold text-slate-700 mb-1">Minggu Penghantaran</label>
+                    <select id="teacher-upload-week" class="w-full border border-slate-300 rounded-lg p-2 bg-white font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                      <!-- Loaded dynamically -->
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block font-bold text-slate-700 mb-1">Tarikh Hari Jumaat</label>
+                    <input type="text" id="teacher-upload-date" readonly class="w-full border border-slate-200 rounded-lg p-2 bg-slate-100 text-slate-600 font-bold text-xs">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Pautan Google Drive / Folder e-RPH Rasmi</label>
+                  <input type="url" id="teacher-upload-link" placeholder="https://drive.google.com/drive/folders/..." class="w-full border border-slate-300 rounded-lg p-2.5 bg-white font-medium text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                  <p class="text-[10px] text-slate-400 mt-1">Masukkan pautan folder Google Drive DELIMa anda atau fail PDF e-RPH lengkap.</p>
+                </div>
+
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Nama Fail e-RPH (Pilihan)</label>
+                  <input type="text" id="teacher-upload-filename" placeholder="cth: eRPH_M7_Nama_Guru.pdf" class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                </div>
+
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Catatan / Refleksi Guru</label>
+                  <textarea id="teacher-upload-catatan" rows="2" placeholder="e-RPH Lengkap Minggu ini bagi semua kelas diajar..." class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end">
+                  <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-lg shadow-sm transition flex items-center space-x-2">
+                    <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                    <span>Hantar & Sahkan e-RPH (Jadikan Hijau)</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- History of 43 Weeks for this teacher -->
+            <div class="space-y-3 pt-2">
+              <h4 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                <i data-lucide="history" class="w-4 h-4 text-sky-600"></i>
+                <span>Rekod & Sejarah Penghantaran e-RPH 43 Minggu Sesi 2026</span>
+              </h4>
+
+              <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs text-slate-700">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px]">
+                      <tr>
+                        <th class="py-2.5 px-3">Minggu</th>
+                        <th class="py-2.5 px-3">Tarikh Jumaat</th>
+                        <th class="py-2.5 px-3">Status</th>
+                        <th class="py-2.5 px-3">Waktu Di-Upload</th>
+                        <th class="py-2.5 px-3">Pautan Fail</th>
+                        <th class="py-2.5 px-3">Semakan Pentadbir</th>
+                      </tr>
+                    </thead>
+                    <tbody id="portal-history-tbody" class="divide-y divide-slate-100 font-medium">
+                      <!-- Populated dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 3: CARTA ORGANISASI e-RPH SK RANGGU 2026                   -->
+        <!-- ============================================================== -->
+        <section id="tab-carta-organisasi" class="tab-content hidden space-y-6">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="text-center max-w-2xl mx-auto space-y-1">
+              <span class="text-xs font-bold text-sky-700 uppercase tracking-widest bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200">
+                Jawatankuasa Pengurusan & Pemantauan e-RPH 2026
               </span>
+              <h3 class="font-black text-lg text-slate-900 mt-2">CARTA ORGANISASI e-RPH SK RANGGU</h3>
+              <p class="text-xs text-slate-500">
+                Struktur Penyeliaan Bertingkat Semakan Rancangan Pelajaran Harian Digital Sekolah Kebangsaan Ranggu, Tawau
+              </p>
             </div>
 
-            <form id="form-teacher-upload" class="space-y-3.5 text-xs">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">Minggu Penghantaran</label>
-                  <select id="teacher-upload-week" class="w-full border border-slate-300 rounded-lg p-2 bg-white font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
-                    <!-- Loaded dynamically -->
-                  </select>
+            <!-- Org Chart Visual Hierarchy -->
+            <div class="pt-4 flex flex-col items-center space-y-6">
+              
+              <!-- Tier 1: Guru Besar & Pentadbir Sistem -->
+              <div class="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-2xl">
+                <!-- Guru Besar Box -->
+                <div class="org-box bg-gradient-to-br from-amber-500 to-yellow-600 text-white p-4 rounded-2xl shadow-md border-2 border-amber-300 w-full sm:w-80 text-center">
+                  <span class="text-[10px] uppercase font-black bg-white/20 px-2 py-0.5 rounded-full tracking-wider">Peneraju Sekolah</span>
+                  <h4 class="font-black text-sm mt-1.5">YUNUS BIN PATARAI</h4>
+                  <p class="text-xs text-amber-100 font-semibold">Guru Besar SK Ranggu</p>
+                  <div class="text-[10px] bg-black/15 mt-2 py-1 px-2 rounded-lg font-mono">
+                    No. K/P: 721005-12-5911
+                  </div>
                 </div>
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">Tarikh Hari Jumaat</label>
-                  <input type="text" id="teacher-upload-date" readonly class="w-full border border-slate-200 rounded-lg p-2 bg-slate-100 text-slate-600 font-bold text-xs">
+
+                <!-- Pentadbir Sistem Box -->
+                <div class="org-box bg-gradient-to-br from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md border-2 border-sky-400 w-full sm:w-80 text-center">
+                  <span class="text-[10px] uppercase font-black bg-sky-500/30 text-sky-300 px-2 py-0.5 rounded-full tracking-wider">Pentadbir Sistem & ICT</span>
+                  <h4 class="font-black text-sm mt-1.5">TS. MOHAMMAD FIKREY</h4>
+                  <p class="text-xs text-sky-200 font-semibold">Penyelaras ICT & Media Digital</p>
+                  <div class="text-[10px] bg-black/30 mt-2 py-1 px-2 rounded-lg font-mono text-amber-300">
+                    Kod Akses: TS.FIKREY37
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Pautan Google Drive / Folder e-RPH Rasmi</label>
-                <input type="url" id="teacher-upload-link" placeholder="https://drive.google.com/drive/folders/..." class="w-full border border-slate-300 rounded-lg p-2.5 bg-white font-medium text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
-                <p class="text-[10px] text-slate-400 mt-1">Masukkan pautan folder Google Drive DELIMa anda atau fail PDF e-RPH lengkap.</p>
+              <!-- Connecting Line -->
+              <div class="w-0.5 h-6 bg-slate-300"></div>
+
+              <!-- Tier 2: 4 Penolong Kanan -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
+                <!-- GPK 1 -->
+                <div class="org-box bg-white p-3.5 rounded-xl border-2 border-sky-500 shadow-xs text-center space-y-1">
+                  <span class="text-[9px] font-black uppercase bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full">PK Pentadbiran</span>
+                  <h5 class="font-black text-xs text-slate-900">PN. HJH. RAHMATIAH MOHD JUDA</h5>
+                  <p class="text-[11px] text-slate-500 font-semibold">Kurikulum & Pagi</p>
+                  <div class="text-[10px] text-sky-700 font-bold bg-sky-50 py-1 rounded">11 Guru Seliaan</div>
+                </div>
+
+                <!-- GPK HEM -->
+                <div class="org-box bg-white p-3.5 rounded-xl border-2 border-emerald-500 shadow-xs text-center space-y-1">
+                  <span class="text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">PK Hal Ehwal Murid</span>
+                  <h5 class="font-black text-xs text-slate-900">PN. KOMALA JOSEPH</h5>
+                  <p class="text-[11px] text-slate-500 font-semibold">HEM & Disiplin</p>
+                  <div class="text-[10px] text-emerald-700 font-bold bg-emerald-50 py-1 rounded">10 Guru Seliaan</div>
+                </div>
+
+                <!-- GPK KOKU -->
+                <div class="org-box bg-white p-3.5 rounded-xl border-2 border-rose-500 shadow-xs text-center space-y-1">
+                  <span class="text-[9px] font-black uppercase bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">PK Kokurikulum</span>
+                  <h5 class="font-black text-xs text-slate-900">PN. WARNAH BINTI SIRA</h5>
+                  <p class="text-[11px] text-slate-500 font-semibold">Kokurikulum & Sukan</p>
+                  <div class="text-[10px] text-rose-700 font-bold bg-rose-50 py-1 rounded">10 Guru Seliaan</div>
+                </div>
+
+                <!-- GPK PETANG -->
+                <div class="org-box bg-white p-3.5 rounded-xl border-2 border-purple-500 shadow-xs text-center space-y-1">
+                  <span class="text-[9px] font-black uppercase bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">PK Sidang Petang</span>
+                  <h5 class="font-black text-xs text-slate-900">TN. HJ. EMRAN HJ. SELAMAT</h5>
+                  <p class="text-[11px] text-slate-500 font-semibold">Tahap 1 (Thn 1, 2, 3)</p>
+                  <div class="text-[10px] text-purple-700 font-bold bg-purple-50 py-1 rounded">16 Guru Seliaan</div>
+                </div>
               </div>
 
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Nama Fail e-RPH (Pilihan)</label>
-                <input type="text" id="teacher-upload-filename" placeholder="cth: eRPH_M7_Nama_Guru.pdf" class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              <!-- Tier 3: Seluruh Pendidik SK Ranggu -->
+              <div class="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+                <p class="text-xs font-bold text-slate-700">
+                  52 Guru Akademik SK Ranggu menghantar e-RPH pada setiap hari <strong class="text-rose-600">JUMAAT</strong> mengikut pentadbir penyelia masing-masing.
+                </p>
               </div>
+            </div>
+          </div>
+        </section>
 
+        <!-- ============================================================== -->
+        <!-- TAB 4: KALENDAR JUMAAT 2026                                    -->
+        <!-- ============================================================== -->
+        <section id="tab-kalendar" class="tab-content hidden space-y-5">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
-                <label class="block font-bold text-slate-700 mb-1">Catatan / Refleksi Guru</label>
-                <textarea id="teacher-upload-catatan" rows="2" placeholder="e-RPH Lengkap Minggu ini bagi semua kelas diajar..." class="w-full border border-slate-300 rounded-lg p-2 bg-white text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"></textarea>
+                <h3 class="font-black text-base text-slate-900">Kalendar Penghantaran Jumaat e-RPH 2026</h3>
+                <p class="text-xs text-slate-500">Senarai 43 Hari Jumaat Tarikh Akhir Muat Naik e-RPH Sesi Persekolahan 2026</p>
               </div>
+              <div class="flex items-center space-x-2 text-xs font-bold">
+                <span class="px-2.5 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                  Hari Ini: <span id="cal-current-date-display">11 Okt 2026</span>
+                </span>
+              </div>
+            </div>
 
-              <div class="pt-2 flex justify-end">
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-lg shadow-sm transition flex items-center space-x-2">
-                  <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-                  <span>Hantar & Sahkan e-RPH (Jadikan Hijau)</span>
-                </button>
-              </div>
-            </form>
+            <!-- 43 Fridays Grid -->
+            <div id="calendar-fridays-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 5: JADUAL WAKTU RUJUKAN                                    -->
+        <!-- ============================================================== -->
+        <section id="tab-jadual-rujukan" class="tab-content hidden space-y-4">
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="font-black text-base text-slate-900">Jadual Waktu Persekolahan SK Ranggu</h3>
+              <p class="text-xs text-slate-500">Rujukan Waktu Kelas & Guru (Penghantaran e-RPH tetap berasaskan Jumaat mengikut nama guru)</p>
+            </div>
+            <div class="text-xs text-slate-500 italic">
+              Paparan rujukan kurikulum sekolah
+            </div>
           </div>
 
-          <!-- History of 43 Weeks for this teacher -->
-          <div class="space-y-3 pt-2">
-            <h4 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
-              <i data-lucide="history" class="w-4 h-4 text-sky-600"></i>
-              <span>Rekod & Sejarah Penghantaran e-RPH 43 Minggu Sesi 2026</span>
-            </h4>
+          <div id="jadual-rujukan-container" class="space-y-4">
+            <!-- Populated from existing timetable data -->
+          </div>
+        </section>
 
+        <!-- ============================================================== -->
+        <!-- TAB 6: KONSOL PENTADBIR SISTEM (TS.FIKREY37)                   -->
+        <!-- ============================================================== -->
+        <section id="tab-konsol-admin" class="tab-content hidden space-y-5">
+          <div class="bg-white p-5 rounded-2xl border-2 border-amber-300 shadow-sm space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold">
+                  <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="font-black text-base text-slate-900 flex items-center gap-2">
+                    <span>Konsol Pembangun & Pentadbir Sistem</span>
+                    <span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono font-bold">TS.FIKREY37</span>
+                  </h3>
+                  <p class="text-xs text-slate-500">Kawalan Penuh Status, Senarai Guru, Padam e-RPH dan Penetapan Agihan</p>
+                </div>
+              </div>
+
+              <!-- Action: Tambah Guru Baru -->
+              <button id="btn-admin-add-teacher" class="px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold shadow-xs transition flex items-center space-x-1.5">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                <span>Tambah Guru Baru</span>
+              </button>
+            </div>
+
+            <!-- Search & Filter in Admin Console -->
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <input type="text" id="admin-search-staff" placeholder="Cari nama guru atau No. K/P..." class="text-xs border border-slate-300 rounded-lg p-2.5 w-full sm:w-80 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <div class="text-xs text-slate-500 font-semibold">
+                Jumlah: <span id="admin-staff-count" class="font-black text-slate-900">0</span> Staf
+              </div>
+            </div>
+
+            <!-- Admin Staff Master Table -->
             <div class="border border-slate-200 rounded-xl overflow-hidden">
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-700">
-                  <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px]">
+                  <thead class="bg-slate-100 border-b border-slate-200 text-slate-700 font-black uppercase text-[10px]">
                     <tr>
-                      <th class="py-2.5 px-3">Minggu</th>
-                      <th class="py-2.5 px-3">Tarikh Jumaat</th>
-                      <th class="py-2.5 px-3">Status</th>
-                      <th class="py-2.5 px-3">Waktu Di-Upload</th>
-                      <th class="py-2.5 px-3">Pautan Fail</th>
-                      <th class="py-2.5 px-3">Semakan Pentadbir</th>
+                      <th class="py-3 px-3">Kod</th>
+                      <th class="py-3 px-3">Nama Penuh Guru</th>
+                      <th class="py-3 px-3">No. K/P</th>
+                      <th class="py-3 px-3">Pentadbir Penyelia</th>
+                      <th class="py-3 px-3 text-center">Status M7</th>
+                      <th class="py-3 px-3 text-center">Status Guru</th>
+                      <th class="py-3 px-3 text-center">Tindakan Super Admin</th>
                     </tr>
                   </thead>
-                  <tbody id="portal-history-tbody" class="divide-y divide-slate-100 font-medium">
-                    <!-- Populated dynamically -->
+                  <tbody id="admin-staff-tbody" class="divide-y divide-slate-100 font-medium">
+                    <!-- Dynamically rendered -->
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- ============================================================== -->
-      <!-- TAB 3: CARTA ORGANISASI e-RPH SK RANGGU 2026                   -->
-      <!-- ============================================================== -->
-      <section id="tab-carta-organisasi" class="tab-content hidden space-y-6">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div class="text-center max-w-2xl mx-auto space-y-1">
-            <span class="text-xs font-bold text-sky-700 uppercase tracking-widest bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200">
-              Jawatankuasa Pengurusan & Pemantauan e-RPH 2026
-            </span>
-            <h3 class="font-black text-lg text-slate-900 mt-2">CARTA ORGANISASI e-RPH SK RANGGU</h3>
-            <p class="text-xs text-slate-500">
-              Struktur Penyeliaan Bertingkat Semakan Rancangan Pelajaran Harian Digital Sekolah Kebangsaan Ranggu, Tawau
-            </p>
-          </div>
+        <!-- ============================================================== -->
+        <!-- TAB 7: EKSPORT & IMPORT                                        -->
+        <!-- ============================================================== -->
+        <section id="tab-eksport" class="tab-content hidden space-y-5">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-black text-base text-slate-900">Eksport & Sandaran Pangkalan Data e-RPH</h3>
+            <p class="text-xs text-slate-500">Jana fail Microsoft Excel (.xlsx) atau kemas kini pangkalan data sistem</p>
 
-          <!-- Org Chart Visual Hierarchy -->
-          <div class="pt-4 flex flex-col items-center space-y-6">
-            
-            <!-- Tier 1: Guru Besar & Pentadbir Sistem -->
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-2xl">
-              <!-- Guru Besar Box -->
-              <div class="org-box bg-gradient-to-br from-amber-500 to-yellow-600 text-white p-4 rounded-2xl shadow-md border-2 border-amber-300 w-full sm:w-80 text-center">
-                <span class="text-[10px] uppercase font-black bg-white/20 px-2 py-0.5 rounded-full tracking-wider">Peneraju Sekolah</span>
-                <h4 class="font-black text-sm mt-1.5">YUNUS BIN PATARAI</h4>
-                <p class="text-xs text-amber-100 font-semibold">Guru Besar SK Ranggu</p>
-                <div class="text-[10px] bg-black/15 mt-2 py-1 px-2 rounded-lg font-mono">
-                  No. K/P: 721005-12-5911
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <!-- Card Export Excel -->
+              <div class="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-3">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+                    <i data-lucide="file-down" class="w-5 h-5"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-extrabold text-xs text-emerald-950">Eksport Laporan Pemantauan e-RPH</h4>
+                    <p class="text-[11px] text-emerald-700">Senarai penuh guru, status penghantaran dan timestamp</p>
+                  </div>
                 </div>
+                <button id="btn-export-monitoring-excel" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-lg shadow-xs transition flex items-center justify-center space-x-2">
+                  <i data-lucide="download" class="w-4 h-4"></i>
+                  <span>Muat Turun Excel (.xlsx)</span>
+                </button>
               </div>
 
-              <!-- Pentadbir Sistem Box -->
-              <div class="org-box bg-gradient-to-br from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md border-2 border-sky-400 w-full sm:w-80 text-center">
-                <span class="text-[10px] uppercase font-black bg-sky-500/30 text-sky-300 px-2 py-0.5 rounded-full tracking-wider">Pentadbir Sistem & ICT</span>
-                <h4 class="font-black text-sm mt-1.5">TS. MOHAMMAD FIKREY</h4>
-                <p class="text-xs text-sky-200 font-semibold">Penyelaras ICT & Media Digital</p>
-                <div class="text-[10px] bg-black/30 mt-2 py-1 px-2 rounded-lg font-mono text-amber-300">
-                  Kod Akses: TS.FIKREY37
+              <!-- Card Reset Demo -->
+              <div class="p-4 bg-rose-50/70 border border-rose-200 rounded-xl space-y-3">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 rounded-lg bg-rose-600 text-white flex items-center justify-center">
+                    <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-extrabold text-xs text-rose-950">Set Semula Data Piawai (Reset Demo)</h4>
+                    <p class="text-[11px] text-rose-700">Kembalikan data asal 60 staf SK Ranggu</p>
+                  </div>
                 </div>
+                <button id="btn-reset-system-data" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 rounded-lg shadow-xs transition flex items-center justify-center space-x-2">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  <span>Reset Kepada Data Asal</span>
+                </button>
               </div>
             </div>
-
-            <!-- Connecting Line -->
-            <div class="w-0.5 h-6 bg-slate-300"></div>
-
-            <!-- Tier 2: 4 Penolong Kanan -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
-              <!-- GPK 1 -->
-              <div class="org-box bg-white p-3.5 rounded-xl border-2 border-sky-500 shadow-xs text-center space-y-1">
-                <span class="text-[9px] font-black uppercase bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full">PK Pentadbiran</span>
-                <h5 class="font-black text-xs text-slate-900">PN. HJH. RAHMATIAH MOHD JUDA</h5>
-                <p class="text-[11px] text-slate-500 font-semibold">Kurikulum & Pagi</p>
-                <div class="text-[10px] text-sky-700 font-bold bg-sky-50 py-1 rounded">11 Guru Seliaan</div>
-              </div>
-
-              <!-- GPK HEM -->
-              <div class="org-box bg-white p-3.5 rounded-xl border-2 border-emerald-500 shadow-xs text-center space-y-1">
-                <span class="text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">PK Hal Ehwal Murid</span>
-                <h5 class="font-black text-xs text-slate-900">PN. KOMALA JOSEPH</h5>
-                <p class="text-[11px] text-slate-500 font-semibold">HEM & Disiplin</p>
-                <div class="text-[10px] text-emerald-700 font-bold bg-emerald-50 py-1 rounded">10 Guru Seliaan</div>
-              </div>
-
-              <!-- GPK KOKU -->
-              <div class="org-box bg-white p-3.5 rounded-xl border-2 border-rose-500 shadow-xs text-center space-y-1">
-                <span class="text-[9px] font-black uppercase bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">PK Kokurikulum</span>
-                <h5 class="font-black text-xs text-slate-900">PN. WARNAH BINTI SIRA</h5>
-                <p class="text-[11px] text-slate-500 font-semibold">Kokurikulum & Sukan</p>
-                <div class="text-[10px] text-rose-700 font-bold bg-rose-50 py-1 rounded">10 Guru Seliaan</div>
-              </div>
-
-              <!-- GPK PETANG -->
-              <div class="org-box bg-white p-3.5 rounded-xl border-2 border-purple-500 shadow-xs text-center space-y-1">
-                <span class="text-[9px] font-black uppercase bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">PK Sidang Petang</span>
-                <h5 class="font-black text-xs text-slate-900">TN. HJ. EMRAN HJ. SELAMAT</h5>
-                <p class="text-[11px] text-slate-500 font-semibold">Tahap 1 (Thn 1, 2, 3)</p>
-                <div class="text-[10px] text-purple-700 font-bold bg-purple-50 py-1 rounded">16 Guru Seliaan</div>
-              </div>
-            </div>
-
-            <!-- Tier 3: Seluruh Pendidik SK Ranggu -->
-            <div class="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
-              <p class="text-xs font-bold text-slate-700">
-                52 Guru Akademik SK Ranggu menghantar e-RPH pada setiap hari <strong class="text-rose-600">JUMAAT</strong> mengikut pentadbir penyelia masing-masing.
-              </p>
-            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- ============================================================== -->
-      <!-- TAB 4: KALENDAR JUMAAT 2026                                    -->
-      <!-- ============================================================== -->
-      <section id="tab-kalendar" class="tab-content hidden space-y-5">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-            <div>
-              <h3 class="font-black text-base text-slate-900">Kalendar Penghantaran Jumaat e-RPH 2026</h3>
-              <p class="text-xs text-slate-500">Senarai 43 Hari Jumaat Tarikh Akhir Muat Naik e-RPH Sesi Persekolahan 2026</p>
-            </div>
-            <div class="flex items-center space-x-2 text-xs font-bold">
-              <span class="px-2.5 py-1 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                Hari Ini: <span id="cal-current-date-display">11 Okt 2026</span>
-              </span>
-            </div>
-          </div>
-
-          <!-- 43 Fridays Grid -->
-          <div id="calendar-fridays-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-      </section>
-
-      <!-- ============================================================== -->
-      <!-- TAB 5: JADUAL WAKTU RUJUKAN                                    -->
-      <!-- ============================================================== -->
-      <section id="tab-jadual-rujukan" class="tab-content hidden space-y-4">
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 class="font-black text-base text-slate-900">Jadual Waktu Persekolahan SK Ranggu</h3>
-            <p class="text-xs text-slate-500">Rujukan Waktu Kelas & Guru (Penghantaran e-RPH tetap berasaskan Jumaat mengikut nama guru)</p>
-          </div>
-          <div class="text-xs text-slate-500 italic">
-            Paparan rujukan kurikulum sekolah
-          </div>
-        </div>
-
-        <div id="jadual-rujukan-container" class="space-y-4">
-          <!-- Populated from existing timetable data -->
-        </div>
-      </section>
-
-      <!-- ============================================================== -->
-      <!-- TAB 6: KONSOL PENTADBIR SISTEM (TS.FIKREY37)                   -->
-      <!-- ============================================================== -->
-      <section id="tab-konsol-admin" class="tab-content hidden space-y-5">
-        <div class="bg-white p-5 rounded-2xl border-2 border-amber-300 shadow-sm space-y-5">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold">
-                <i data-lucide="shield-alert" class="w-5 h-5"></i>
-              </div>
-              <div>
-                <h3 class="font-black text-base text-slate-900 flex items-center gap-2">
-                  <span>Konsol Pembangun & Pentadbir Sistem</span>
-                  <span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono font-bold">TS.FIKREY37</span>
-                </h3>
-                <p class="text-xs text-slate-500">Kawalan Penuh Status, Senarai Guru, Padam e-RPH dan Penetapan Agihan</p>
-              </div>
-            </div>
-
-            <!-- Action: Tambah Guru Baru -->
-            <button id="btn-admin-add-teacher" class="px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold shadow-xs transition flex items-center space-x-1.5">
-              <i data-lucide="user-plus" class="w-4 h-4"></i>
-              <span>Tambah Guru Baru</span>
-            </button>
-          </div>
-
-          <!-- Search & Filter in Admin Console -->
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <input type="text" id="admin-search-staff" placeholder="Cari nama guru atau No. K/P..." class="text-xs border border-slate-300 rounded-lg p-2.5 w-full sm:w-80 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500">
-            <div class="text-xs text-slate-500 font-semibold">
-              Jumlah: <span id="admin-staff-count" class="font-black text-slate-900">0</span> Staf
-            </div>
-          </div>
-
-          <!-- Admin Staff Master Table -->
-          <div class="border border-slate-200 rounded-xl overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs text-slate-700">
-                <thead class="bg-slate-100 border-b border-slate-200 text-slate-700 font-black uppercase text-[10px]">
-                  <tr>
-                    <th class="py-3 px-3">Kod</th>
-                    <th class="py-3 px-3">Nama Penuh Guru</th>
-                    <th class="py-3 px-3">No. K/P</th>
-                    <th class="py-3 px-3">Pentadbir Penyelia</th>
-                    <th class="py-3 px-3 text-center">Status M7</th>
-                    <th class="py-3 px-3 text-center">Status Guru</th>
-                    <th class="py-3 px-3 text-center">Tindakan Super Admin</th>
-                  </tr>
-                </thead>
-                <tbody id="admin-staff-tbody" class="divide-y divide-slate-100 font-medium">
-                  <!-- Dynamically rendered -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============================================================== -->
-      <!-- TAB 7: EKSPORT & IMPORT                                        -->
-      <!-- ============================================================== -->
-      <section id="tab-eksport" class="tab-content hidden space-y-5">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h3 class="font-black text-base text-slate-900">Eksport & Sandaran Pangkalan Data e-RPH</h3>
-          <p class="text-xs text-slate-500">Jana fail Microsoft Excel (.xlsx) atau kemas kini pangkalan data sistem</p>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <!-- Card Export Excel -->
-            <div class="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-3">
-              <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
-                  <i data-lucide="file-down" class="w-5 h-5"></i>
-                </div>
-                <div>
-                  <h4 class="font-extrabold text-xs text-emerald-950">Eksport Laporan Pemantauan e-RPH</h4>
-                  <p class="text-[11px] text-emerald-700">Senarai penuh guru, status penghantaran dan timestamp</p>
-                </div>
-              </div>
-              <button id="btn-export-monitoring-excel" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-lg shadow-xs transition flex items-center justify-center space-x-2">
-                <i data-lucide="download" class="w-4 h-4"></i>
-                <span>Muat Turun Excel (.xlsx)</span>
-              </button>
-            </div>
-
-            <!-- Card Reset Demo -->
-            <div class="p-4 bg-rose-50/70 border border-rose-200 rounded-xl space-y-3">
-              <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-lg bg-rose-600 text-white flex items-center justify-center">
-                  <i data-lucide="refresh-cw" class="w-5 h-5"></i>
-                </div>
-                <div>
-                  <h4 class="font-extrabold text-xs text-rose-950">Set Semula Data Piawai (Reset Demo)</h4>
-                  <p class="text-[11px] text-rose-700">Kembalikan data asal 60 staf SK Ranggu</p>
-                </div>
-              </div>
-              <button id="btn-reset-system-data" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-2.5 rounded-lg shadow-xs transition flex items-center justify-center space-x-2">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                <span>Reset Kepada Data Asal</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-    </main>
-  </div>
-
-  <!-- ============================================================== -->
-  <!-- MODAL: LOG MASUK & TUKAR PENGGUNA                              -->
-  <!-- ============================================================== -->
-  <div id="modal-login" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 overflow-y-auto">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden modal-animate">
-      <div class="bg-slate-900 text-white p-4 flex items-center justify-between border-b border-slate-800">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center">
-            <i data-lucide="lock" class="w-4 h-4 text-white"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-sm text-white">Log Masuk Pengguna</h3>
-            <p class="text-[10px] text-slate-400">Pilih peranan atau masukkan No. K/P anda</p>
-          </div>
-        </div>
-        <button id="btn-close-login-modal" class="text-slate-400 hover:text-white p-1">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div class="p-5 space-y-4 text-xs">
-        <!-- Login Role Tabs -->
-        <div class="flex border-b border-slate-200">
-          <button data-login-mode="guru" class="login-tab-btn flex-1 py-2 font-bold border-b-2 border-sky-600 text-sky-700 text-center">
-            Log Masuk Guru
-          </button>
-          <button data-login-mode="pentadbir" class="login-tab-btn flex-1 py-2 font-bold text-slate-500 border-b-2 border-transparent hover:text-slate-800 text-center">
-            Pentadbir Sekolah
-          </button>
-          <button data-login-mode="admin" class="login-tab-btn flex-1 py-2 font-bold text-slate-500 border-b-2 border-transparent hover:text-slate-800 text-center">
-            Super Admin
-          </button>
-        </div>
-
-        <!-- 1. Form Guru Login -->
-        <form id="form-login-guru" class="login-subform space-y-3">
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Nombor Kad Pengenalan (No. K/P)</label>
-            <input type="text" id="login-guru-ic" placeholder="cth: 730926-12-5494 atau 730926125494" required class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 font-mono text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Kata Laluan</label>
-            <input type="password" id="login-guru-pwd" placeholder="Kata laluan sementara: P3nd1d1kan" required class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none">
-            <p class="text-[10px] text-slate-400 mt-1">Kata laluan sementara: <strong class="text-sky-700 font-mono">P3nd1d1kan</strong></p>
-          </div>
-          <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 rounded-lg shadow-xs transition">
-            Log Masuk Sebagai Guru
-          </button>
-        </form>
-
-        <!-- 2. Form Pentadbir Quick Select -->
-        <div id="form-login-pentadbir" class="login-subform hidden space-y-2">
-          <p class="text-[11px] text-slate-500 font-semibold mb-2">Pilih profil pentadbir untuk log masuk:</p>
-          <button data-admin-id="1" class="btn-select-admin-role w-full text-left p-2.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 transition flex items-center justify-between">
-            <div>
-              <span class="font-extrabold text-amber-950 block">YUNUS BIN PATARAI</span>
-              <span class="text-[10px] text-amber-800 font-medium">Guru Besar (Peneraju) • Boleh lihat SEMUA guru</span>
-            </div>
-            <span class="text-xs bg-amber-500 text-white font-black px-2 py-0.5 rounded">GB</span>
-          </button>
-
-          <button data-admin-id="2" class="btn-select-admin-role w-full text-left p-2.5 rounded-xl border border-sky-300 bg-sky-50 hover:bg-sky-100 transition flex items-center justify-between">
-            <div>
-              <span class="font-extrabold text-sky-950 block">PN. HJH. RAHMATIAH MOHD JUDA</span>
-              <span class="text-[10px] text-sky-800 font-medium">GPK Pentadbiran • Hanya lihat guru seliaan Kurikulum</span>
-            </div>
-            <span class="text-xs bg-sky-600 text-white font-black px-2 py-0.5 rounded">PK 1</span>
-          </button>
-
-          <button data-admin-id="3" class="btn-select-admin-role w-full text-left p-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 transition flex items-center justify-between">
-            <div>
-              <span class="font-extrabold text-emerald-950 block">PN. KOMALA JOSEPH</span>
-              <span class="text-[10px] text-emerald-800 font-medium">GPK Hal Ehwal Murid • Hanya lihat guru seliaan HEM</span>
-            </div>
-            <span class="text-xs bg-emerald-600 text-white font-black px-2 py-0.5 rounded">PK HEM</span>
-          </button>
-
-          <button data-admin-id="4" class="btn-select-admin-role w-full text-left p-2.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 transition flex items-center justify-between">
-            <div>
-              <span class="font-extrabold text-rose-950 block">PN. WARNAH BINTI SIRA</span>
-              <span class="text-[10px] text-rose-800 font-medium">GPK Kokurikulum • Hanya lihat guru seliaan Koku</span>
-            </div>
-            <span class="text-xs bg-rose-600 text-white font-black px-2 py-0.5 rounded">PK KOKU</span>
-          </button>
-
-          <button data-admin-id="5" class="btn-select-admin-role w-full text-left p-2.5 rounded-xl border border-purple-300 bg-purple-50 hover:bg-purple-100 transition flex items-center justify-between">
-            <div>
-              <span class="font-extrabold text-purple-950 block">TN. HJ. EMRAN HJ. SELAMAT</span>
-              <span class="text-[10px] text-purple-800 font-medium">GPK Petang • Hanya lihat guru seliaan Petang</span>
-            </div>
-            <span class="text-xs bg-purple-600 text-white font-black px-2 py-0.5 rounded">PK PTG</span>
-          </button>
-        </div>
-
-        <!-- 3. Form Super Admin Code -->
-        <form id="form-login-superadmin" class="login-subform hidden space-y-3">
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Kod Akses Pentadbir Sistem</label>
-            <input type="password" id="login-admin-code" placeholder="Masukkan TS.FIKREY37" required class="w-full border border-amber-300 rounded-lg p-2.5 bg-amber-50 font-mono text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none">
-            <p class="text-[10px] text-slate-500 mt-1">Kod khas pembangun sistem SK Ranggu.</p>
-          </div>
-          <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-lg shadow-xs transition">
-            Sahkan Akses Super Admin
-          </button>
-        </form>
-      </div>
+      </main>
     </div>
   </div>
+
 
   <!-- ============================================================== -->
   <!-- MODAL: TUKAR KATA LALUAN GURU                                  -->
