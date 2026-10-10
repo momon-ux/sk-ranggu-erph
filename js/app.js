@@ -105,9 +105,29 @@ document.addEventListener("DOMContentLoaded", () => {
     teacherUploadCatatan: document.getElementById("teacher-upload-catatan"),
     portalHistoryTbody: document.getElementById("portal-history-tbody"),
 
-    // Tab 4 Calendar Elements
+    // Tab 4 Calendar & Real-Time Clock Elements
+    gatewayLiveDay: document.getElementById("gateway-live-day"),
+    gatewayLiveDate: document.getElementById("gateway-live-date"),
+    gatewayLiveTime: document.getElementById("gateway-live-time"),
+
+    headerLiveDay: document.getElementById("header-live-day"),
+    headerLiveDate: document.getElementById("header-live-date"),
+    headerLiveTime: document.getElementById("header-live-time"),
+
+    calHeroTime: document.getElementById("cal-hero-time"),
+    calHeroDay: document.getElementById("cal-hero-day"),
+    calHeroDate: document.getElementById("cal-hero-date"),
+    calHeroWeekBadge: document.getElementById("cal-hero-week-badge"),
+    calHeroCountdownTitle: document.getElementById("cal-hero-countdown-title"),
+    calHeroCountdownText: document.getElementById("cal-hero-countdown-text"),
+    calHeroFridayTarget: document.getElementById("cal-hero-friday-target"),
+
+    calMonthTitle: document.getElementById("cal-month-title"),
+    calMonthDaysGrid: document.getElementById("cal-month-days-grid"),
+    btnCalPrevMonth: document.getElementById("btn-cal-prev-month"),
+    btnCalToday: document.getElementById("btn-cal-today"),
+    btnCalNextMonth: document.getElementById("btn-cal-next-month"),
     calendarFridaysGrid: document.getElementById("calendar-fridays-grid"),
-    calCurrentDateDisplay: document.getElementById("cal-current-date-display"),
 
     // Tab 5 Timetable Elements
     jadualRujukanContainer: document.getElementById("jadual-rujukan-container"),
@@ -883,13 +903,203 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ==============================================================
-  // TAB 4: RENDER KALENDAR PENGHANTARAN JUMAAT
+  // ENJIN MASA NYATA (REAL-TIME CLOCK & CALENDAR ENGINE)
   // ==============================================================
-  function renderCalendarFridays() {
-    const grid = elements.calendarFridaysGrid;
+  let calendarViewDate = new Date();
+
+  const MALAY_DAYS = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"];
+  const MALAY_MONTHS = [
+    "Januari", "Februari", "Mac", "April", "Mei", "Jun",
+    "Julai", "Ogos", "September", "Oktober", "November", "Disember"
+  ];
+
+  function updateLiveClock() {
+    const now = new Date();
+
+    const dayIdx = now.getDay();
+    const dayName = MALAY_DAYS[dayIdx];
+    const dateNum = now.getDate();
+    const monthName = MALAY_MONTHS[now.getMonth()];
+    const yearNum = now.getFullYear();
+
+    // Format 12-Hour Jam: hh:mm:ss AM/PM
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12; // Tukar jam 0 ke 12
+    const formattedHours = String(hours).padStart(2, "0");
+    const formattedTime = `${formattedHours}:${minutes}:${seconds} ${ampm}`;
+
+    const formattedFullDate = `${dateNum} ${monthName.toUpperCase()} ${yearNum}`;
+    const formattedShortDate = `${dateNum} ${monthName.substr(0, 3)} ${yearNum}`;
+
+    // 1. Kemaskini Gateway (Login Screen)
+    if (elements.gatewayLiveDay) elements.gatewayLiveDay.textContent = dayName.toUpperCase();
+    if (elements.gatewayLiveDate) elements.gatewayLiveDate.textContent = formattedFullDate;
+    if (elements.gatewayLiveTime) elements.gatewayLiveTime.textContent = formattedTime;
+
+    // 2. Kemaskini Header Bar Utama
+    if (elements.headerLiveDay) elements.headerLiveDay.textContent = dayName.toUpperCase();
+    if (elements.headerLiveDate) elements.headerLiveDate.textContent = formattedShortDate;
+    if (elements.headerLiveTime) elements.headerLiveTime.textContent = formattedTime;
+
+    // 3. Kemaskini Tab Kalendar (Hero Clock)
+    if (elements.calHeroTime) elements.calHeroTime.textContent = formattedTime;
+    if (elements.calHeroDay) elements.calHeroDay.textContent = dayName.toUpperCase();
+    if (elements.calHeroDate) elements.calHeroDate.textContent = `${dateNum} ${monthName} ${yearNum}`;
+
+    // Kira Baki Hari ke Jumaat
+    let daysToFriday = (5 - dayIdx + 7) % 7;
+    let countdownTitle = "Peringatan Hari Jumaat:";
+    let countdownText = "";
+
+    const activeFriday = db.config.fridays2026.find(f => f.minggu === state.activeWeek);
+    const fridayLabel = activeFriday ? activeFriday.label : "Jumaat Minggu Ini";
+    if (elements.calHeroFridayTarget) elements.calHeroFridayTarget.textContent = `${fridayLabel} (11:59 PM)`;
+
+    if (dayIdx === 5) {
+      countdownTitle = "🚨 PERINGATAN HARI INI:";
+      countdownText = "HARI INI IALAH HARI JUMAAT! Sila pastikan e-RPH telah dihantar sebelum tamat tempoh.";
+      if (elements.calHeroCountdownText) {
+        elements.calHeroCountdownText.className = "text-sm font-black text-emerald-400 leading-snug animate-pulse";
+      }
+    } else if (dayIdx === 4) {
+      countdownTitle = "⚠️ PERINGATAN KEMUNCAK:";
+      countdownText = `ESOK IALAH HARI JUMAAT (${fridayLabel})! Tarikh akhir muat naik e-RPH Minggu ${state.activeWeek}.`;
+      if (elements.calHeroCountdownText) {
+        elements.calHeroCountdownText.className = "text-sm font-black text-amber-300 leading-snug";
+      }
+    } else {
+      countdownTitle = "Kiraan Detik Penghantaran:";
+      countdownText = `Baki ${daysToFriday} hari lagi sebelum Tarikh Akhir Jumaat (${fridayLabel}).`;
+      if (elements.calHeroCountdownText) {
+        elements.calHeroCountdownText.className = "text-sm font-black text-rose-300 leading-snug";
+      }
+    }
+
+    if (elements.calHeroCountdownTitle) elements.calHeroCountdownTitle.textContent = countdownTitle;
+    if (elements.calHeroCountdownText) elements.calHeroCountdownText.textContent = countdownText;
+    if (elements.calHeroWeekBadge) elements.calHeroWeekBadge.textContent = `Minggu ${state.activeWeek}`;
+  }
+
+  function startRealTimeClockEngine() {
+    updateLiveClock();
+    setInterval(updateLiveClock, 1000);
+  }
+
+  // ==============================================================
+  // TAB 4: RENDER KALENDAR BULANAN & PENGHANTARAN JUMAAT
+  // ==============================================================
+  function renderInteractiveMonthlyCalendar() {
+    const grid = elements.calMonthDaysGrid;
+    if (!grid) return;
     grid.innerHTML = "";
 
-    elements.calCurrentDateDisplay.textContent = `11 Okt 2026`;
+    const year = calendarViewDate.getFullYear();
+    const month = calendarViewDate.getMonth();
+
+    const monthName = MALAY_MONTHS[month];
+    elements.calMonthTitle.textContent = `${monthName} ${year}`;
+
+    const now = new Date();
+    const isCurrentMonth = (now.getFullYear() === year && now.getMonth() === month);
+    const todayDate = now.getDate();
+
+    // Dapatkan hari pertama bulan (0 = Ahad, 1 = Isnin, ..., 6 = Sabtu)
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    // Bilangan hari dalam bulan semasa
+    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+    // Bilangan hari dalam bulan sebelumnya
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    // 1. Petak hari dari bulan sebelumnya (pudar)
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dayNum = prevMonthDays - i;
+      const cell = document.createElement("div");
+      cell.className = "p-2 min-h-[60px] sm:min-h-[80px] rounded-xl bg-slate-50/50 border border-slate-100 text-slate-300 text-xs font-semibold select-none flex flex-col justify-start";
+      cell.innerHTML = `<span>${dayNum}</span>`;
+      grid.appendChild(cell);
+    }
+
+    // 2. Petak hari bulan semasa
+    for (let d = 1; d <= totalDaysInMonth; d++) {
+      const cellDate = new Date(year, month, d);
+      const dayOfWeek = cellDate.getDay();
+      const isToday = (isCurrentMonth && d === todayDate);
+      const isFriday = (dayOfWeek === 5);
+
+      // Semak jika Jumaat ini padan dengan minggu persekolahan 2026
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const matchedFriday = isFriday ? db.config.fridays2026.find(f => f.tarikh === dateStr) : null;
+
+      const cell = document.createElement("div");
+      let cellClasses = "p-2 min-h-[60px] sm:min-h-[80px] rounded-xl border transition flex flex-col justify-between text-xs relative ";
+
+      if (isToday) {
+        cellClasses += "bg-amber-50 border-amber-400 ring-2 ring-amber-400/50 font-bold shadow-xs ";
+      } else if (isFriday) {
+        cellClasses += "bg-rose-50/80 border-rose-200 hover:bg-rose-100/70 font-semibold ";
+      } else {
+        cellClasses += "bg-white border-slate-200 hover:bg-slate-50 ";
+      }
+
+      let innerHtml = `
+        <div class="flex items-center justify-between">
+          <span class="font-extrabold ${isToday ? 'text-amber-900 text-sm' : isFriday ? 'text-rose-700 font-black' : 'text-slate-700'}">${d}</span>
+          ${isToday ? '<span class="text-[9px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded shadow-xs">HARI INI</span>' : ''}
+        </div>
+      `;
+
+      if (isFriday) {
+        innerHtml += `
+          <div class="mt-1">
+            <span class="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-lg bg-rose-600 text-white shadow-xs">
+              <i data-lucide="check-circle" class="w-3 h-3"></i>
+              <span>${matchedFriday ? 'M' + matchedFriday.minggu : 'e-RPH'}</span>
+            </span>
+            <span class="block text-[8px] sm:text-[9px] text-rose-800 font-bold mt-0.5">Tarikh Akhir</span>
+          </div>
+        `;
+      }
+
+      cell.className = cellClasses;
+      cell.innerHTML = innerHtml;
+
+      if (matchedFriday) {
+        cell.classList.add("cursor-pointer");
+        cell.title = `Klik untuk semak status penghantaran Minggu ${matchedFriday.minggu} (${matchedFriday.label})`;
+        cell.addEventListener("click", () => {
+          state.activeWeek = matchedFriday.minggu;
+          elements.headerWeekSelect.value = matchedFriday.minggu;
+          updateFridayDisplay();
+          switchTab("pemantauan");
+        });
+      }
+
+      grid.appendChild(cell);
+    }
+
+    // 3. Petak hari dari bulan seterusnya untuk genapkan baris
+    const totalRendered = firstDayIndex + totalDaysInMonth;
+    const remainingCells = (7 - (totalRendered % 7)) % 7;
+    for (let nextD = 1; nextD <= remainingCells; nextD++) {
+      const cell = document.createElement("div");
+      cell.className = "p-2 min-h-[60px] sm:min-h-[80px] rounded-xl bg-slate-50/50 border border-slate-100 text-slate-300 text-xs font-semibold select-none flex flex-col justify-start";
+      cell.innerHTML = `<span>${nextD}</span>`;
+      grid.appendChild(cell);
+    }
+
+    lucide.createIcons();
+  }
+
+  function renderCalendarFridays() {
+    renderInteractiveMonthlyCalendar();
+
+    const grid = elements.calendarFridaysGrid;
+    if (!grid) return;
+    grid.innerHTML = "";
 
     db.config.fridays2026.forEach(f => {
       const isCurrent = (f.minggu === state.activeWeek);
@@ -1518,8 +1728,31 @@ document.addEventListener("DOMContentLoaded", () => {
   elements.btnCloseReviewModal.addEventListener("click", () => elements.modalReviewErph.classList.add("hidden"));
   elements.btnCloseManageStaff.addEventListener("click", () => elements.modalAdminManageStaff.classList.add("hidden"));
 
+  // Calendar Month Navigation Listeners
+  if (elements.btnCalPrevMonth) {
+    elements.btnCalPrevMonth.addEventListener("click", () => {
+      calendarViewDate.setMonth(calendarViewDate.getMonth() - 1);
+      renderInteractiveMonthlyCalendar();
+    });
+  }
+
+  if (elements.btnCalNextMonth) {
+    elements.btnCalNextMonth.addEventListener("click", () => {
+      calendarViewDate.setMonth(calendarViewDate.getMonth() + 1);
+      renderInteractiveMonthlyCalendar();
+    });
+  }
+
+  if (elements.btnCalToday) {
+    elements.btnCalToday.addEventListener("click", () => {
+      calendarViewDate = new Date();
+      renderInteractiveMonthlyCalendar();
+    });
+  }
+
   // ==============================================================
-  // BOOTSTRAP: SEMAK SESI LOG MASUK (GATEWAY FIRST)
+  // BOOTSTRAP: JALANKAN ENJIN REAL-TIME & SEMAK SESI LOG MASUK
   // ==============================================================
+  startRealTimeClockEngine();
   checkExistingSession();
 });
