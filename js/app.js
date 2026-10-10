@@ -83,6 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
     navBtnPemantauan: document.getElementById("nav-btn-pemantauan"),
     navBtnPortalGuru: document.getElementById("nav-btn-portal-guru"),
     navBtnAdminConsole: document.getElementById("nav-btn-admin-console"),
+    navBtnEksport: document.getElementById("nav-btn-eksport"),
 
     // Tab 1 Elements
     statTotalHijau: document.getElementById("stat-total-hijau"),
@@ -473,12 +474,52 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==============================================================
-  // 6. PENUKARAN TAB NAVIGASI
+  // 6. PENUKARAN TAB NAVIGASI & KAWALAN HAK AKSES PERANAN
   // ==============================================================
   function switchTab(tabId) {
+    const isSuper = state.isSuperAdminAuthenticated;
+    const isGb = (!isSuper && state.currentUser && state.currentUser.id === 1);
+    const isGpk = (!isSuper && state.currentUser && [2, 3, 4, 5].includes(state.currentUser.id));
+    const isTeacher = (!isSuper && !isGb && !isGpk);
+
+    // KESELAMATAN SEKATAN AKSES MENGIKUT PERANAN:
+    // 1. Guru biasa DILARANG akses pemantauan pentadbir, konsol admin, atau eksport
+    if (isTeacher && (tabId === "pemantauan" || tabId === "konsol-admin" || tabId === "eksport")) {
+      Swal.fire({
+        icon: "info",
+        title: "Paparan Terhad Guru",
+        text: "Paparan ini khusus untuk pentadbir sekolah sahaja. Anda dialihkan ke Portal Peribadi e-RPH anda.",
+        timer: 1600,
+        showConfirmButton: false
+      });
+      tabId = "portal-guru";
+    }
+
+    // 2. GPK (Pentadbir Sekolah) DILARANG akses Konsol Pentadbir Sistem (Ts. Fikrey) atau Eksport
+    if (isGpk && (tabId === "konsol-admin" || tabId === "eksport")) {
+      Swal.fire({
+        icon: "warning",
+        title: "Akses Terhad",
+        text: "Modul ini tidak dibuka untuk peranan Penolong Kanan.",
+        confirmButtonColor: "#0284c7"
+      });
+      tabId = "pemantauan";
+    }
+
+    // 3. Guru Besar DILARANG buka Konsol Pembangun Sistem (dikunci khusus untuk Ts. Fikrey)
+    if (isGb && tabId === "konsol-admin") {
+      Swal.fire({
+        icon: "warning",
+        title: "Konsol Teknikal Pembangun",
+        text: "Konsol pentadbir sistem dikunci khusus untuk Ts. Mohammad Fikrey (Penyelaras ICT).",
+        confirmButtonColor: "#d97706"
+      });
+      tabId = "pemantauan";
+    }
+
     state.activeTab = tabId;
 
-    // Jika tab adalah Konsol Admin dan belum disahkan, minta kod akses
+    // Jika tab adalah Konsol Admin dan belum disahkan, minta pengesahan keselamatan
     if (tabId === "konsol-admin" && !state.isSuperAdminAuthenticated) {
       promptSuperAdminAuth(() => switchTab("konsol-admin"));
       return;
@@ -502,9 +543,24 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Kemaskini Tajuk Header
+    // Kemaskini Tajuk Header Dinamik Mengikut Peranan
+    let monitoringTitle = "Pemantauan 5 Lajur Pentadbir e-RPH";
+    let monitoringSub = "Penghantaran Mingguan Setiap Jumaat • SK Ranggu Sesi 2026";
+
+    if (isGpk) {
+      const gpkName = state.currentUser.role.split('(')[0].trim();
+      monitoringTitle = `Pemantauan Guru Seliaan (${gpkName})`;
+      monitoringSub = "Hanya Memaparkan Kumpulan Guru di Bawah Seliaan Anda Sahaja";
+    } else if (isGb) {
+      monitoringTitle = "Pemantauan Keseluruhan Sekolah (Semua Guru)";
+      monitoringSub = "Penyeliaan Penuh 5 Lajur Pentadbir • Akses Guru Besar";
+    } else if (isSuper) {
+      monitoringTitle = "Papan Induk Pemantauan e-RPH (Akses Penuh Super Admin)";
+      monitoringSub = "Kawalan Teknikal 5 Lajur Pentadbir, Folder Guru Besar & Status Guru";
+    }
+
     const titles = {
-      "pemantauan": { title: "Pemantauan Lajur Pentadbir e-RPH", sub: "Penghantaran Mingguan Setiap Jumaat • SK Ranggu Sesi 2026" },
+      "pemantauan": { title: monitoringTitle, sub: monitoringSub },
       "portal-guru": { title: "Portal Peribadi Guru e-RPH", sub: "Pengisian & Semakan Penghantaran e-RPH Nama Sendiri" },
       "carta-organisasi": { title: "Carta Organisasi Jawatankuasa e-RPH", sub: "Struktur Hierarki Penyeliaan Bertingkat SK Ranggu 2026" },
       "kalendar": { title: "Kalendar Penghantaran Jumaat 2026", sub: "Jadual Penuh 43 Hari Jumaat Tarikh Akhir Muat Naik" },
@@ -531,33 +587,100 @@ document.addEventListener("DOMContentLoaded", () => {
     lucide.createIcons();
   }
 
-  // 7. Kemaskini Paparan Pengguna Aktif di Header & Sidebar
+  // 7. Kemaskini Paparan Pengguna Aktif & Menu Sisi Mengikut Peranan
   function updateAuthDisplay() {
     if (!state.currentUser) return;
 
     elements.authDisplayName.textContent = state.currentUser.name;
     elements.authDisplayRole.textContent = state.currentUser.role;
 
+    const isSuper = state.isSuperAdminAuthenticated;
+    const isGb = (!isSuper && state.currentUser.id === 1);
+    const isGpk = (!isSuper && [2, 3, 4, 5].includes(state.currentUser.id));
+    const isTeacher = (!isSuper && !isGb && !isGpk);
+
     // Badge Icon
-    if (state.isSuperAdminAuthenticated) {
+    if (isSuper) {
       elements.userBadgeIcon.textContent = "TS";
       elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-amber-500 text-white font-black flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
-    } else if (state.currentUser.id === 1) {
+    } else if (isGb) {
       elements.userBadgeIcon.textContent = "GB";
-      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-amber-500 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
-    } else if (state.currentUser.isSupervisor) {
+      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-amber-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+    } else if (isGpk) {
       elements.userBadgeIcon.textContent = "PK";
       elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-sky-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
     } else {
       elements.userBadgeIcon.textContent = "G";
       elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
     }
+
+    // KAWALAN PENGASINGAN PAPARAN MENU SISI (SIDEBAR VIEW ISOLATION):
+    // 1. Guru Biasa: Hanya nampak Portal Sendiri, Carta Organisasi, Kalendar, Jadual Waktu.
+    if (isTeacher) {
+      if (elements.navBtnPemantauan) elements.navBtnPemantauan.classList.add("hidden");
+      if (elements.navBtnAdminConsole) elements.navBtnAdminConsole.classList.add("hidden");
+      if (elements.navBtnEksport) elements.navBtnEksport.classList.add("hidden");
+      if (elements.navBtnPortalGuru) {
+        elements.navBtnPortalGuru.classList.remove("hidden");
+        elements.navBtnPortalGuru.querySelector("span").textContent = "Portal e-RPH Saya";
+      }
+    }
+    // 2. Pentadbir Sekolah (GPK): Nampak Pemantauan Guru Seliaan (Lajur beliau sahaja), Portal, Carta, Kalendar, Jadual.
+    else if (isGpk) {
+      if (elements.navBtnPemantauan) {
+        elements.navBtnPemantauan.classList.remove("hidden");
+        elements.navBtnPemantauan.querySelector("span").textContent = "Pemantauan Guru Seliaan";
+      }
+      if (elements.navBtnPortalGuru) {
+        elements.navBtnPortalGuru.classList.remove("hidden");
+        elements.navBtnPortalGuru.querySelector("span").textContent = "Hantar e-RPH Saya (Ke GB)";
+      }
+      if (elements.navBtnAdminConsole) elements.navBtnAdminConsole.classList.add("hidden");
+      if (elements.navBtnEksport) elements.navBtnEksport.classList.add("hidden");
+    }
+    // 3. Guru Besar: Nampak Pemantauan Semua Guru, Folder GB, Carta, Kalendar, Jadual, Eksport Excel.
+    else if (isGb) {
+      if (elements.navBtnPemantauan) {
+        elements.navBtnPemantauan.classList.remove("hidden");
+        elements.navBtnPemantauan.querySelector("span").textContent = "Pemantauan Semua Guru";
+      }
+      if (elements.navBtnPortalGuru) {
+        elements.navBtnPortalGuru.classList.remove("hidden");
+        elements.navBtnPortalGuru.querySelector("span").textContent = "Folder e-RPH Guru Besar";
+      }
+      if (elements.navBtnAdminConsole) elements.navBtnAdminConsole.classList.add("hidden");
+      if (elements.navBtnEksport) elements.navBtnEksport.classList.remove("hidden");
+    }
+    // 4. Super Admin (Ts. Fikrey): Akses penuh ke atas semua menu.
+    else if (isSuper) {
+      if (elements.navBtnPemantauan) {
+        elements.navBtnPemantauan.classList.remove("hidden");
+        elements.navBtnPemantauan.querySelector("span").textContent = "Pemantauan 5 Lajur Pentadbir";
+      }
+      if (elements.navBtnPortalGuru) {
+        elements.navBtnPortalGuru.classList.remove("hidden");
+        elements.navBtnPortalGuru.querySelector("span").textContent = "Portal e-RPH Ts. Fikrey";
+      }
+      if (elements.navBtnAdminConsole) elements.navBtnAdminConsole.classList.remove("hidden");
+      if (elements.navBtnEksport) elements.navBtnEksport.classList.remove("hidden");
+    }
   }
 
   // ==============================================================
-  // TAB 1: RENDER PEMANTAUAN 5 LAJUR PENTADBIR
+  // TAB 1: RENDER PEMANTAUAN LAJUR PENTADBIR
   // ==============================================================
   function renderMonitoringColumns() {
+    const isSuper = state.isSuperAdminAuthenticated;
+    const isGb = (!isSuper && state.currentUser && state.currentUser.id === 1);
+    const isGpk = (!isSuper && state.currentUser && [2, 3, 4, 5].includes(state.currentUser.id));
+    const isTeacher = (!isSuper && !isGb && !isGpk);
+
+    // KESELAMATAN: Jika guru biasa membuka tab pemantauan, sekat dan alihkan ke portal guru
+    if (isTeacher) {
+      switchTab("portal-guru");
+      return;
+    }
+
     const container = elements.pentadbirColumnsWrapper;
     container.innerHTML = "";
 
@@ -565,39 +688,50 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Ambil semua guru aktif
     const activeTeachers = db.staffList.filter(s => s.status === "Aktif");
-
-    // Ambil senarai upload bagi minggu ini
     const weekUploads = db.uploads.filter(u => u.minggu === weekNum);
 
-    // Kira statistik keseluruhan
+    // Tentukan lajur yang dipaparkan mengikut peranan
+    let columnsToRender = db.pentadbir;
+    if (isGpk) {
+      // GPK HANYA DAPAT MELIHAT LAJUR SELIAAN BELIAU SENDIRI SAHAJA!
+      columnsToRender = db.pentadbir.filter(col => col.id === state.currentUser.id);
+      elements.pentadbirColumnsWrapper.className = "max-w-2xl mx-auto w-full space-y-4";
+    } else {
+      // Guru Besar & Super Admin melihat kesemua 5 lajur
+      elements.pentadbirColumnsWrapper.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-start";
+    }
+
+    // Kira statistik paparan
+    let targetStaffForStats = [];
+    if (isGpk) {
+      targetStaffForStats = db.staffList.filter(s => s.supervisorId === state.currentUser.id && s.status === "Aktif");
+    } else {
+      targetStaffForStats = activeTeachers;
+    }
+
     let totalHijau = 0;
     let totalMerah = 0;
-
-    activeTeachers.forEach(t => {
+    targetStaffForStats.forEach(t => {
       const up = weekUploads.find(u => u.guruId === t.id);
-      if (up && up.status === "HIJAU") {
-        totalHijau++;
-      } else {
-        totalMerah++;
-      }
+      if (up && up.status === "HIJAU") totalHijau++;
+      else totalMerah++;
     });
 
-    const totalActive = activeTeachers.length || 1;
+    const totalActive = targetStaffForStats.length || 1;
     const overallPct = Math.round((totalHijau / totalActive) * 100);
 
-    elements.statTotalHijau.textContent = `${totalHijau} Guru Hijau`;
-    elements.statTotalMerah.textContent = `${totalMerah} Guru Merah`;
-    elements.statTotalPct.textContent = `${overallPct}%`;
+    if (isGpk) {
+      elements.statTotalHijau.textContent = `${totalHijau} Guru Seliaan Hijau`;
+      elements.statTotalMerah.textContent = `${totalMerah} Guru Seliaan Merah`;
+      elements.statTotalPct.textContent = `${overallPct}% Selesai`;
+    } else {
+      elements.statTotalHijau.textContent = `${totalHijau} Guru Hijau (Sekolah)`;
+      elements.statTotalMerah.textContent = `${totalMerah} Guru Merah (Sekolah)`;
+      elements.statTotalPct.textContent = `${overallPct}% Keseluruhan`;
+    }
 
-    // Render setiap satu daripada 5 lajur pentadbir
-    db.pentadbir.forEach(col => {
-      // Periksa kawalan privasi pentadbir:
-      // "untuk pentadbir sistem dan pentadbir sekolah mereka boleh lihat senarai guru di bawah mereka sahaja..masing2 kecuali guru besar sebab hanya guru besar boleh lihat ke semua guru"
-      const isGb = (state.currentUser && state.currentUser.id === 1);
-      const isSuper = state.isSuperAdminAuthenticated;
-      const isColOwner = (state.currentUser && state.currentUser.id === col.id);
-      const canViewThisColumn = (isGb || isSuper || isColOwner);
-
+    // Render setiap lajur yang dibenarkan
+    columnsToRender.forEach(col => {
       // Cari guru-guru seliaan di bawah pentadbir ini
       let columnStaff = [];
       if (col.id === 1) {
@@ -647,20 +781,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       container.appendChild(colCard);
       const colBody = colCard.querySelector(`#col-body-${col.id}`);
-
-      // Jika pengguna tidak mempunyai kebenaran melihat lajur ini
-      if (!canViewThisColumn) {
-        colBody.innerHTML = `
-          <div class="p-6 text-center space-y-2 text-slate-400">
-            <i data-lucide="lock" class="w-8 h-8 mx-auto text-slate-300"></i>
-            <p class="font-bold text-xs text-slate-600">Akses Terhad</p>
-            <p class="text-[10px] leading-relaxed">
-              Anda hanya dibenarkan melihat senarai guru di bawah seliaan anda sahaja.
-            </p>
-          </div>
-        `;
-        return;
-      }
 
       // Render kad setiap guru di bawah pentadbir ini
       columnStaff.forEach(teacher => {
