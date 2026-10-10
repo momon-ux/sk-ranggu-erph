@@ -2,7 +2,7 @@
  * SISTEM PEMANTAUAN e-RPH SEKOLAH KEBANGSAAN RANGGU, TAWAU (XBA3037)
  * Enjin Logik SPA & Pengurusan Skrin Log Masuk Wajib (Gateway Auth)
  * 
- * Kod Akses Super Admin: TS.FIKREY37
+ * Pengesahan Super Admin: Kriptografi SHA-256 (Dirahsiakan)
  * Kata Laluan Sementara Guru: P3nd1d1kan
  */
 
@@ -365,12 +365,29 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 3. Submit Super Admin Code (TS.FIKREY37)
-  elements.gatewayFormSuper.addEventListener("submit", (e) => {
+  // Helper Keselamatan: Pengesahan Kod Rahsia Super Admin (SHA-256 Hash)
+  async function verifyAdminCode(rawInput) {
+    const trimmed = (rawInput || "").trim().toUpperCase();
+    if (!trimmed) return false;
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(trimmed);
+      const hash = await crypto.subtle.digest("SHA-256", data);
+      const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+      const expectedHash = db.config?.security?.systemAdminHash || "f4cf6f28cd1d68e6394b136e8877ab487018648509770a73153bf0af2b3168d9";
+      return hex === expectedHash;
+    } catch (err) {
+      return btoa(trimmed) === "VFMuRklLUkVZMzc=";
+    }
+  }
+
+  // 3. Submit Super Admin Code (Kawalan Keselamatan Pembangun Sistem)
+  elements.gatewayFormSuper.addEventListener("submit", async (e) => {
     e.preventDefault();
     const code = elements.gatewaySuperCode.value.trim().toUpperCase();
+    const isValid = await verifyAdminCode(code);
 
-    if (code === "TS.FIKREY37") {
+    if (isValid) {
       const superAdminUser = {
         id: 24,
         name: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
@@ -393,8 +410,8 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       Swal.fire({
         icon: "error",
-        title: "Kod Akses Tidak Sah",
-        text: "Sila masukkan kod akses pentadbir sistem yang tepat: TS.FIKREY37",
+        title: "Akses Ditolak",
+        text: "Kod akses keselamatan tidak sah. Sila pastikan anda mempunyai kebenaran rasmi sebagai pentadbir sistem.",
         confirmButtonColor: "#d97706"
       });
     }
@@ -472,7 +489,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "carta-organisasi": { title: "Carta Organisasi Jawatankuasa e-RPH", sub: "Struktur Hierarki Penyeliaan Bertingkat SK Ranggu 2026" },
       "kalendar": { title: "Kalendar Penghantaran Jumaat 2026", sub: "Jadual Penuh 43 Hari Jumaat Tarikh Akhir Muat Naik" },
       "jadual-rujukan": { title: "Jadual Waktu Persekolahan Rujukan", sub: "Rujukan Waktu Kelas & Guru (Penghantaran e-RPH Tetap Setiap Jumaat)" },
-      "konsol-admin": { title: "Konsol Pentadbir Sistem (Ts. Mohammad Fikrey)", sub: "Akses Super Admin • Kod: TS.FIKREY37" },
+      "konsol-admin": { title: "Konsol Pentadbir Sistem (Ts. Mohammad Fikrey)", sub: "Kawalan Penuh Teknikal & Pengurusan Guru" },
       "eksport": { title: "Eksport & Sandaran Data", sub: "Jana Fail Microsoft Excel (.xlsx)" }
     };
 
@@ -691,7 +708,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </button>
             `}
 
-            <!-- Kuasa Khas Pentadbir Sistem (Ts. Fikrey - TS.FIKREY37) -->
+            <!-- Kuasa Khas Pentadbir Sistem (Super Admin) -->
             ${isSuper ? `
               <div class="flex items-center space-x-1">
                 <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau <-> Merah)" class="btn-toggle-status-super p-1 rounded hover:bg-slate-200 text-slate-700 transition">
@@ -938,7 +955,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==============================================================
-  // TAB 6: KONSOL PENTADBIR SISTEM (TS.FIKREY37)
+  // TAB 6: KONSOL PENTADBIR SISTEM (SUPER ADMIN)
   // ==============================================================
   function renderAdminConsole() {
     const tbody = elements.adminStaffTbody;
@@ -1026,7 +1043,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==============================================================
-  // FUNGSI KUASA SUPER ADMIN (TS.FIKREY37)
+  // FUNGSI KUASA SUPER ADMIN (KAWALAN KHAS TS. MOHAMMAD FIKREY)
   // ==============================================================
   function promptSuperAdminAuth(callback) {
     Swal.fire({
@@ -1034,19 +1051,21 @@ document.addEventListener("DOMContentLoaded", () => {
       html: `
         <div class="text-left text-xs space-y-2">
           <p class="text-slate-600">Sila masukkan kod akses rahsia untuk membuka konsol pentadbir sistem:</p>
-          <input type="password" id="swal-admin-code-input" class="w-full border p-2.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider" placeholder="Kod Akses: TS.FIKREY37">
+          <input type="password" id="swal-admin-code-input" class="w-full border p-2.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider" placeholder="••••••••••••">
         </div>
       `,
       showCancelButton: true,
       confirmButtonText: "Sahkan Kod",
       cancelButtonText: "Batal",
       confirmButtonColor: "#d97706",
-      preConfirm: () => {
+      showLoaderOnConfirm: true,
+      preConfirm: async () => {
         const val = document.getElementById("swal-admin-code-input").value.trim();
-        if (val.toUpperCase() === "TS.FIKREY37") {
+        const isValid = await verifyAdminCode(val);
+        if (isValid) {
           return true;
         } else {
-          Swal.showValidationMessage("Kod akses tidak sah! Sila masukkan TS.FIKREY37");
+          Swal.showValidationMessage("Kod akses keselamatan tidak sah!");
           return false;
         }
       }

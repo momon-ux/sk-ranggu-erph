@@ -3,7 +3,7 @@
  * Pangkalan Data Induk Rasmi & Senarai Penuh Staf 2026
  * 
  * Pembangun Sistem: MOHAMMAD FIKREY BIN ABDUL GAPAR (Pentadbir Sistem)
- * Kod Akses Super Admin: TS.FIKREY37
+ * Keselamatan Super Admin: SHA-256 Hash Cryptographic Verification
  * Kata Laluan Sementara Guru: P3nd1d1kan
  */
 
@@ -20,7 +20,7 @@ const ERPH_SYSTEM_CONFIG = {
     totalWeeks: 43
   },
   security: {
-    systemAdminCode: "TS.FIKREY37",
+    systemAdminHash: "f4cf6f28cd1d68e6394b136e8877ab487018648509770a73153bf0af2b3168d9",
     systemAdminName: "Ts. Mohammad Fikrey bin Abdul Gapar",
     defaultTeacherPassword: "P3nd1d1kan"
   },

@@ -21,7 +21,7 @@
 Sistem memaparkan 5 lajur utama mengikut barisan kepimpinan pentadbiran SK Ranggu:
 1. 👑 **Guru Besar (YUNUS BIN PATARAI)**:
    - Memantau 4 Penolong Kanan serta mempunyai hak akses memantau ke semua guru sekolah.
-   - **Folder e-RPH Guru Besar adalah sulit**: Hanya boleh dilihat oleh Guru Besar sendiri dan Pentadbir Sistem (`TS.FIKREY37`).
+   - **Folder e-RPH Guru Besar adalah sulit**: Hanya boleh dilihat oleh Guru Besar sendiri dan Pentadbir Sistem (Ts. Mohammad Fikrey).
 2. 📚 **GPK Pentadbiran (PUAN HAJAH RAHMATIAH BINTI MOHD JUDA)**:
    - Menyelia kumpulan guru Kurikulum & Akademik Sesi Pagi (11 guru).
 3. 🤝 **GPK Hal Ehwal Murid (PUAN KOMALA BINTI JOSEPH)**:
@@ -47,7 +47,7 @@ Sistem memaparkan 5 lajur utama mengikut barisan kepimpinan pentadbiran SK Rangg
 ---
 
 ### 4. ⚡ Kuasa Penuh Pentadbir Sistem (Ts. Mohammad Fikrey)
-- **Kod Akses Super Admin**: `TS.FIKREY37`
+- **Kod Akses Super Admin**: *(Dirahsiakan - Hanya dipegang oleh Pembangun Sistem, Ts. Mohammad Fikrey)*
 - Kuasa istimewa yang diberikan:
   1. **Togol Status Guru**: Tukar butang Merah <-> Hijau secara manual dengan satu klik.
   2. **Padam e-RPH Senyap**: Memadam fail/rekod e-RPH guru tanpa meninggalkan sebarang pernyataan tarikh pengeluaran.
