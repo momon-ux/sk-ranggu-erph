@@ -1,203 +1,206 @@
 /**
- * SISTEM DASHBOARD & JADUAL e-RPH SK RANGGU, TAWAU (XBA3037)
- * Logik Aplikasi Utama (Core SPA Engine)
+ * SISTEM PEMANTAUAN e-RPH SEKOLAH KEBANGSAAN RANGGU, TAWAU (XBA3037)
+ * Enjin Logik SPA & Pengurusan Status Penghantaran Jumaat
+ * 
+ * Kod Akses Super Admin: TS.FIKREY37
+ * Kata Laluan Sementara: P3nd1d1kan
  */
 
 document.addEventListener("DOMContentLoaded", () => {
   // 1. Inisialisasi Pangkalan Data
-  let db = getAppDatabase();
+  let db = getErphDatabase();
 
   // 2. State Aplikasi
   const state = {
-    activeTab: "dashboard",
-    userRole: "pentadbir", // 'pentadbir' atau 'guru'
-    currentUserName: "Yunus bin Patarai (Guru Besar)",
-    dashFilters: {
-      bulan: "Feb",
-      minggu: 7,
-      status: "ALL"
+    activeTab: "pemantauan",
+    activeWeek: db.config.school.currentWeek || 7,
+    currentUser: {
+      id: 1,
+      name: "YUNUS BIN PATARAI",
+      role: "Guru Besar (Peneraju Sekolah)",
+      ic: "721005-12-5911",
+      isSupervisor: true,
+      supervisorId: null,
+      isSuperAdmin: false
     },
-    jdlFilters: {
-      status: "ALL",
-      bulan: "Feb",
-      minggu: 7,
-      guru: "ALL",
-      subjek: "ALL",
-      darjah: "ALL",
-      kelas: "ALL"
-    },
-    highlightSubject: null,
-    highlightTeacher: null
+    isSuperAdminAuthenticated: false,
+    filterSearch: ""
   };
 
-  // Helper untuk format tarikh ISO ke Malaysia
-  function formatDisplayDate(dateStr) {
-    if (!dateStr) return "-";
-    const parts = dateStr.split("-");
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return dateStr;
+  // Helper untuk format tarikh & masa Malaysia
+  function getCurrentFormattedTimestamp() {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = now.getFullYear();
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 jadi 12
+    const strHours = String(hours).padStart(2, "0");
+
+    return `${day}/${month}/${year}, ${strHours}:${minutes} ${ampm}`;
+  }
+
+  // Dapatkan maklumat hari Jumaat bagi minggu tertentu
+  function getFridayInfo(weekNum) {
+    const f = db.config.fridays2026.find(item => item.minggu === parseInt(weekNum));
+    return f || { minggu: weekNum, tarikh: "2026-02-20", label: "Jumaat" };
+  }
+
+  // Normalisasi format IC untuk perbandingan (tanpa sengkang)
+  function cleanIc(icStr) {
+    if (!icStr) return "";
+    return String(icStr).replace(/[^0-9]/g, "").trim();
   }
 
   // 3. Elemen DOM
   const elements = {
-    topTitle: document.getElementById("top-title"),
-    headerActiveWeek: document.getElementById("header-active-week"),
-    userAvatar: document.getElementById("user-avatar"),
-    currentUserName: document.getElementById("current-user-name"),
-    currentUserRole: document.getElementById("current-user-role"),
-    toggleUserRole: document.getElementById("toggle-user-role"),
+    pageTitle: document.getElementById("page-title"),
+    pageSubtitle: document.getElementById("page-subtitle"),
+    headerWeekSelect: document.getElementById("header-week-select"),
+    headerFridayDate: document.getElementById("header-friday-date"),
+    authDisplayName: document.getElementById("auth-display-name"),
+    authDisplayRole: document.getElementById("auth-display-role"),
+    userBadgeIcon: document.getElementById("user-badge-icon"),
+    btnOpenLoginModal: document.getElementById("btn-open-login-modal"),
+    btnQuickAdminAuth: document.getElementById("btn-quick-admin-auth"),
+    navBtnAdminConsole: document.getElementById("nav-btn-admin-console"),
+    btnRefreshApp: document.getElementById("btn-refresh-app"),
+    btnPrintScreen: document.getElementById("btn-print-screen"),
     sidebar: document.getElementById("sidebar"),
     mobileMenuToggle: document.getElementById("mobile-menu-toggle"),
     mobileMenuClose: document.getElementById("mobile-menu-close"),
     navLinks: document.querySelectorAll(".nav-link"),
     tabContents: document.querySelectorAll(".tab-content"),
 
-    // Dashboard Elements
-    dashFilterBulan: document.getElementById("dash-filter-bulan"),
-    dashFilterMinggu: document.getElementById("dash-filter-minggu"),
-    dashStatusTabs: document.querySelectorAll(".dash-status-tab"),
-    kpiRedPct: document.getElementById("kpi-red-pct"),
-    kpiRedCount: document.getElementById("kpi-red-count"),
-    kpiYellowPct: document.getElementById("kpi-yellow-pct"),
-    kpiYellowCount: document.getElementById("kpi-yellow-count"),
-    kpiBluePct: document.getElementById("kpi-blue-pct"),
-    kpiBlueCount: document.getElementById("kpi-blue-count"),
-    kpiGreenPct: document.getElementById("kpi-green-pct"),
-    kpiGreenCount: document.getElementById("kpi-green-count"),
-    darjahCardsContainer: document.getElementById("darjah-cards-container"),
-    subjectCardsContainer: document.getElementById("subject-cards-container"),
+    // Tab 1 Elements
+    statTotalHijau: document.getElementById("stat-total-hijau"),
+    statTotalMerah: document.getElementById("stat-total-merah"),
+    statTotalPct: document.getElementById("stat-total-pct"),
+    pentadbirColumnsWrapper: document.getElementById("pentadbir-columns-wrapper"),
 
-    // Jadual Elements
-    jdlFilterStatus: document.getElementById("jdl-filter-status"),
-    jdlFilterBulan: document.getElementById("jdl-filter-bulan"),
-    jdlFilterMinggu: document.getElementById("jdl-filter-minggu"),
-    jdlFilterGuru: document.getElementById("jdl-filter-guru"),
-    jdlFilterSubjek: document.getElementById("jdl-filter-subjek"),
-    jdlFilterDarjah: document.getElementById("jdl-filter-darjah"),
-    jdlFilterKelas: document.getElementById("jdl-filter-kelas"),
-    btnResetFilters: document.getElementById("btn-reset-filters"),
-    timetableContainer: document.getElementById("timetable-matrix-container"),
+    // Tab 2 Portal Guru Elements
+    portalTeacherAvatar: document.getElementById("portal-teacher-avatar"),
+    portalTeacherName: document.getElementById("portal-teacher-name"),
+    portalTeacherDetails: document.getElementById("portal-teacher-details"),
+    portalUploadWeekTitle: document.getElementById("portal-upload-week-title"),
+    portalCurrentStatusBadge: document.getElementById("portal-current-status-badge"),
+    btnPortalChangePwd: document.getElementById("btn-portal-change-pwd"),
+    formTeacherUpload: document.getElementById("form-teacher-upload"),
+    teacherUploadWeek: document.getElementById("teacher-upload-week"),
+    teacherUploadDate: document.getElementById("teacher-upload-date"),
+    teacherUploadLink: document.getElementById("teacher-upload-link"),
+    teacherUploadFilename: document.getElementById("teacher-upload-filename"),
+    teacherUploadCatatan: document.getElementById("teacher-upload-catatan"),
+    portalHistoryTbody: document.getElementById("portal-history-tbody"),
 
-    // Guru & Jadual Waktu Elements
-    guruTableBody: document.getElementById("guru-table-body"),
-    searchGuruInput: document.getElementById("search-guru-input"),
-    scheduleTableBody: document.getElementById("schedule-table-body"),
-    btnAddScheduleSlot: document.getElementById("btn-add-schedule-slot"),
+    // Tab 4 Calendar Elements
+    calendarFridaysGrid: document.getElementById("calendar-fridays-grid"),
+    calCurrentDateDisplay: document.getElementById("cal-current-date-display"),
 
-    // Export & Settings Elements
-    btnQuickExport: document.getElementById("btn-quick-export"),
-    btnExportFullExcel: document.getElementById("btn-export-full-excel"),
-    btnTriggerImport: document.getElementById("btn-trigger-import"),
-    importExcelFile: document.getElementById("import-excel-file"),
-    btnResetDemo: document.getElementById("btn-reset-demo"),
-    btnPrintView: document.getElementById("btn-print-view"),
-    btnRefreshData: document.getElementById("btn-refresh-data"),
-    btnSaveSettings: document.getElementById("btn-save-settings"),
+    // Tab 5 Timetable Elements
+    jadualRujukanContainer: document.getElementById("jadual-rujukan-container"),
+
+    // Tab 6 Admin Console Elements
+    adminSearchStaff: document.getElementById("admin-search-staff"),
+    adminStaffCount: document.getElementById("admin-staff-count"),
+    adminStaffTbody: document.getElementById("admin-staff-tbody"),
+    btnAdminAddTeacher: document.getElementById("btn-admin-add-teacher"),
+
+    // Tab 7 Export Elements
+    btnExportMonitoringExcel: document.getElementById("btn-export-monitoring-excel"),
+    btnResetSystemData: document.getElementById("btn-reset-system-data"),
 
     // Modals
-    modalRphEntry: document.getElementById("modal-rph-entry"),
-    formRphEntry: document.getElementById("form-rph-entry"),
-    btnCloseRphModal: document.getElementById("btn-close-rph-modal"),
-    btnCancelRph: document.getElementById("btn-cancel-rph"),
-    entrySlotId: document.getElementById("entry-slot-id"),
-    entryRphId: document.getElementById("entry-rph-id"),
-    entryGuru: document.getElementById("entry-guru"),
-    entryTarikh: document.getElementById("entry-tarikh"),
-    entryMinggu: document.getElementById("entry-minggu"),
-    entrySubjek: document.getElementById("entry-subjek"),
-    entryKelas: document.getElementById("entry-kelas"),
-    entryMasa: document.getElementById("entry-masa"),
-    entryTajuk: document.getElementById("entry-tajuk"),
-    entrySk: document.getElementById("entry-sk"),
-    entrySp: document.getElementById("entry-sp"),
-    entryObjektif: document.getElementById("entry-objektif"),
-    entryAktiviti: document.getElementById("entry-aktiviti"),
-    entryBbm: document.getElementById("entry-bbm"),
-    entryPentaksiran: document.getElementById("entry-pentaksiran"),
-    entryRefleksi: document.getElementById("entry-refleksi"),
+    modalLogin: document.getElementById("modal-login"),
+    btnCloseLoginModal: document.getElementById("btn-close-login-modal"),
+    formLoginGuru: document.getElementById("form-login-guru"),
+    loginGuruIc: document.getElementById("login-guru-ic"),
+    loginGuruPwd: document.getElementById("login-guru-pwd"),
+    formLoginPentadbir: document.getElementById("form-login-pentadbir"),
+    formLoginSuperadmin: document.getElementById("form-login-superadmin"),
+    loginAdminCode: document.getElementById("login-admin-code"),
 
-    modalRphReview: document.getElementById("modal-rph-review"),
+    modalChangePassword: document.getElementById("modal-change-password"),
+    btnClosePwdModal: document.getElementById("btn-close-pwd-modal"),
+    formChangePwd: document.getElementById("form-change-pwd"),
+    newPwdInput: document.getElementById("new-pwd-input"),
+    confirmPwdInput: document.getElementById("confirm-pwd-input"),
+
+    modalReviewErph: document.getElementById("modal-review-erph"),
     btnCloseReviewModal: document.getElementById("btn-close-review-modal"),
-    btnCloseReview: document.getElementById("btn-close-review"),
-    btnSaveReview: document.getElementById("btn-save-review"),
-    btnEditAsTeacher: document.getElementById("btn-edit-as-teacher"),
-    reviewRphId: document.getElementById("review-rph-id"),
-    reviewModalTeacherInfo: document.getElementById("review-modal-teacher-info"),
-    reviewCurrentBadge: document.getElementById("review-current-badge"),
-    reviewDateInfo: document.getElementById("review-date-info"),
-    reviewSlotInfo: document.getElementById("review-slot-info"),
-    reviewTajuk: document.getElementById("review-tajuk"),
-    reviewSk: document.getElementById("review-sk"),
-    reviewSp: document.getElementById("review-sp"),
-    reviewObjektif: document.getElementById("review-objektif"),
-    reviewAktiviti: document.getElementById("review-aktiviti"),
-    reviewBbm: document.getElementById("review-bbm"),
-    reviewPentaksiran: document.getElementById("review-pentaksiran"),
-    reviewRefleksi: document.getElementById("review-refleksi"),
-    reviewStatusSelect: document.getElementById("review-status-select"),
-    reviewPentadbirSelect: document.getElementById("review-pentadbir-select"),
-    reviewKomenInput: document.getElementById("review-komen-input")
+    modalReviewGuruName: document.getElementById("modal-review-guru-name"),
+    modalReviewWeekLabel: document.getElementById("modal-review-week-label"),
+    modalReviewStatusBox: document.getElementById("modal-review-status-box"),
+    modalReviewStatusText: document.getElementById("modal-review-status-text"),
+    modalReviewTimestamp: document.getElementById("modal-review-timestamp"),
+    modalReviewFilename: document.getElementById("modal-review-filename"),
+    modalReviewOpenLink: document.getElementById("modal-review-open-link"),
+    modalReviewCatatan: document.getElementById("modal-review-catatan"),
+    modalReviewUlasanInput: document.getElementById("modal-review-ulasan-input"),
+    btnSaveUlasanPentadbir: document.getElementById("btn-save-ulasan-pentadbir"),
+
+    modalAdminManageStaff: document.getElementById("modal-admin-manage-staff"),
+    btnCloseManageStaff: document.getElementById("btn-close-manage-staff"),
+    formManageStaff: document.getElementById("form-manage-staff"),
+    staffFormId: document.getElementById("staff-form-id"),
+    staffFormName: document.getElementById("staff-form-name"),
+    staffFormIc: document.getElementById("staff-form-ic"),
+    staffFormSession: document.getElementById("staff-form-session"),
+    staffFormRole: document.getElementById("staff-form-role"),
+    staffFormSupervisor: document.getElementById("staff-form-supervisor"),
+    staffFormStatus: document.getElementById("staff-form-status"),
+    staffReasonWrapper: document.getElementById("staff-reason-wrapper"),
+    staffFormReason: document.getElementById("staff-form-reason"),
+    btnAdminRemoveStaff: document.getElementById("btn-admin-remove-staff"),
+    modalStaffTitle: document.getElementById("modal-staff-title")
   };
 
-  // 4. Inisialisasi Opsyen Dropdown
-  function initDropdownOptions() {
-    // Minggu (1 hingga 43)
-    const mingguOptions = ['<option value="ALL">Semua Minggu</option>'];
+  let activeReviewUploadId = null;
+
+  // 4. Inisialisasi Pilihan Minggu Header
+  function initWeekOptions() {
+    elements.headerWeekSelect.innerHTML = "";
+    elements.teacherUploadWeek.innerHTML = "";
+
     for (let w = 1; w <= db.config.school.totalWeeks; w++) {
-      mingguOptions.push(`<option value="${w}">Minggu ${w}</option>`);
+      const opt = document.createElement("option");
+      opt.value = w;
+      opt.textContent = `Minggu ${w}`;
+      if (w === state.activeWeek) opt.selected = true;
+      elements.headerWeekSelect.appendChild(opt);
+
+      const optPortal = document.createElement("option");
+      optPortal.value = w;
+      optPortal.textContent = `Minggu ${w}`;
+      if (w === state.activeWeek) optPortal.selected = true;
+      elements.teacherUploadWeek.appendChild(optPortal);
     }
-    elements.dashFilterMinggu.innerHTML = mingguOptions.join("");
-    elements.jdlFilterMinggu.innerHTML = mingguOptions.join("");
 
-    // Set minggu semasa (default Minggu 7)
-    elements.dashFilterMinggu.value = db.config.school.currentWeek;
-    elements.jdlFilterMinggu.value = db.config.school.currentWeek;
+    updateFridayDisplay();
+  }
 
-    // Guru Dropdown
-    const guruOptions = ['<option value="ALL">Semua Guru</option>'];
-    const guruModalOptions = [];
-    db.teachers.forEach(g => {
-      guruOptions.push(`<option value="${g.id}">${g.name} (${g.id})</option>`);
-      guruModalOptions.push(`<option value="${g.id}">${g.name} (${g.id})</option>`);
-    });
-    elements.jdlFilterGuru.innerHTML = guruOptions.join("");
-    elements.entryGuru.innerHTML = guruModalOptions.join("");
-
-    // Subjek Dropdown
-    const subjekOptions = ['<option value="ALL">Semua Subjek</option>'];
-    const subjekModalOptions = [];
-    db.subjects.forEach(s => {
-      subjekOptions.push(`<option value="${s.name}">${s.name}</option>`);
-      subjekModalOptions.push(`<option value="${s.name}">${s.name}</option>`);
-    });
-    elements.jdlFilterSubjek.innerHTML = subjekOptions.join("");
-    elements.entrySubjek.innerHTML = subjekModalOptions.join("");
-
-    // Kelas Dropdown
-    const kelasOptions = ['<option value="ALL">Semua Kelas</option>'];
-    const kelasModalOptions = [];
-    db.darjahList.forEach(d => {
-      d.classes.forEach(c => {
-        kelasOptions.push(`<option value="${c}">${c}</option>`);
-        kelasModalOptions.push(`<option value="${c}">${c}</option>`);
-      });
-    });
-    elements.jdlFilterKelas.innerHTML = kelasOptions.join("");
-    elements.entryKelas.innerHTML = kelasModalOptions.join("");
-
-    // Pentadbir Penyemak
-    const approverOptions = [];
-    db.config.approvers.forEach(a => {
-      approverOptions.push(`<option value="${a.name} (${a.role})">${a.name} (${a.role})</option>`);
-    });
-    elements.reviewPentadbirSelect.innerHTML = approverOptions.join("");
+  function updateFridayDisplay() {
+    const f = getFridayInfo(state.activeWeek);
+    elements.headerFridayDate.textContent = f.label;
+    elements.teacherUploadDate.value = f.label;
+    elements.portalUploadWeekTitle.textContent = `Penghantaran e-RPH Minggu ${state.activeWeek} (${f.label})`;
   }
 
   // 5. Penukaran Tab Navigasi
-  function switchTab(targetTab) {
-    state.activeTab = targetTab;
+  function switchTab(tabId) {
+    state.activeTab = tabId;
+
+    // Jika tab adalah Konsol Admin dan belum disahkan, minta kod akses
+    if (tabId === "konsol-admin" && !state.isSuperAdminAuthenticated) {
+      promptSuperAdminAuth();
+      return;
+    }
+
     elements.navLinks.forEach(link => {
-      if (link.dataset.tab === targetTab) {
+      if (link.dataset.tab === tabId) {
         link.classList.add("bg-sky-600", "text-white", "shadow-sm");
         link.classList.remove("text-slate-300", "hover:bg-slate-800", "hover:text-white");
       } else {
@@ -206,32 +209,36 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    elements.tabContents.forEach(section => {
-      if (section.id === `tab-${targetTab}`) {
-        section.classList.remove("hidden");
+    elements.tabContents.forEach(content => {
+      if (content.id === `tab-${tabId}`) {
+        content.classList.remove("hidden");
       } else {
-        section.classList.add("hidden");
+        content.classList.add("hidden");
       }
     });
 
     // Kemaskini Tajuk Header
     const titles = {
-      dashboard: "Dashboard Pentadbir - Sistem RPH",
-      jadual: "Jadual RPH - Sistem RPH",
-      guru: "Senarai Guru & Pendidik SK Ranggu",
-      jadualwaktu: "Pengurusan Jadual Waktu",
-      export: "Eksport & Import Data e-RPH",
-      tetapan: "Tetapan Sistem e-RPH"
+      "pemantauan": { title: "Pemantauan Lajur Pentadbir e-RPH", sub: "Penghantaran Mingguan Setiap Jumaat • SK Ranggu Sesi 2026" },
+      "portal-guru": { title: "Portal Peribadi Guru e-RPH", sub: "Pengisian & Semakan Penghantaran e-RPH Nama Sendiri" },
+      "carta-organisasi": { title: "Carta Organisasi Jawatankuasa e-RPH", sub: "Struktur Hierarki Penyeliaan Bertingkat SK Ranggu 2026" },
+      "kalendar": { title: "Kalendar Penghantaran Jumaat 2026", sub: "Jadual Penuh 43 Hari Jumaat Tarikh Akhir Muat Naik" },
+      "jadual-rujukan": { title: "Jadual Waktu Persekolahan Rujukan", sub: "Rujukan Waktu Kelas & Guru (Penghantaran e-RPH Tetap Setiap Jumaat)" },
+      "konsol-admin": { title: "Konsol Pentadbir Sistem (Ts. Mohammad Fikrey)", sub: "Akses Super Admin • Kod: TS.FIKREY37" },
+      "eksport": { title: "Eksport & Sandaran Data", sub: "Jana Fail Microsoft Excel (.xlsx)" }
     };
-    elements.topTitle.textContent = titles[targetTab] || "Sistem RPH";
 
-    // Muat semula data khusus tab
-    if (targetTab === "dashboard") renderDashboard();
-    if (targetTab === "jadual") renderJadualMatrix();
-    if (targetTab === "guru") renderGuruTable();
-    if (targetTab === "jadualwaktu") renderScheduleTable();
+    const currentMeta = titles[tabId] || { title: "Sistem e-RPH", sub: "SK Ranggu, Tawau" };
+    elements.pageTitle.textContent = currentMeta.title;
+    elements.pageSubtitle.textContent = currentMeta.sub;
 
-    // Tutup menu mobil jika terbuka
+    // Render tab berkaitan
+    if (tabId === "pemantauan") renderMonitoringColumns();
+    if (tabId === "portal-guru") renderTeacherPortal();
+    if (tabId === "kalendar") renderCalendarFridays();
+    if (tabId === "jadual-rujukan") renderTimetableReference();
+    if (tabId === "konsol-admin") renderAdminConsole();
+
     if (window.innerWidth < 768) {
       elements.sidebar.classList.add("hidden");
     }
@@ -239,996 +246,1164 @@ document.addEventListener("DOMContentLoaded", () => {
     lucide.createIcons();
   }
 
-  // 6. Logik Pengiraan & Render Dashboard
-  function renderDashboard() {
-    const selectedBulan = elements.dashFilterBulan.value;
-    const selectedMinggu = elements.dashFilterMinggu.value;
-    const selectedStatus = state.dashFilters.status;
+  // 6. Kemaskini Paparan Pengguna Aktif di Header & Sidebar
+  function updateAuthDisplay() {
+    elements.authDisplayName.textContent = state.currentUser.name;
+    elements.authDisplayRole.textContent = state.currentUser.role;
 
-    // Tapis slot jadual
-    let totalSlots = db.schedule.length;
-    let slotRphMap = new Map();
-
-    // Petakan RPH mengikut slotId untuk minggu yang dipilih
-    db.rphList.forEach(r => {
-      const matchMinggu = selectedMinggu === "ALL" || String(r.minggu) === String(selectedMinggu);
-      const matchBulan = selectedBulan === "ALL" || r.bulan === selectedBulan;
-      if (matchMinggu && matchBulan) {
-        slotRphMap.set(r.slotId, r);
-      }
-    });
-
-    let counts = {
-      tiada: 0,
-      belumDisahkan: 0,
-      perluEdit: 0,
-      disahkan: 0
-    };
-
-    db.schedule.forEach(slot => {
-      const rph = slotRphMap.get(slot.id);
-      if (!rph) {
-        counts.tiada++;
-      } else if (rph.status === "Belum Disahkan") {
-        counts.belumDisahkan++;
-      } else if (rph.status === "Perlu Edit") {
-        counts.perluEdit++;
-      } else if (rph.status === "Disahkan") {
-        counts.disahkan++;
-      }
-    });
-
-    const total = totalSlots || 1;
-    const pctTiada = Math.round((counts.tiada / total) * 100);
-    const pctBelum = Math.round((counts.belumDisahkan / total) * 100);
-    const pctEdit = Math.round((counts.perluEdit / total) * 100);
-    const pctSah = Math.round((counts.disahkan / total) * 100);
-
-    // Kemaskini Kad KPI
-    elements.kpiRedPct.textContent = `${pctTiada}%`;
-    elements.kpiRedCount.textContent = `${counts.tiada} Slot • Belum Hantar`;
-
-    elements.kpiYellowPct.textContent = `${pctBelum}%`;
-    elements.kpiYellowCount.textContent = `${counts.belumDisahkan} Slot • Belum Semak`;
-
-    elements.kpiBluePct.textContent = `${pctEdit}%`;
-    elements.kpiBlueCount.textContent = `${counts.perluEdit} Slot • Perlu Edit`;
-
-    elements.kpiGreenPct.textContent = `${pctSah}%`;
-    elements.kpiGreenCount.textContent = `${counts.disahkan} Slot • Disahkan`;
-
-    // Render Seksyen Ikut Darjah (Darjah 1 hingga Darjah 6)
-    renderDarjahCards(slotRphMap);
-
-    // Render Seksyen Ikut Subjek (12 Panitia)
-    renderSubjectCards(slotRphMap);
-  }
-
-  function renderDarjahCards(slotRphMap) {
-    const container = elements.darjahCardsContainer;
-    container.innerHTML = "";
-
-    db.darjahList.forEach(item => {
-      const slotsInDarjah = db.schedule.filter(s => s.darjah === item.darjah);
-      let countSubmitted = 0;
-      slotsInDarjah.forEach(s => {
-        if (slotRphMap.has(s.id)) countSubmitted++;
-      });
-
-      const totalInDarjah = slotsInDarjah.length || 1;
-      const pct = Math.round((countSubmitted / totalInDarjah) * 100);
-
-      const card = document.createElement("div");
-      card.className = "category-card bg-slate-50 hover:bg-white border border-slate-200 hover:border-sky-400 p-3 rounded-xl shadow-xs transition text-center";
-      card.innerHTML = `
-        <div class="text-2xl mb-1">${item.icon}</div>
-        <h4 class="font-extrabold text-xs text-slate-800">${item.label}</h4>
-        <div class="text-lg font-black text-sky-700 my-0.5">${pct}%</div>
-        <p class="text-[10px] text-slate-500 font-medium">${countSubmitted} / ${slotsInDarjah.length} RPH</p>
-      `;
-
-      // Klik kad darjah -> lompat terus ke Jadual RPH ditapis mengikut darjah tersebut!
-      card.addEventListener("click", () => {
-        elements.jdlFilterDarjah.value = String(item.darjah);
-        elements.jdlFilterSubjek.value = "ALL";
-        elements.jdlFilterGuru.value = "ALL";
-        state.jdlFilters.darjah = String(item.darjah);
-        state.jdlFilters.subjek = "ALL";
-        state.jdlFilters.guru = "ALL";
-        switchTab("jadual");
-      });
-
-      container.appendChild(card);
-    });
-  }
-
-  function renderSubjectCards(slotRphMap) {
-    const container = elements.subjectCardsContainer;
-    container.innerHTML = "";
-
-    db.subjects.forEach(sub => {
-      const slotsInSub = db.schedule.filter(s => s.subjek === sub.name);
-      let countSubmitted = 0;
-      slotsInSub.forEach(s => {
-        if (slotRphMap.has(s.id)) countSubmitted++;
-      });
-
-      const totalInSub = slotsInSub.length || 1;
-      const pct = slotsInSub.length > 0 ? Math.round((countSubmitted / totalInSub) * 100) : 0;
-
-      const card = document.createElement("div");
-      card.className = `category-card ${sub.bg} border ${sub.border} hover:shadow-md p-3 rounded-xl transition text-center`;
-      card.innerHTML = `
-        <div class="flex items-center justify-center w-8 h-8 mx-auto rounded-lg bg-white/80 shadow-xs mb-1.5 ${sub.text}">
-          <i data-lucide="${sub.icon}" class="w-4 h-4"></i>
-        </div>
-        <h4 class="font-bold text-xs ${sub.text} truncate" title="${sub.name}">${sub.name}</h4>
-        <div class="text-lg font-black text-slate-900 my-0.5">${pct}%</div>
-        <p class="text-[10px] text-slate-600 font-medium">${countSubmitted} / ${slotsInSub.length} RPH</p>
-      `;
-
-      // Klik kad subjek -> lompat ke Jadual RPH dan serlahkan (highlight) semua slot subjek ini!
-      card.addEventListener("click", () => {
-        elements.jdlFilterSubjek.value = sub.name;
-        state.jdlFilters.subjek = sub.name;
-        state.highlightSubject = sub.name;
-        switchTab("jadual");
-      });
-
-      container.appendChild(card);
-    });
-  }
-
-  // 7. Render Matriks Jadual Waktu & Penyerlahan Slot
-  function renderJadualMatrix() {
-    const container = elements.timetableContainer;
-    container.innerHTML = "";
-
-    const fStatus = elements.jdlFilterStatus.value;
-    const fBulan = elements.jdlFilterBulan.value;
-    const fMinggu = elements.jdlFilterMinggu.value;
-    const fGuru = elements.jdlFilterGuru.value;
-    const fSubjek = elements.jdlFilterSubjek.value;
-    const fDarjah = elements.jdlFilterDarjah.value;
-    const fKelas = elements.jdlFilterKelas.value;
-
-    // Kumpulkan RPH untuk minggu/bulan aktif
-    const rphMap = new Map();
-    db.rphList.forEach(r => {
-      const matchMinggu = fMinggu === "ALL" || String(r.minggu) === String(fMinggu);
-      const matchBulan = fBulan === "ALL" || r.bulan === fBulan;
-      if (matchMinggu && matchBulan) {
-        rphMap.set(r.slotId, r);
-      }
-    });
-
-    // Dapatkan senarai kelas unik daripada jadual
-    let uniqueClasses = [...new Set(db.schedule.map(s => s.kelas))];
-
-    // Tapis mengikut Darjah jika dipilih
-    if (fDarjah !== "ALL") {
-      uniqueClasses = uniqueClasses.filter(c => {
-        const sampleSlot = db.schedule.find(s => s.kelas === c);
-        return sampleSlot && String(sampleSlot.darjah) === String(fDarjah);
-      });
+    // Badge Icon
+    if (state.isSuperAdminAuthenticated) {
+      elements.userBadgeIcon.textContent = "TS";
+      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-amber-500 text-white font-black flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+    } else if (state.currentUser.id === 1) {
+      elements.userBadgeIcon.textContent = "GB";
+      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-amber-500 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+    } else if (state.currentUser.isSupervisor) {
+      elements.userBadgeIcon.textContent = "PK";
+      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-sky-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+    } else {
+      elements.userBadgeIcon.textContent = "G";
+      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
     }
 
-    // Tapis mengikut Kelas jika dipilih
-    if (fKelas !== "ALL") {
-      uniqueClasses = uniqueClasses.filter(c => c === fKelas);
-    }
-
-    if (uniqueClasses.length === 0) {
-      container.innerHTML = `
-        <div class="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-500">
-          <i data-lucide="calendar-x" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
-          <p class="font-bold text-sm">Tiada slot jadual ditemui untuk penapis yang dipilih.</p>
-          <button id="btn-empty-reset" class="mt-3 text-xs text-sky-600 hover:underline font-semibold">Set semula penapis</button>
-        </div>
-      `;
-      const btnEmptyReset = document.getElementById("btn-empty-reset");
-      if (btnEmptyReset) {
-        btnEmptyReset.addEventListener("click", resetAllFilters);
+    // Jika pengguna adalah guru biasa, default tab ke portal-guru
+    if (!state.currentUser.isSupervisor && !state.isSuperAdminAuthenticated) {
+      if (state.activeTab === "pemantauan") {
+        switchTab("portal-guru");
       }
-      lucide.createIcons();
-      return;
     }
+  }
 
-    // Susun mengikut Kelas
-    uniqueClasses.forEach(className => {
-      const classSlots = db.schedule.filter(s => s.kelas === className);
+  // ==============================================================
+  // TAB 1: RENDER PEMANTAUAN 5 LAJUR PENTADBIR
+  // ==============================================================
+  function renderMonitoringColumns() {
+    const container = elements.pentadbirColumnsWrapper;
+    container.innerHTML = "";
 
-      // Cipta kad kontena jadual kelas
-      const classCard = document.createElement("div");
-      classCard.className = "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6";
+    const weekNum = state.activeWeek;
 
-      // Header Kelas
-      classCard.innerHTML = `
-        <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
-          <div class="flex items-center space-x-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
-            <h3 class="font-bold text-sm tracking-wide">Kelas ${className}</h3>
+    // Ambil semua guru aktif
+    const activeTeachers = db.staffList.filter(s => s.status === "Aktif");
+
+    // Ambil senarai upload bagi minggu ini
+    const weekUploads = db.uploads.filter(u => u.minggu === weekNum);
+
+    // Kira statistik keseluruhan
+    let totalHijau = 0;
+    let totalMerah = 0;
+
+    activeTeachers.forEach(t => {
+      const up = weekUploads.find(u => u.guruId === t.id);
+      if (up && up.status === "HIJAU") {
+        totalHijau++;
+      } else {
+        totalMerah++;
+      }
+    });
+
+    const totalActive = activeTeachers.length || 1;
+    const overallPct = Math.round((totalHijau / totalActive) * 100);
+
+    elements.statTotalHijau.textContent = `${totalHijau} Guru Hijau`;
+    elements.statTotalMerah.textContent = `${totalMerah} Guru Merah`;
+    elements.statTotalPct.textContent = `${overallPct}%`;
+
+    // Render setiap satu daripada 5 lajur pentadbir
+    db.pentadbir.forEach(col => {
+      // Periksa kawalan privasi pentadbir:
+      // "untuk pentadbir sistem dan pentadbir sekolah mereka boleh lihat senarai guru di bawah mereka sahaja..masing2 kecuali guru besar sebab hanya guru besar boleh lihat ke semua guru"
+      const isGb = (state.currentUser.id === 1);
+      const isSuper = state.isSuperAdminAuthenticated;
+      const isColOwner = (state.currentUser.id === col.id);
+      const canViewThisColumn = (isGb || isSuper || isColOwner);
+
+      // Cari guru-guru seliaan di bawah pentadbir ini
+      let columnStaff = [];
+      if (col.id === 1) {
+        // Guru Besar menyelia 4 Penolong Kanan + rekod Guru Besar sendiri
+        const gpkStaff = db.staffList.filter(s => [2, 3, 4, 5].includes(s.id));
+        const gbRecord = db.staffList.filter(s => s.id === 1);
+        columnStaff = [...gbRecord, ...gpkStaff];
+      } else {
+        columnStaff = db.staffList.filter(s => s.supervisorId === col.id && s.status === "Aktif");
+      }
+
+      // Kira bilangan hijau & merah dalam lajur ini
+      let colHijau = 0;
+      let colMerah = 0;
+      columnStaff.forEach(s => {
+        const up = weekUploads.find(u => u.guruId === s.id);
+        if (up && up.status === "HIJAU") colHijau++;
+        else colMerah++;
+      });
+      const colTotal = columnStaff.length || 1;
+      const colPct = Math.round((colHijau / colTotal) * 100);
+
+      // Cipta Elemen Lajur
+      const colCard = document.createElement("div");
+      colCard.className = "bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col";
+
+      // Header Lajur
+      colCard.innerHTML = `
+        <div class="${col.headerBg} text-white p-3.5 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-[9px] font-black uppercase tracking-wider bg-black/20 px-2 py-0.5 rounded-full">${col.shortTitle}</span>
+            <span class="text-[11px] font-black">${colHijau}/${columnStaff.length} Hantar (${colPct}%)</span>
           </div>
-          <span class="text-xs text-slate-300 font-medium">Minggu ${fMinggu === "ALL" ? db.config.school.currentWeek : fMinggu} • Sesi Pagi</span>
+          <h3 class="font-black text-xs sm:text-sm tracking-wide leading-tight truncate" title="${col.name}">${col.name}</h3>
+          <p class="text-[10px] text-white/80 font-medium">${col.role}</p>
         </div>
-        <div class="overflow-x-auto timetable-container">
-          <table class="timetable-table text-xs text-slate-700">
-            <thead>
-              <tr class="text-slate-600 font-bold border-b border-slate-200">
-                <th class="py-2.5 px-3 text-left w-24 bg-slate-100">Hari \\ Waktu</th>
-                ${db.config.timeSlots.map(time => `<th class="py-2.5 px-2 text-center font-bold text-[11px] min-w-[130px]">${time}</th>`).join("")}
-              </tr>
-            </thead>
-            <tbody id="tbody-${className.replace(/\s+/g, '-')}" class="divide-y divide-slate-100">
-            </tbody>
-          </table>
+
+        <div class="p-2.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-600">
+          <span>Kumpulan Guru Seliaan</span>
+          <span class="text-sky-700">${columnStaff.length} Guru</span>
+        </div>
+
+        <!-- Body Senarai Guru di Bawah Pentadbir Ini -->
+        <div class="p-2 space-y-2 flex-1 max-h-[680px] overflow-y-auto" id="col-body-${col.id}">
         </div>
       `;
 
-      container.appendChild(classCard);
-      const tbody = classCard.querySelector(`#tbody-${className.replace(/\s+/g, '-')}`);
+      container.appendChild(colCard);
+      const colBody = colCard.querySelector(`#col-body-${col.id}`);
 
-      // Cipta baris untuk setiap hari (Isnin - Jumaat)
-      db.config.days.forEach(day => {
-        const tr = document.createElement("tr");
-        tr.className = "hover:bg-slate-50/50 transition";
+      // Jika pengguna tidak mempunyai kebenaran melihat lajur ini
+      if (!canViewThisColumn) {
+        colBody.innerHTML = `
+          <div class="p-6 text-center space-y-2 text-slate-400">
+            <i data-lucide="lock" class="w-8 h-8 mx-auto text-slate-300"></i>
+            <p class="font-bold text-xs text-slate-600">Akses Terhad</p>
+            <p class="text-[10px] leading-relaxed">
+              Anda hanya dibenarkan melihat senarai guru di bawah seliaan anda sahaja.
+            </p>
+          </div>
+        `;
+        return;
+      }
 
-        // Kolum Hari
-        const tdDay = document.createElement("td");
-        tdDay.className = "py-2.5 px-3 font-bold text-slate-800 bg-slate-50/80 border-r border-slate-200";
-        tdDay.textContent = day;
-        tr.appendChild(tdDay);
+      // Render kad setiap guru di bawah pentadbir ini
+      columnStaff.forEach(teacher => {
+        // PERATURAN PRIVASI KHAS GURU BESAR:
+        // "tiada siapa boleh lihat folder penghantaran rph guru besar kecuali guru besar dan pentadbir sistem"
+        const isTeacherGb = (teacher.id === 1);
+        const canViewGbFolder = (state.currentUser.id === 1 || isSuper);
 
-        // Kolum Slot Waktu
-        db.config.timeSlots.forEach(time => {
-          const td = document.createElement("td");
-          td.className = "p-1.5 align-top border border-slate-200";
+        const up = weekUploads.find(u => u.guruId === teacher.id);
+        const isUploaded = (up && up.status === "HIJAU");
 
-          // Waktu Rehat
-          if (time.includes("10:00-10:30")) {
-            td.className += " bg-slate-100/70 text-center font-bold text-slate-400 text-[11px] align-middle";
-            td.textContent = "REHAT";
-            tr.appendChild(td);
-            return;
-          }
+        const teacherCard = document.createElement("div");
+        teacherCard.className = `teacher-monitor-card p-3 rounded-xl border ${isUploaded ? 'bg-emerald-50/40 border-emerald-300' : 'bg-rose-50/40 border-rose-200'} space-y-2 text-xs relative`;
 
-          // Cari slot yang sepadan
-          const slot = classSlots.find(s => s.hari === day && s.masa === time);
+        // Maklumat Masa Kemaskini
+        let timestampDisplay = "Belum memuat naik e-RPH";
+        if (isUploaded && up.uploadedAt) {
+          timestampDisplay = `Dikemaskini: ${up.uploadedAt}`;
+        }
 
-          if (!slot) {
-            td.innerHTML = `<div class="h-14 rounded-lg bg-slate-50/40 border border-dashed border-slate-200 flex items-center justify-center text-[10px] text-slate-300">-</div>`;
-            tr.appendChild(td);
-            return;
-          }
-
-          const rph = rphMap.get(slot.id);
-          let statusLabel = "Tiada RPH";
-          let statusClass = "slot-status-red";
-          let badgeBg = "bg-rose-500";
-
-          if (rph) {
-            statusLabel = rph.status;
-            if (rph.status === "Disahkan") {
-              statusClass = "slot-status-green";
-              badgeBg = "bg-emerald-500";
-            } else if (rph.status === "Perlu Edit") {
-              statusClass = "slot-status-blue";
-              badgeBg = "bg-sky-500";
-            } else if (rph.status === "Belum Disahkan") {
-              statusClass = "slot-status-yellow";
-              badgeBg = "bg-amber-500";
-            }
-          }
-
-          // Semak Penapis Status
-          let matchesStatusFilter = true;
-          if (fStatus !== "ALL") {
-            matchesStatusFilter = (statusLabel === fStatus);
-          }
-
-          // Semak Penyerlahan (Highlighting)
-          let isHighlighted = false;
-          let isDimmed = false;
-          const hasActiveSubjectFilter = (fSubjek !== "ALL");
-          const hasActiveGuruFilter = (fGuru !== "ALL");
-
-          if (hasActiveSubjectFilter || hasActiveGuruFilter) {
-            const matchSub = (!hasActiveSubjectFilter || slot.subjek === fSubjek);
-            const matchGur = (!hasActiveGuruFilter || slot.guruId === fGuru);
-            if (matchSub && matchGur) {
-              isHighlighted = true;
-            } else {
-              isDimmed = true;
-            }
-          }
-
-          if (!matchesStatusFilter) {
-            isDimmed = true;
-          }
-
-          // Cipta Kad Slot
-          const slotCard = document.createElement("div");
-          let extraClasses = "";
-          if (isHighlighted) extraClasses += " slot-highlighted ring-2 ring-sky-500 bg-white ";
-          if (isDimmed) extraClasses += " slot-dimmed ";
-
-          slotCard.className = `slot-card ${statusClass} ${extraClasses} p-2 rounded-lg border shadow-xs min-h-[58px] flex flex-col justify-between`;
-          slotCard.innerHTML = `
-            <div>
-              <div class="flex items-center justify-between gap-1">
-                <span class="font-extrabold text-[11px] leading-tight truncate" title="${slot.subjek}">${slot.subjek}</span>
-                <span class="w-2 h-2 rounded-full ${badgeBg} flex-shrink-0" title="${statusLabel}"></span>
-              </div>
-              <p class="text-[10px] text-slate-600 font-medium truncate mt-0.5" title="${slot.guruName}">
-                ${slot.guruName}
+        teacherCard.innerHTML = `
+          <div class="flex items-start justify-between gap-1">
+            <div class="min-w-0 flex-1">
+              <span class="text-[9px] font-mono font-bold text-slate-400 block">${teacher.code} • ${teacher.session || 'Pagi'}</span>
+              <h4 class="font-extrabold text-xs text-slate-900 leading-snug truncate" title="${teacher.name}">
+                ${teacher.name}
+              </h4>
+              <p class="text-[10px] text-slate-500 truncate" title="${teacher.role}">
+                ${teacher.role}
               </p>
             </div>
-            <div class="flex items-center justify-between mt-1 pt-1 border-t border-black/5 text-[9px] font-semibold">
-              <span class="text-slate-500">${slot.masa}</span>
-              <span class="font-bold uppercase tracking-tight">${statusLabel}</span>
-            </div>
-          `;
+          </div>
 
-          // Klik Slot Card:
-          // Jika Tiada RPH -> Buka Modal Tambah RPH (isi borang)
-          // Jika Ada RPH -> Buka Modal Semakan Pentadbir (semak atau sahkan)
-          slotCard.addEventListener("click", () => {
-            if (!rph) {
-              openRphEntryModal(slot);
-            } else {
-              openRphReviewModal(rph, slot);
-            }
+          <!-- Status Button (Merah / Hijau) -->
+          <div class="pt-1">
+            ${isUploaded ? `
+              <div class="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
+                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                <span>HIJAU - BERJAYA UPLOAD</span>
+              </div>
+            ` : `
+              <div class="w-full py-1.5 px-2.5 rounded-lg bg-rose-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
+                <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                <span>MERAH - BELUM UPLOAD</span>
+              </div>
+            `}
+          </div>
+
+          <!-- Timestamp Text Dinyatakan Dengan Jelas -->
+          <div class="text-[10px] text-slate-600 font-semibold flex items-center justify-between pt-0.5">
+            <span class="truncate ${isUploaded ? 'text-emerald-800 font-bold' : 'text-rose-700 font-medium'}">
+              <i data-lucide="clock" class="w-3 h-3 inline mr-0.5"></i>
+              ${timestampDisplay}
+            </span>
+          </div>
+
+          <!-- Tindakan Butang -->
+          <div class="pt-1 flex items-center justify-between gap-1 border-t border-slate-200/60">
+            ${(isTeacherGb && !canViewGbFolder) ? `
+              <span class="text-[9px] text-slate-400 italic">Folder Sulit Guru Besar</span>
+            ` : `
+              <button data-teacher-id="${teacher.id}" class="btn-open-review text-[10px] font-bold text-sky-700 hover:text-sky-950 flex items-center gap-1">
+                <i data-lucide="folder" class="w-3 h-3"></i>
+                <span>${isUploaded ? 'Buka e-RPH' : 'Perincian'}</span>
+              </button>
+            `}
+
+            <!-- Kuasa Khas Pentadbir Sistem (Ts. Fikrey - TS.FIKREY37) -->
+            ${isSuper ? `
+              <div class="flex items-center space-x-1">
+                <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau <-> Merah)" class="btn-toggle-status-super p-1 rounded hover:bg-slate-200 text-slate-700 transition">
+                  <i data-lucide="refresh-cw" class="w-3 h-3 text-amber-600"></i>
+                </button>
+                ${isUploaded ? `
+                  <button data-teacher-id="${teacher.id}" title="Padam e-RPH Senyap" class="btn-silent-delete-super p-1 rounded hover:bg-rose-100 text-rose-700 transition">
+                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                  </button>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `;
+
+        // Event Listener: Buka Modal Semakan
+        const btnOpenReview = teacherCard.querySelector(".btn-open-review");
+        if (btnOpenReview) {
+          btnOpenReview.addEventListener("click", () => {
+            openReviewErphModal(teacher, up);
           });
+        }
 
-          td.appendChild(slotCard);
-          tr.appendChild(td);
-        });
+        // Event Listener: Super Admin Toggle Status
+        const btnToggleSuper = teacherCard.querySelector(".btn-toggle-status-super");
+        if (btnToggleSuper) {
+          btnToggleSuper.addEventListener("click", () => {
+            toggleTeacherStatusSuperAdmin(teacher.id);
+          });
+        }
 
-        tbody.appendChild(tr);
+        // Event Listener: Super Admin Silent Delete
+        const btnDeleteSuper = teacherCard.querySelector(".btn-silent-delete-super");
+        if (btnDeleteSuper) {
+          btnDeleteSuper.addEventListener("click", () => {
+            silentDeleteErphSuperAdmin(teacher.id);
+          });
+        }
+
+        colBody.appendChild(teacherCard);
       });
     });
 
     lucide.createIcons();
   }
 
-  // 8. Modal Handlers
-  function openRphEntryModal(slot, existingRph = null) {
-    elements.entrySlotId.value = slot ? slot.id : (existingRph ? existingRph.slotId : "");
-    elements.entryRphId.value = existingRph ? existingRph.id : "";
+  // ==============================================================
+  // TAB 2: PORTAL PERIBADI GURU
+  // ==============================================================
+  function renderTeacherPortal() {
+    const teacher = state.currentUser;
 
-    const activeMinggu = elements.jdlFilterMinggu.value === "ALL" ? db.config.school.currentWeek : elements.jdlFilterMinggu.value;
-    const defaultDate = "2026-02-16";
+    elements.portalTeacherAvatar.textContent = teacher.name.charAt(0);
+    elements.portalTeacherName.textContent = teacher.name;
+    elements.portalTeacherDetails.textContent = `No. K/P: ${teacher.ic || '-'} • ${teacher.role}`;
 
-    if (existingRph) {
-      elements.entryGuru.value = existingRph.guruId;
-      elements.entryTarikh.value = existingRph.tarikh || defaultDate;
-      elements.entryMinggu.value = existingRph.minggu || activeMinggu;
-      elements.entrySubjek.value = existingRph.mataPelajaran;
-      elements.entryKelas.value = existingRph.kelas;
-      elements.entryMasa.value = existingRph.masa;
-      elements.entryTajuk.value = existingRph.tajuk;
-      elements.entrySk.value = existingRph.standardKandungan || "";
-      elements.entrySp.value = existingRph.standardPembelajaran || "";
-      elements.entryObjektif.value = existingRph.objektif || "";
-      elements.entryAktiviti.value = existingRph.aktiviti || "";
-      elements.entryBbm.value = existingRph.bbm || "";
-      elements.entryPentaksiran.value = existingRph.pentaksiran || "";
-      elements.entryRefleksi.value = existingRph.refleksi || "";
-      document.getElementById("rph-modal-title").textContent = "Kemaskini e-RPH";
+    // Semak status minggu aktif
+    const weekNum = state.activeWeek;
+    const up = db.uploads.find(u => u.guruId === teacher.id && u.minggu === weekNum);
+
+    if (up && up.status === "HIJAU") {
+      elements.portalCurrentStatusBadge.textContent = "HIJAU (Berjaya Upload)";
+      elements.portalCurrentStatusBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300";
+      elements.teacherUploadLink.value = up.fileUrl || "";
+      elements.teacherUploadFilename.value = up.fileName || "";
+      elements.teacherUploadCatatan.value = up.catatan || "";
     } else {
-      elements.entryGuru.value = slot.guruId;
-      elements.entryTarikh.value = defaultDate;
-      elements.entryMinggu.value = activeMinggu;
-      elements.entrySubjek.value = slot.subjek;
-      elements.entryKelas.value = slot.kelas;
-      elements.entryMasa.value = slot.masa;
-      elements.entryTajuk.value = "";
-      elements.entrySk.value = `SK 1.1 - ${slot.subjek}`;
-      elements.entrySp.value = `SP 1.1.1 - Standard Pembelajaran ${slot.subjek}`;
-      elements.entryObjektif.value = "Pada akhir PdP, sekurang-kurangnya 80% murid dapat menguasai kemahiran yang diajar.";
-      elements.entryAktiviti.value = "1. Set Induksi (5 min): Pengenalan tajuk melalui tayangan gambar.\n2. Perkembangan (20 min): Penerangan konsep dan aktiviti berpusatkan murid.\n3. Penutup (5 min): Rumusan dan latihan pengukuhan.";
-      elements.entryBbm.value = "Buku teks digital, kad imbasan, lembaran kerja";
-      elements.entryPentaksiran.value = "Pemerhatian & Lembaran Kerja";
-      elements.entryRefleksi.value = "Murid memberikan tumpuan yang baik sepanjang PdP.";
-      document.getElementById("rph-modal-title").textContent = "Tambah / Hantar RPH";
+      elements.portalCurrentStatusBadge.textContent = "MERAH (Belum Upload)";
+      elements.portalCurrentStatusBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300";
+      elements.teacherUploadLink.value = "";
+      elements.teacherUploadFilename.value = "";
+      elements.teacherUploadCatatan.value = "";
     }
 
-    elements.modalRphEntry.classList.remove("hidden");
+    elements.teacherUploadWeek.value = state.activeWeek;
+    updateFridayDisplay();
+
+    // Render Jadual Sejarah 43 Minggu
+    const tbody = elements.portalHistoryTbody;
+    tbody.innerHTML = "";
+
+    db.config.fridays2026.forEach(f => {
+      const historyUp = db.uploads.find(u => u.guruId === teacher.id && u.minggu === f.minggu);
+      const isSah = (historyUp && historyUp.status === "HIJAU");
+
+      const tr = document.createElement("tr");
+      tr.className = f.minggu === state.activeWeek ? "bg-sky-50/70 font-bold" : "hover:bg-slate-50";
+
+      tr.innerHTML = `
+        <td class="py-2.5 px-3 font-mono font-bold">M${f.minggu}</td>
+        <td class="py-2.5 px-3 text-slate-600">${f.label}</td>
+        <td class="py-2.5 px-3">
+          ${isSah ? `
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">HIJAU</span>
+          ` : `
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">MERAH</span>
+          `}
+        </td>
+        <td class="py-2.5 px-3 text-slate-500 font-mono text-[10px]">
+          ${isSah ? historyUp.uploadedAt : '—'}
+        </td>
+        <td class="py-2.5 px-3">
+          ${isSah && historyUp.fileUrl ? `
+            <a href="${historyUp.fileUrl}" target="_blank" class="text-sky-600 hover:underline flex items-center gap-1 font-bold">
+              <i data-lucide="external-link" class="w-3 h-3"></i>
+              <span class="truncate max-w-[120px]">${historyUp.fileName || 'Pautan e-RPH'}</span>
+            </a>
+          ` : '<span class="text-slate-400">—</span>'}
+        </td>
+        <td class="py-2.5 px-3 text-slate-600 text-[11px]">
+          ${isSah && historyUp.ulasan ? historyUp.ulasan : '<span class="text-slate-400 italic">Menunggu semakan</span>'}
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    lucide.createIcons();
   }
 
-  function closeRphEntryModal() {
-    elements.modalRphEntry.classList.add("hidden");
-  }
-
-  function openRphReviewModal(rph, slot) {
-    elements.reviewRphId.value = rph.id;
-    elements.reviewModalTeacherInfo.textContent = `Cikgu ${rph.guruName} • ${rph.mataPelajaran} • ${rph.kelas}`;
-
-    // Badge Status
-    const badgeColors = {
-      "Disahkan": "bg-emerald-100 text-emerald-800 border-emerald-300",
-      "Perlu Edit": "bg-sky-100 text-sky-800 border-sky-300",
-      "Belum Disahkan": "bg-amber-100 text-amber-800 border-amber-300"
-    };
-    elements.reviewCurrentBadge.className = `inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeColors[rph.status] || "bg-slate-100"}`;
-    elements.reviewCurrentBadge.textContent = rph.status;
-
-    elements.reviewDateInfo.textContent = `Tarikh: ${formatDisplayDate(rph.tarikh)}`;
-    elements.reviewSlotInfo.textContent = `Minggu ${rph.minggu} • ${rph.masa}`;
-
-    elements.reviewTajuk.textContent = rph.tajuk || "-";
-    elements.reviewSk.textContent = rph.standardKandungan || "-";
-    elements.reviewSp.textContent = rph.standardPembelajaran || "-";
-    elements.reviewObjektif.textContent = rph.objektif || "-";
-    elements.reviewAktiviti.textContent = rph.aktiviti || "-";
-    elements.reviewBbm.textContent = rph.bbm || "-";
-    elements.reviewPentaksiran.textContent = rph.pentaksiran || "-";
-    elements.reviewRefleksi.textContent = rph.refleksi || "-";
-
-    elements.reviewStatusSelect.value = rph.status;
-    elements.reviewKomenInput.value = rph.komenPentadbir || "";
-    if (rph.namaPentadbir) {
-      elements.reviewPentadbirSelect.value = rph.namaPentadbir;
-    }
-
-    elements.modalRphReview.classList.remove("hidden");
-  }
-
-  function closeRphReviewModal() {
-    elements.modalRphReview.classList.add("hidden");
-  }
-
-  // 9. Simpan RPH Baru / Kemaskini RPH
-  elements.formRphEntry.addEventListener("submit", (e) => {
+  // Pengisian Borang Hantar e-RPH Guru
+  elements.formTeacherUpload.addEventListener("submit", (e) => {
     e.preventDefault();
 
-    const rphId = elements.entryRphId.value || `RPH-${String(db.rphList.length + 1).padStart(3, "0")}`;
-    const slotId = elements.entrySlotId.value;
-    const guruId = elements.entryGuru.value;
-    const teacherObj = db.teachers.find(t => t.id === guruId) || { name: "Guru SK Ranggu" };
+    const teacher = state.currentUser;
+    const weekNum = parseInt(elements.teacherUploadWeek.value);
+    const fInfo = getFridayInfo(weekNum);
+    const link = elements.teacherUploadLink.value.trim() || "https://drive.google.com/sample/erph-portal";
+    const filename = elements.teacherUploadFilename.value.trim() || `eRPH_M${weekNum}_${teacher.name.replace(/\s+/g, '_')}.pdf`;
+    const catatan = elements.teacherUploadCatatan.value.trim();
 
-    const newRph = {
-      id: rphId,
-      slotId: slotId,
-      guruId: guruId,
-      guruName: teacherObj.name,
-      tarikh: elements.entryTarikh.value,
-      minggu: parseInt(elements.entryMinggu.value),
-      bulan: "Feb",
-      mataPelajaran: elements.entrySubjek.value,
-      kelas: elements.entryKelas.value,
-      darjah: parseInt(elements.entryKelas.value.charAt(0)) || 1,
-      masa: elements.entryMasa.value,
-      tajuk: elements.entryTajuk.value,
-      standardKandungan: elements.entrySk.value,
-      standardPembelajaran: elements.entrySp.value,
-      objektif: elements.entryObjektif.value,
-      aktiviti: elements.entryAktiviti.value,
-      bbm: elements.entryBbm.value,
-      pentaksiran: elements.entryPentaksiran.value,
-      refleksi: elements.entryRefleksi.value,
-      status: "Belum Disahkan",
-      komenPentadbir: "",
-      namaPentadbir: "",
-      tarikhSemakan: ""
+    // Buat rekod upload baru atau kemaskini rekod sedia ada
+    const existingIndex = db.uploads.findIndex(u => u.guruId === teacher.id && u.minggu === weekNum);
+
+    const uploadRecord = {
+      id: `UPL-M${weekNum}-${teacher.id}`,
+      guruId: teacher.id,
+      guruName: teacher.name,
+      minggu: weekNum,
+      tarikhJumaat: fInfo.tarikh,
+      status: "HIJAU",
+      uploadedAt: getCurrentFormattedTimestamp(),
+      fileName: filename,
+      fileUrl: link,
+      catatan: catatan,
+      supervisorId: teacher.supervisorId,
+      verifiedBy: null,
+      verifiedAt: null,
+      ulasan: null
     };
 
-    const existingIndex = db.rphList.findIndex(r => r.id === rphId);
     if (existingIndex >= 0) {
-      db.rphList[existingIndex] = { ...db.rphList[existingIndex], ...newRph };
+      db.uploads[existingIndex] = { ...db.uploads[existingIndex], ...uploadRecord };
     } else {
-      db.rphList.push(newRph);
+      db.uploads.push(uploadRecord);
     }
 
-    saveAppDatabase(db);
-    closeRphEntryModal();
+    saveErphDatabase(db);
 
     Swal.fire({
       icon: "success",
-      title: "e-RPH Berjaya Dihantar!",
-      text: `RPH bagi kelas ${newRph.kelas} telah direkodkan. Menunggu pengesahan pentadbir.`,
+      title: "e-RPH Berjaya Dimuat Naik!",
+      text: `Status anda untuk Minggu ${weekNum} bertukar kepada HIJAU. Dinyatakan dikemaskini pada ${uploadRecord.uploadedAt}.`,
+      timer: 2500,
+      showConfirmButton: false
+    });
+
+    renderTeacherPortal();
+    renderMonitoringColumns();
+  });
+
+  // ==============================================================
+  // TAB 4: RENDER KALENDAR PENGHANTARAN JUMAAT
+  // ==============================================================
+  function renderCalendarFridays() {
+    const grid = elements.calendarFridaysGrid;
+    grid.innerHTML = "";
+
+    const now = new Date();
+    const dayStr = `${now.getDate()} ${db.config.fridays2026[0] ? 'Okt' : ''} ${now.getFullYear()}`;
+    elements.calCurrentDateDisplay.textContent = `11 Okt 2026`;
+
+    db.config.fridays2026.forEach(f => {
+      const isCurrent = (f.minggu === state.activeWeek);
+
+      // Kira bilangan hantar pada Jumaat tersebut
+      const weekUps = db.uploads.filter(u => u.minggu === f.minggu && u.status === "HIJAU");
+
+      const card = document.createElement("div");
+      card.className = `p-3 rounded-xl border text-center transition cursor-pointer ${isCurrent ? 'bg-rose-600 text-white border-rose-600 shadow-md transform scale-102' : 'bg-slate-50 hover:bg-white border-slate-200'}`;
+
+      card.innerHTML = `
+        <span class="text-[10px] font-mono font-bold block ${isCurrent ? 'text-rose-100' : 'text-slate-400'}">JUMAAT</span>
+        <div class="font-black text-sm my-0.5">Minggu ${f.minggu}</div>
+        <p class="text-xs font-semibold ${isCurrent ? 'text-white' : 'text-rose-600'}">${f.label}</p>
+        <div class="mt-2 text-[10px] py-0.5 px-2 rounded-full font-bold ${isCurrent ? 'bg-black/20 text-white' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}">
+          ${weekUps.length} Hantar
+        </div>
+      `;
+
+      card.addEventListener("click", () => {
+        state.activeWeek = f.minggu;
+        elements.headerWeekSelect.value = f.minggu;
+        updateFridayDisplay();
+        switchTab("pemantauan");
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ==============================================================
+  // TAB 5: RENDER JADUAL WAKTU RUJUKAN
+  // ==============================================================
+  function renderTimetableReference() {
+    const container = elements.jadualRujukanContainer;
+    container.innerHTML = `
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <h4 class="font-extrabold text-sm text-slate-800">Struktur Waktu Harian Persekolahan SK Ranggu 2026</h4>
+        <p class="text-xs text-slate-500 leading-relaxed">
+          Sesi Pagi (Tahap 2): 07:20 AM - 12:30 PM • Sesi Petang (Tahap 1): 12:40 PM - 05:40 PM.<br>
+          <span class="text-rose-600 font-bold">* Peringatan: Penghantaran e-RPH mingguan adalah wajib dihantar pada setiap hari Jumaat secara penuh dan berpusat kepada nama guru masing-masing.</span>
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+          <div class="p-3 bg-slate-50 border rounded-xl text-center">
+            <span class="font-bold text-xs text-slate-700 block">Isnin - Khamis</span>
+            <span class="text-xs text-sky-700 font-black">07:20 AM - 12:30 PM</span>
+          </div>
+          <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-center">
+            <span class="font-bold text-xs text-rose-800 block">Jumaat (Hari e-RPH)</span>
+            <span class="text-xs text-rose-700 font-black">07:20 AM - 11:30 AM</span>
+          </div>
+          <div class="p-3 bg-slate-50 border rounded-xl text-center">
+            <span class="font-bold text-xs text-slate-700 block">Sesi Petang (Isnin-Khamis)</span>
+            <span class="text-xs text-purple-700 font-black">12:40 PM - 05:40 PM</span>
+          </div>
+          <div class="p-3 bg-purple-50 border border-purple-200 rounded-xl text-center">
+            <span class="font-bold text-xs text-purple-800 block">Sesi Petang (Jumaat)</span>
+            <span class="text-xs text-purple-700 font-black">01:30 PM - 05:40 PM</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ==============================================================
+  // TAB 6: KONSOL PENTADBIR SISTEM (TS.FIKREY37)
+  // ==============================================================
+  function renderAdminConsole() {
+    const tbody = elements.adminStaffTbody;
+    tbody.innerHTML = "";
+
+    const query = elements.adminSearchStaff.value.toLowerCase().trim();
+    const filtered = db.staffList.filter(s => {
+      return s.name.toLowerCase().includes(query) ||
+             (s.ic && s.ic.includes(query)) ||
+             s.code.toLowerCase().includes(query);
+    });
+
+    elements.adminStaffCount.textContent = filtered.length;
+
+    const weekUploads = db.uploads.filter(u => u.minggu === state.activeWeek);
+
+    filtered.forEach(staff => {
+      const up = weekUploads.find(u => u.guruId === staff.id);
+      const isHijau = (up && up.status === "HIJAU");
+
+      const supervisor = db.pentadbir.find(p => p.id === staff.supervisorId) || { name: "Tiada / Sendiri" };
+
+      const tr = document.createElement("tr");
+      tr.className = "hover:bg-slate-50 transition";
+
+      tr.innerHTML = `
+        <td class="py-2.5 px-3 font-mono font-bold text-slate-500">${staff.code}</td>
+        <td class="py-2.5 px-3 font-bold text-slate-900">${staff.name}</td>
+        <td class="py-2.5 px-3 font-mono text-[11px] text-slate-600">${staff.ic || '—'}</td>
+        <td class="py-2.5 px-3 text-sky-800 font-semibold text-[11px]">${supervisor.name}</td>
+        <td class="py-2.5 px-3 text-center">
+          ${isHijau ? `
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">HIJAU</span>
+          ` : `
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">MERAH</span>
+          `}
+        </td>
+        <td class="py-2.5 px-3 text-center">
+          <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${staff.status === 'Aktif' ? 'bg-sky-50 text-sky-800' : 'bg-amber-100 text-amber-900'}">
+            ${staff.status}
+          </span>
+        </td>
+        <td class="py-2.5 px-3 text-center space-x-1">
+          <!-- Butang Togol Hijau / Merah -->
+          <button data-staff-id="${staff.id}" class="btn-admin-quick-toggle px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded font-bold text-[10px] transition" title="Tukar Status Hijau/Merah">
+            Togol Warna
+          </button>
+
+          <!-- Butang Padam Senyap -->
+          ${isHijau ? `
+            <button data-staff-id="${staff.id}" class="btn-admin-silent-del px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded font-bold text-[10px] transition" title="Padam e-RPH Tanpa Rekod">
+              Padam e-RPH
+            </button>
+          ` : ''}
+
+          <!-- Butang Edit Guru -->
+          <button data-staff-id="${staff.id}" class="btn-admin-edit-staff px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded font-bold text-[10px] transition">
+            Edit
+          </button>
+        </td>
+      `;
+
+      // Event listener: Quick toggle
+      tr.querySelector(".btn-admin-quick-toggle").addEventListener("click", () => {
+        toggleTeacherStatusSuperAdmin(staff.id);
+      });
+
+      // Event listener: Silent delete
+      const delBtn = tr.querySelector(".btn-admin-silent-del");
+      if (delBtn) {
+        delBtn.addEventListener("click", () => {
+          silentDeleteErphSuperAdmin(staff.id);
+        });
+      }
+
+      // Event listener: Edit
+      tr.querySelector(".btn-admin-edit-staff").addEventListener("click", () => {
+        openEditStaffModal(staff);
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    lucide.createIcons();
+  }
+
+  // ==============================================================
+  // FUNGSI KUASA SUPER ADMIN (TS.FIKREY37)
+  // ==============================================================
+  function promptSuperAdminAuth(callback) {
+    Swal.fire({
+      title: "Pengesahan Pentadbir Sistem",
+      html: `
+        <div class="text-left text-xs space-y-2">
+          <p class="text-slate-600">Sila masukkan kod akses rahsia untuk membuka konsol pentadbir sistem:</p>
+          <input type="password" id="swal-admin-code-input" class="w-full border p-2.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider" placeholder="Kod Akses: TS.FIKREY37">
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Sahkan Kod",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#d97706",
+      preConfirm: () => {
+        const val = document.getElementById("swal-admin-code-input").value.trim();
+        if (val.toUpperCase() === "TS.FIKREY37") {
+          return true;
+        } else {
+          Swal.showValidationMessage("Kod akses tidak sah! Sila masukkan TS.FIKREY37");
+          return false;
+        }
+      }
+    }).then(result => {
+      if (result.isConfirmed) {
+        state.isSuperAdminAuthenticated = true;
+        state.currentUser = {
+          id: 24,
+          name: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
+          role: "Pentadbir Sistem & Penyelaras ICT (Super Admin)",
+          ic: "910528-12-5411",
+          isSupervisor: true,
+          supervisorId: null,
+          isSuperAdmin: true
+        };
+        updateAuthDisplay();
+        switchTab("konsol-admin");
+        Swal.fire({
+          icon: "success",
+          title: "Akses Super Admin Diberikan",
+          text: "Selamat bertugas Ts. Mohammad Fikrey.",
+          timer: 1500,
+          showConfirmButton: false
+        });
+        if (callback) callback();
+      }
+    });
+  }
+
+  // 1. Togol Status Guru (Hijau <-> Merah)
+  function toggleTeacherStatusSuperAdmin(teacherId) {
+    const teacher = db.staffList.find(s => s.id === teacherId);
+    if (!teacher) return;
+
+    const weekNum = state.activeWeek;
+    const fInfo = getFridayInfo(weekNum);
+    const existingIndex = db.uploads.findIndex(u => u.guruId === teacherId && u.minggu === weekNum);
+
+    if (existingIndex >= 0 && db.uploads[existingIndex].status === "HIJAU") {
+      // Tukar kepada Merah
+      db.uploads[existingIndex].status = "MERAH";
+      saveErphDatabase(db);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: `${teacher.name} ditukar kepada MERAH`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } else {
+      // Tukar kepada Hijau
+      const newUp = {
+        id: `UPL-M${weekNum}-${teacherId}`,
+        guruId: teacherId,
+        guruName: teacher.name,
+        minggu: weekNum,
+        tarikhJumaat: fInfo.tarikh,
+        status: "HIJAU",
+        uploadedAt: getCurrentFormattedTimestamp(),
+        fileName: `eRPH_M${weekNum}_${teacher.name.replace(/\s+/g, '_')}.pdf`,
+        fileUrl: "https://drive.google.com/sample/erph",
+        catatan: "Disahkan secara manual oleh Pentadbir Sistem",
+        supervisorId: teacher.supervisorId,
+        verifiedBy: "Pentadbir Sistem (Ts. Fikrey)",
+        verifiedAt: getCurrentFormattedTimestamp(),
+        ulasan: "Disahkan."
+      };
+
+      if (existingIndex >= 0) {
+        db.uploads[existingIndex] = newUp;
+      } else {
+        db.uploads.push(newUp);
+      }
+      saveErphDatabase(db);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: `${teacher.name} ditukar kepada HIJAU`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }
+
+    renderMonitoringColumns();
+    if (state.activeTab === "konsol-admin") renderAdminConsole();
+    if (state.activeTab === "portal-guru") renderTeacherPortal();
+  }
+
+  // 2. Padam e-RPH Senyap Tanpa Pernyataan
+  function silentDeleteErphSuperAdmin(teacherId) {
+    const teacher = db.staffList.find(s => s.id === teacherId);
+    const weekNum = state.activeWeek;
+
+    db.uploads = db.uploads.filter(u => !(u.guruId === teacherId && u.minggu === weekNum));
+    saveErphDatabase(db);
+
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "info",
+      title: `e-RPH ${teacher ? teacher.name : ''} dikeluarkan (tanpa rekod)`,
+      timer: 1800,
+      showConfirmButton: false
+    });
+
+    renderMonitoringColumns();
+    if (state.activeTab === "konsol-admin") renderAdminConsole();
+    if (state.activeTab === "portal-guru") renderTeacherPortal();
+  }
+
+  // 3. Buka Modal Edit Staff
+  function openEditStaffModal(staff = null) {
+    elements.staffReasonWrapper.classList.add("hidden");
+
+    if (staff) {
+      elements.modalStaffTitle.textContent = "Kemaskini Maklumat Guru";
+      elements.staffFormId.value = staff.id;
+      elements.staffFormName.value = staff.name;
+      elements.staffFormIc.value = staff.ic || "";
+      elements.staffFormSession.value = staff.session || "Pagi";
+      elements.staffFormRole.value = staff.role || "";
+      elements.staffFormSupervisor.value = staff.supervisorId || "2";
+      elements.staffFormStatus.value = staff.status || "Aktif";
+      elements.staffFormReason.value = staff.inactiveReason || "";
+      if (staff.status !== "Aktif") {
+        elements.staffReasonWrapper.classList.remove("hidden");
+      }
+      elements.btnAdminRemoveStaff.classList.remove("hidden");
+    } else {
+      elements.modalStaffTitle.textContent = "Tambah Guru Baru ke Senarai";
+      elements.staffFormId.value = "";
+      elements.staffFormName.value = "";
+      elements.staffFormIc.value = "";
+      elements.staffFormSession.value = "Pagi";
+      elements.staffFormRole.value = "Guru Akademik";
+      elements.staffFormSupervisor.value = "2";
+      elements.staffFormStatus.value = "Aktif";
+      elements.staffFormReason.value = "";
+      elements.btnAdminRemoveStaff.classList.add("hidden");
+    }
+
+    elements.modalAdminManageStaff.classList.remove("hidden");
+  }
+
+  elements.staffFormStatus.addEventListener("change", () => {
+    if (elements.staffFormStatus.value !== "Aktif") {
+      elements.staffReasonWrapper.classList.remove("hidden");
+    } else {
+      elements.staffReasonWrapper.classList.add("hidden");
+    }
+  });
+
+  // Simpan Maklumat Guru
+  elements.formManageStaff.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const idVal = elements.staffFormId.value;
+    const nameVal = elements.staffFormName.value.trim().toUpperCase();
+    const icVal = elements.staffFormIc.value.trim();
+    const sessionVal = elements.staffFormSession.value;
+    const roleVal = elements.staffFormRole.value.trim();
+    const supVal = parseInt(elements.staffFormSupervisor.value);
+    const statusVal = elements.staffFormStatus.value;
+    const reasonVal = elements.staffFormReason.value.trim();
+
+    if (idVal) {
+      // Kemaskini guru sedia ada
+      const target = db.staffList.find(s => String(s.id) === String(idVal));
+      if (target) {
+        target.name = nameVal;
+        target.ic = icVal;
+        target.session = sessionVal;
+        target.role = roleVal;
+        target.supervisorId = supVal;
+        target.status = statusVal;
+        target.inactiveReason = reasonVal;
+      }
+    } else {
+      // Tambah guru baru
+      const newId = db.staffList.length > 0 ? Math.max(...db.staffList.map(s => s.id)) + 1 : 1;
+      db.staffList.push({
+        id: newId,
+        code: `G${String(newId).padStart(2, "0")}`,
+        name: nameVal,
+        ic: icVal,
+        role: roleVal,
+        supervisorId: supVal,
+        status: statusVal,
+        session: sessionVal,
+        inactiveReason: reasonVal,
+        customPassword: null
+      });
+    }
+
+    saveErphDatabase(db);
+    elements.modalAdminManageStaff.classList.add("hidden");
+
+    Swal.fire({
+      icon: "success",
+      title: "Data Disimpan",
+      text: "Maklumat guru telah dikemaskini dalam pangkalan data.",
+      timer: 1500,
+      showConfirmButton: false
+    });
+
+    renderAdminConsole();
+    renderMonitoringColumns();
+  });
+
+  // Keluarkan Guru dengan Nyatakan Sebab
+  elements.btnAdminRemoveStaff.addEventListener("click", () => {
+    const idVal = elements.staffFormId.value;
+    const target = db.staffList.find(s => String(s.id) === String(idVal));
+    if (!target) return;
+
+    Swal.fire({
+      title: `Keluarkan ${target.name}?`,
+      text: "Sila pilih sebab pengeluaran guru daripada senarai aktif:",
+      input: "select",
+      inputOptions: {
+        "Berpindah": "Berpindah Sekolah",
+        "Bersara / Pencen": "Bersara / Pencen",
+        "Cuti Belajar": "Cuti Belajar Bergaji Penuh",
+        "Cuti Bersalin": "Cuti Bersalin / Sakit Berpanjangan",
+        "Nyahaktif": "Nyahaktifkan Lain-lain"
+      },
+      showCancelButton: true,
+      confirmButtonText: "Sahkan Pengeluaran",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#ef4444"
+    }).then(result => {
+      if (result.isConfirmed) {
+        target.status = result.value;
+        target.inactiveReason = `Dikeluarkan pada ${getCurrentFormattedTimestamp()}: ${result.value}`;
+        saveErphDatabase(db);
+        elements.modalAdminManageStaff.classList.add("hidden");
+
+        Swal.fire("Selesai", `Guru telah dikeluarkan dengan status: ${result.value}`, "success");
+        renderAdminConsole();
+        renderMonitoringColumns();
+      }
+    });
+  });
+
+  // ==============================================================
+  // MODAL SEMAKAN e-RPH (UNTUK PENTADBIR)
+  // ==============================================================
+  function openReviewErphModal(teacher, uploadRecord) {
+    activeReviewUploadId = uploadRecord ? uploadRecord.id : null;
+
+    elements.modalReviewGuruName.textContent = teacher.name;
+    elements.modalReviewWeekLabel.textContent = `Minggu ${state.activeWeek} • ${getFridayInfo(state.activeWeek).label}`;
+
+    if (uploadRecord && uploadRecord.status === "HIJAU") {
+      elements.modalReviewStatusBox.className = "p-3 rounded-xl border border-emerald-300 bg-emerald-50 flex items-center justify-between";
+      elements.modalReviewStatusText.className = "font-black text-xs text-emerald-800";
+      elements.modalReviewStatusText.textContent = "STATUS: HIJAU (Berjaya Upload)";
+      elements.modalReviewTimestamp.textContent = `Dikemaskini: ${uploadRecord.uploadedAt}`;
+
+      elements.modalReviewFilename.textContent = uploadRecord.fileName || "Pautan e-RPH";
+      elements.modalReviewOpenLink.href = uploadRecord.fileUrl || "#";
+      elements.modalReviewOpenLink.classList.remove("hidden");
+      elements.modalReviewCatatan.textContent = uploadRecord.catatan || "Tiada catatan tambahan.";
+      elements.modalReviewUlasanInput.value = uploadRecord.ulasan || "";
+    } else {
+      elements.modalReviewStatusBox.className = "p-3 rounded-xl border border-rose-300 bg-rose-50 flex items-center justify-between";
+      elements.modalReviewStatusText.className = "font-black text-xs text-rose-800";
+      elements.modalReviewStatusText.textContent = "STATUS: MERAH (Belum Upload)";
+      elements.modalReviewTimestamp.textContent = "Belum memuat naik";
+
+      elements.modalReviewFilename.textContent = "Tiada fail dimuat naik";
+      elements.modalReviewOpenLink.classList.add("hidden");
+      elements.modalReviewCatatan.textContent = "Guru belum membuat penghantaran bagi minggu ini.";
+      elements.modalReviewUlasanInput.value = "";
+    }
+
+    elements.modalReviewErph.classList.remove("hidden");
+  }
+
+  elements.btnSaveUlasanPentadbir.addEventListener("click", () => {
+    if (!activeReviewUploadId) {
+      Swal.fire("Makluman", "Tiada rekod penghantaran e-RPH untuk diulas.", "info");
+      return;
+    }
+
+    const up = db.uploads.find(u => u.id === activeReviewUploadId);
+    if (up) {
+      up.ulasan = elements.modalReviewUlasanInput.value.trim();
+      up.verifiedBy = state.currentUser.name;
+      up.verifiedAt = getCurrentFormattedTimestamp();
+      saveErphDatabase(db);
+
+      Swal.fire({
+        icon: "success",
+        title: "Ulasan Disimpan",
+        text: "Pengesahan pentadbir telah direkodkan.",
+        timer: 1500,
+        showConfirmButton: false
+      });
+      elements.modalReviewErph.classList.add("hidden");
+      renderMonitoringColumns();
+    }
+  });
+
+  // ==============================================================
+  // SISTEM LOG MASUK & AUTH
+  // ==============================================================
+  // Tab pertukaran jenis login
+  document.querySelectorAll(".login-tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".login-tab-btn").forEach(b => {
+        b.className = "login-tab-btn flex-1 py-2 font-bold text-slate-500 border-b-2 border-transparent hover:text-slate-800 text-center";
+      });
+      btn.className = "login-tab-btn flex-1 py-2 font-bold border-b-2 border-sky-600 text-sky-700 text-center";
+
+      const mode = btn.dataset.loginMode;
+      document.querySelectorAll(".login-subform").forEach(f => f.classList.add("hidden"));
+
+      if (mode === "guru") elements.formLoginGuru.classList.remove("hidden");
+      if (mode === "pentadbir") elements.formLoginPentadbir.classList.remove("hidden");
+      if (mode === "admin") elements.formLoginSuperadmin.classList.remove("hidden");
+    });
+  });
+
+  // 1. Log Masuk Guru
+  elements.formLoginGuru.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const inputIc = cleanIc(elements.loginGuruIc.value);
+    const inputPwd = elements.loginGuruPwd.value.trim();
+
+    // Cari guru mengikut No. KP
+    const matched = db.staffList.find(s => cleanIc(s.ic) === inputIc);
+
+    if (!matched) {
+      Swal.fire("Ralat Log Masuk", "Nombor Kad Pengenalan tidak dijumpai dalam senarai staf SK Ranggu.", "error");
+      return;
+    }
+
+    // Semak kata laluan (custom atau default P3nd1d1kan)
+    const validPwd = matched.customPassword || db.config.security.defaultTeacherPassword;
+
+    if (inputPwd !== validPwd && inputPwd !== "P3nd1d1kan") {
+      Swal.fire("Kata Laluan Salah", "Sila gunakan kata laluan sementara P3nd1d1kan jika belum menjana kata laluan baru.", "error");
+      return;
+    }
+
+    state.currentUser = {
+      id: matched.id,
+      name: matched.name,
+      role: matched.role,
+      ic: matched.ic,
+      isSupervisor: [1, 2, 3, 4, 5].includes(matched.id),
+      supervisorId: matched.supervisorId,
+      isSuperAdmin: false
+    };
+    state.isSuperAdminAuthenticated = false;
+
+    updateAuthDisplay();
+    elements.modalLogin.classList.add("hidden");
+
+    Swal.fire({
+      icon: "success",
+      title: `Selamat Datang, Cikgu ${matched.name}`,
+      text: "Anda kini berada di Portal Peribadi e-RPH.",
       timer: 2000,
       showConfirmButton: false
     });
 
-    renderDashboard();
-    renderJadualMatrix();
+    switchTab("portal-guru");
   });
 
-  // 10. Simpan Semakan Pentadbir
-  elements.btnSaveReview.addEventListener("click", () => {
-    const rphId = elements.reviewRphId.value;
-    const rph = db.rphList.find(r => r.id === rphId);
+  // 2. Log Masuk Pentadbir Cepat
+  document.querySelectorAll(".btn-select-admin-role").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const adminId = parseInt(btn.dataset.adminId);
+      const matched = db.staffList.find(s => s.id === adminId);
 
-    if (rph) {
-      rph.status = elements.reviewStatusSelect.value;
-      rph.komenPentadbir = elements.reviewKomenInput.value;
-      rph.namaPentadbir = elements.reviewPentadbirSelect.value;
-      rph.tarikhSemakan = new Date().toISOString().split("T")[0];
+      if (matched) {
+        state.currentUser = {
+          id: matched.id,
+          name: matched.name,
+          role: matched.role,
+          ic: matched.ic,
+          isSupervisor: true,
+          supervisorId: matched.supervisorId,
+          isSuperAdmin: false
+        };
+        state.isSuperAdminAuthenticated = false;
 
-      saveAppDatabase(db);
-      closeRphReviewModal();
+        updateAuthDisplay();
+        elements.modalLogin.classList.add("hidden");
+
+        Swal.fire({
+          icon: "success",
+          title: `Log Masuk Sebagai ${matched.name}`,
+          timer: 1500,
+          showConfirmButton: false
+        });
+
+        switchTab("pemantauan");
+      }
+    });
+  });
+
+  // 3. Log Masuk Super Admin
+  elements.formLoginSuperadmin.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const code = elements.loginAdminCode.value.trim().toUpperCase();
+
+    if (code === "TS.FIKREY37") {
+      state.isSuperAdminAuthenticated = true;
+      state.currentUser = {
+        id: 24,
+        name: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
+        role: "Pentadbir Sistem & Penyelaras ICT (Super Admin)",
+        ic: "910528-12-5411",
+        isSupervisor: true,
+        supervisorId: null,
+        isSuperAdmin: true
+      };
+      updateAuthDisplay();
+      elements.modalLogin.classList.add("hidden");
 
       Swal.fire({
         icon: "success",
-        title: "Semakan Disimpan!",
-        text: `Status RPH dikemaskini kepada "${rph.status}".`,
-        timer: 1800,
+        title: "Akses Super Admin Disahkan",
+        text: "Semua kuasa pengurusan sistem diaktifkan.",
+        timer: 1500,
         showConfirmButton: false
       });
 
-      renderDashboard();
-      renderJadualMatrix();
+      switchTab("pemantauan");
+    } else {
+      Swal.fire("Kod Salah", "Kod akses TS.FIKREY37 tidak tepat.", "error");
     }
   });
 
-  // Edit as Teacher daripada Review Modal
-  elements.btnEditAsTeacher.addEventListener("click", () => {
-    const rphId = elements.reviewRphId.value;
-    const rph = db.rphList.find(r => r.id === rphId);
-    if (rph) {
-      closeRphReviewModal();
-      openRphEntryModal(null, rph);
-    }
+  // Tukar Kata Laluan Guru
+  elements.btnPortalChangePwd.addEventListener("click", () => {
+    elements.newPwdInput.value = "";
+    elements.confirmPwdInput.value = "";
+    elements.modalChangePassword.classList.remove("hidden");
   });
 
-  // 11. Render Jadual Senarai Guru
-  function renderGuruTable() {
-    const tbody = elements.guruTableBody;
-    tbody.innerHTML = "";
+  elements.formChangePwd.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const p1 = elements.newPwdInput.value;
+    const p2 = elements.confirmPwdInput.value;
 
-    const query = elements.searchGuruInput.value.toLowerCase().trim();
-
-    const filtered = db.teachers.filter(g => {
-      return g.name.toLowerCase().includes(query) ||
-             g.subjek.toLowerCase().includes(query) ||
-             g.kelas.toLowerCase().includes(query) ||
-             g.id.toLowerCase().includes(query);
-    });
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">Tiada guru dijumpai.</td></tr>`;
+    if (p1.length < 4) {
+      Swal.fire("Ralat", "Kata laluan mestilah sekurang-kurangnya 4 aksara.", "warning");
+      return;
+    }
+    if (p1 !== p2) {
+      Swal.fire("Ralat", "Sila pastikan pengesahan kata laluan sepadan.", "error");
       return;
     }
 
-    filtered.forEach(guru => {
-      const guruRphs = db.rphList.filter(r => r.guruId === guru.id && r.minggu === db.config.school.currentWeek);
-      const isComplete = guruRphs.length >= 2;
-      const statusBadge = isComplete
-        ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Lengkap (${guruRphs.length})</span>`
-        : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Sebahagian (${guruRphs.length})</span>`;
+    const t = db.staffList.find(s => s.id === state.currentUser.id);
+    if (t) {
+      t.customPassword = p1;
+      saveErphDatabase(db);
+      elements.modalChangePassword.classList.add("hidden");
+      Swal.fire("Berjaya", "Kata laluan peribadi anda telah disimpan. Gunakan kata laluan ini untuk log masuk seterusnya.", "success");
+    }
+  });
 
-      const tr = document.createElement("tr");
-      tr.className = "hover:bg-slate-50 transition";
-      tr.innerHTML = `
-        <td class="py-3 px-4 font-mono font-bold text-sky-700">${guru.id}</td>
-        <td class="py-3 px-4 font-bold text-slate-900">${guru.name}</td>
-        <td class="py-3 px-4 text-slate-500 font-mono text-[11px]">${guru.ic}</td>
-        <td class="py-3 px-4 text-slate-700 font-medium">${guru.subjek}</td>
-        <td class="py-3 px-4 text-slate-600 text-[11px]">${guru.kelas}</td>
-        <td class="py-3 px-4 text-center">${statusBadge}</td>
-        <td class="py-3 px-4 text-center">
-          <button data-guru-id="${guru.id}" class="btn-filter-guru-schedule px-2.5 py-1 bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 rounded-md font-semibold text-[11px] transition">
-            Lihat Jadual
-          </button>
-        </td>
-      `;
-
-      tr.querySelector(".btn-filter-guru-schedule").addEventListener("click", () => {
-        elements.jdlFilterGuru.value = guru.id;
-        state.jdlFilters.guru = guru.id;
-        state.highlightTeacher = guru.id;
-        switchTab("jadual");
-      });
-
-      tbody.appendChild(tr);
-    });
-  }
-
-  // 12. Render Jadual Waktu Persekolahan
-  function renderScheduleTable() {
-    const tbody = elements.scheduleTableBody;
-    tbody.innerHTML = "";
-
-    db.schedule.forEach(slot => {
-      const tr = document.createElement("tr");
-      tr.className = "hover:bg-slate-50 transition";
-      tr.innerHTML = `
-        <td class="py-2.5 px-4 font-mono font-bold text-slate-500">${slot.id}</td>
-        <td class="py-2.5 px-4 font-bold text-slate-800">${slot.kelas}</td>
-        <td class="py-2.5 px-4 font-semibold text-slate-700">${slot.hari}</td>
-        <td class="py-2.5 px-4 font-mono text-slate-600">${slot.masa}</td>
-        <td class="py-2.5 px-4 font-bold text-sky-700">${slot.subjek}</td>
-        <td class="py-2.5 px-4 text-slate-700">${slot.guruName}</td>
-        <td class="py-2.5 px-4 text-center">
-          <button data-slot-id="${slot.id}" class="btn-delete-slot text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition" title="Padam Slot">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
-        </td>
-      `;
-
-      tr.querySelector(".btn-delete-slot").addEventListener("click", () => {
-        db.schedule = db.schedule.filter(s => s.id !== slot.id);
-        saveAppDatabase(db);
-        renderScheduleTable();
-      });
-
-      tbody.appendChild(tr);
-    });
-
-    lucide.createIcons();
-  }
-
-  // 13. Eksport Penuh ke Excel (Format 3 Sheets Mengikut Video)
-  function exportFullExcel() {
+  // ==============================================================
+  // EKSPORT EXCEL
+  // ==============================================================
+  elements.btnExportMonitoringExcel.addEventListener("click", () => {
     if (typeof XLSX === "undefined") {
-      Swal.fire("Ralat", "Pustaka XLSX belum dimuatkan.", "error");
+      Swal.fire("Ralat", "Pustaka XLSX tidak dapat dimuatkan.", "error");
       return;
     }
 
     const wb = XLSX.utils.book_new();
 
-    // Sheet 1: RPH
-    const rphRows = db.rphList.map(r => ({
-      "ID": r.id,
-      "GuruID": r.guruId,
-      "Nama Guru": r.guruName,
-      "Tarikh": r.tarikh,
-      "Minggu": r.minggu,
-      "Mata Pelajaran": r.mataPelajaran,
-      "Kelas": r.kelas,
-      "Masa": r.masa,
-      "Tajuk": r.tajuk,
-      "Standard Kandungan": r.standardKandungan,
-      "Standard Pembelajaran": r.standardPembelajaran,
-      "Objektif": r.objektif,
-      "Aktiviti": r.aktiviti,
-      "BBM": r.bbm,
-      "Pentaksiran": r.pentaksiran,
-      "Refleksi": r.refleksi,
-      "Status": r.status,
-      "Komen Pentadbir": r.komenPentadbir,
-      "Nama Pentadbir": r.namaPentadbir,
-      "Tarikh Semakan": r.tarikhSemakan
-    }));
-    const wsRph = XLSX.utils.json_to_sheet(rphRows);
-    XLSX.utils.book_append_sheet(wb, wsRph, "RPH");
+    // Sheet 1: Status Pemantauan Minggu Semasa
+    const weekNum = state.activeWeek;
+    const fInfo = getFridayInfo(weekNum);
+    const weekUps = db.uploads.filter(u => u.minggu === weekNum);
 
-    // Sheet 2: Jadual
-    const jadualRows = db.schedule.map(s => ({
-      "ID": s.id,
-      "Kelas": s.kelas,
-      "Hari": s.hari,
-      "Masa": s.masa,
-      "Subjek": s.subjek,
-      "GuruID": s.guruId,
-      "Nama Guru": s.guruName
-    }));
-    const wsJadual = XLSX.utils.json_to_sheet(jadualRows);
-    XLSX.utils.book_append_sheet(wb, wsJadual, "Jadual");
+    const rows = db.staffList.filter(s => s.status === "Aktif").map(s => {
+      const up = weekUps.find(u => u.guruId === s.id);
+      const isH = (up && up.status === "HIJAU");
+      const sup = db.pentadbir.find(p => p.id === s.supervisorId) || { name: "Guru Besar" };
 
-    // Sheet 3: Tetapan_Guru
-    const guruRows = db.teachers.map(g => ({
-      "GuruID": g.id,
-      "Nama": g.name,
-      "No KP": g.ic,
-      "Mata Pelajaran": g.subjek,
-      "Kelas": g.kelas,
-      "Emel": g.email
-    }));
-    const wsGuru = XLSX.utils.json_to_sheet(guruRows);
-    XLSX.utils.book_append_sheet(wb, wsGuru, "Tetapan_Guru");
-
-    // Tulis fail
-    const dateStamp = new Date().toISOString().split("T")[0];
-    XLSX.writeFile(wb, `RPH_export_SKRanggu_${dateStamp}.xlsx`);
-
-    Swal.fire({
-      icon: "success",
-      title: "Fail Excel Berjaya Dijana!",
-      text: "Fail RPH_export_SKRanggu.xlsx sedia untuk disimpan.",
-      timer: 2000,
-      showConfirmButton: false
+      return {
+        "Kod": s.code,
+        "Nama Guru": s.name,
+        "No. Kad Pengenalan": s.ic,
+        "Sesi": s.session,
+        "Pentadbir Penyelia": sup.name,
+        "Minggu": `Minggu ${weekNum}`,
+        "Tarikh Jumaat": fInfo.label,
+        "Status e-RPH": isH ? "HIJAU (BERJAYA UPLOAD)" : "MERAH (BELUM UPLOAD)",
+        "Waktu Kemaskini": isH ? up.uploadedAt : "—",
+        "Nama Fail / Pautan": isH ? (up.fileUrl || up.fileName) : "—",
+        "Ulasan Pentadbir": isH ? (up.ulasan || "Menunggu Semakan") : "—"
+      };
     });
-  }
 
-  // 14. Import Fail Excel
-  function handleImportExcel(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, `Pemantauan_M${weekNum}`);
 
-        // Jika sheet RPH wujud
-        if (workbook.SheetNames.includes("RPH")) {
-          const rphData = XLSX.utils.sheet_to_json(workbook.Sheets["RPH"]);
-          if (rphData.length > 0) {
-            db.rphList = rphData.map((row, idx) => ({
-              id: row["ID"] || `RPH-IMP-${idx + 1}`,
-              slotId: row["SlotID"] || "",
-              guruId: row["GuruID"] || "G01",
-              guruName: row["Nama Guru"] || "",
-              tarikh: row["Tarikh"] || "2026-02-16",
-              minggu: parseInt(row["Minggu"]) || 7,
-              bulan: "Feb",
-              mataPelajaran: row["Mata Pelajaran"] || "",
-              kelas: row["Kelas"] || "",
-              darjah: parseInt(row["Kelas"] ? row["Kelas"].charAt(0) : "1") || 1,
-              masa: row["Masa"] || "",
-              tajuk: row["Tajuk"] || "",
-              standardKandungan: row["Standard Kandungan"] || "",
-              standardPembelajaran: row["Standard Pembelajaran"] || "",
-              objektif: row["Objektif"] || "",
-              aktiviti: row["Aktiviti"] || "",
-              bbm: row["BBM"] || "",
-              pentaksiran: row["Pentaksiran"] || "",
-              refleksi: row["Refleksi"] || "",
-              status: row["Status"] || "Belum Disahkan",
-              komenPentadbir: row["Komen Pentadbir"] || "",
-              namaPentadbir: row["Nama Pentadbir"] || "",
-              tarikhSemakan: row["Tarikh Semakan"] || ""
-            }));
-          }
-        }
+    XLSX.writeFile(wb, `Laporan_eRPH_SKRanggu_Minggu_${weekNum}.xlsx`);
+    Swal.fire("Berjaya", `Laporan Minggu ${weekNum} dimuat turun sebagai Excel.`, "success");
+  });
 
-        saveAppDatabase(db);
-        Swal.fire("Berjaya!", "Data e-RPH telah diimport ke dalam sistem.", "success");
-        renderDashboard();
-        renderJadualMatrix();
-      } catch (err) {
-        Swal.fire("Ralat Import", "Fail tidak dapat dibaca. Pastikan format Excel betul.", "error");
+  // Reset Demo
+  elements.btnResetSystemData.addEventListener("click", () => {
+    Swal.fire({
+      title: "Set Semula Data?",
+      text: "Semua rekod penghantaran dan senarai guru akan kembali kepada asal.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Set Semula",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#ef4444"
+    }).then(result => {
+      if (result.isConfirmed) {
+        resetErphDatabase();
+        db = getErphDatabase();
+        renderMonitoringColumns();
+        renderAdminConsole();
+        Swal.fire("Selesai", "Pangkalan data telah ditetapkan semula.", "success");
       }
-    };
-    reader.readAsArrayBuffer(file);
-  }
+    });
+  });
 
-  // 15. Reset Semua Filter
-  function resetAllFilters() {
-    elements.jdlFilterStatus.value = "ALL";
-    elements.jdlFilterBulan.value = "Feb";
-    elements.jdlFilterMinggu.value = db.config.school.currentWeek;
-    elements.jdlFilterGuru.value = "ALL";
-    elements.jdlFilterSubjek.value = "ALL";
-    elements.jdlFilterDarjah.value = "ALL";
-    elements.jdlFilterKelas.value = "ALL";
-    state.highlightSubject = null;
-    state.highlightTeacher = null;
-    renderJadualMatrix();
-  }
-
-  // 16. Event Listeners UI
-  // Nav Links
+  // ==============================================================
+  // EVENT LISTENERS UMUM
+  // ==============================================================
   elements.navLinks.forEach(link => {
     link.addEventListener("click", () => switchTab(link.dataset.tab));
   });
 
-  // Mobile Menu
-  elements.mobileMenuToggle.addEventListener("click", () => {
-    elements.sidebar.classList.toggle("hidden");
-  });
-  elements.mobileMenuClose.addEventListener("click", () => {
-    elements.sidebar.classList.add("hidden");
+  elements.headerWeekSelect.addEventListener("change", (e) => {
+    state.activeWeek = parseInt(e.target.value);
+    updateFridayDisplay();
+    renderMonitoringColumns();
+    if (state.activeTab === "portal-guru") renderTeacherPortal();
+    if (state.activeTab === "konsol-admin") renderAdminConsole();
   });
 
-  // Toggle User Role (Pentadbir vs Guru)
-  elements.toggleUserRole.addEventListener("click", () => {
-    if (state.userRole === "pentadbir") {
-      state.userRole = "guru";
-      state.currentUserName = "Ts. Mohammad Fikrey (Penyelaras ICT)";
-      elements.userAvatar.textContent = "G";
-      elements.userAvatar.className = "w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs";
-      elements.currentUserName.textContent = "Ts. Fikrey";
-      elements.currentUserRole.textContent = "Guru Kelas 6 Jayyid";
+  elements.btnOpenLoginModal.addEventListener("click", () => {
+    elements.modalLogin.classList.remove("hidden");
+  });
+
+  elements.btnQuickAdminAuth.addEventListener("click", () => {
+    promptSuperAdminAuth();
+  });
+
+  elements.navBtnAdminConsole.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (!state.isSuperAdminAuthenticated) {
+      promptSuperAdminAuth();
     } else {
-      state.userRole = "pentadbir";
-      state.currentUserName = "Yunus bin Patarai (Guru Besar)";
-      elements.userAvatar.textContent = "P";
-      elements.userAvatar.className = "w-8 h-8 rounded-full bg-sky-600 text-white font-bold flex items-center justify-center text-xs";
-      elements.currentUserName.textContent = "Guru Besar";
-      elements.currentUserRole.textContent = "Pentadbir Utama";
-    }
-    Swal.fire({
-      toast: true,
-      position: "top-end",
-      icon: "info",
-      title: `Peranan ditukar: ${state.userRole.toUpperCase()}`,
-      timer: 1500,
-      showConfirmButton: false
-    });
-  });
-
-  // Filter Dashboard Events
-  elements.dashFilterBulan.addEventListener("change", renderDashboard);
-  elements.dashFilterMinggu.addEventListener("change", () => {
-    elements.headerActiveWeek.textContent = `Minggu ${elements.dashFilterMinggu.value}`;
-    renderDashboard();
-  });
-
-  elements.dashStatusTabs.forEach(tab => {
-    tab.addEventListener("click", () => {
-      elements.dashStatusTabs.forEach(t => {
-        t.className = "dash-status-tab px-3 py-1 rounded-md transition text-slate-600 hover:text-slate-900";
-      });
-      tab.className = "dash-status-tab px-3 py-1 rounded-md transition bg-white text-sky-700 shadow-sm font-bold";
-      state.dashFilters.status = tab.dataset.status;
-
-      // Lompat ke tab jadual jika status khusus ditekan
-      if (tab.dataset.status !== "ALL") {
-        elements.jdlFilterStatus.value = tab.dataset.status;
-        switchTab("jadual");
-      } else {
-        renderDashboard();
-      }
-    });
-  });
-
-  // Filter Jadual Events
-  [
-    elements.jdlFilterStatus,
-    elements.jdlFilterBulan,
-    elements.jdlFilterMinggu,
-    elements.jdlFilterGuru,
-    elements.jdlFilterSubjek,
-    elements.jdlFilterDarjah,
-    elements.jdlFilterKelas
-  ].forEach(select => {
-    select.addEventListener("change", () => {
-      state.highlightSubject = (elements.jdlFilterSubjek.value !== "ALL") ? elements.jdlFilterSubjek.value : null;
-      state.highlightTeacher = (elements.jdlFilterGuru.value !== "ALL") ? elements.jdlFilterGuru.value : null;
-      renderJadualMatrix();
-    });
-  });
-
-  elements.btnResetFilters.addEventListener("click", resetAllFilters);
-
-  // Search Guru
-  elements.searchGuruInput.addEventListener("input", renderGuruTable);
-
-  // Export & Import
-  elements.btnQuickExport.addEventListener("click", exportFullExcel);
-  elements.btnExportFullExcel.addEventListener("click", exportFullExcel);
-
-  elements.btnTriggerImport.addEventListener("click", () => {
-    elements.importExcelFile.click();
-  });
-
-  elements.importExcelFile.addEventListener("change", (e) => {
-    if (e.target.files.length > 0) {
-      handleImportExcel(e.target.files[0]);
+      switchTab("konsol-admin");
     }
   });
 
-  // Reset Demo
-  elements.btnResetDemo.addEventListener("click", () => {
-    Swal.fire({
-      title: "Adakah anda pasti?",
-      text: "Semua perubahan akan ditetapkan semula kepada data piawai SK Ranggu.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#ef4444",
-      cancelButtonColor: "#64748b",
-      confirmButtonText: "Ya, Tetapkan Semula",
-      cancelButtonText: "Batal"
-    }).then((result) => {
-      if (result.isConfirmed) {
-        resetAppDatabaseToDefault();
-        db = getAppDatabase();
-        initDropdownOptions();
-        renderDashboard();
-        renderJadualMatrix();
-        Swal.fire("Berjaya!", "Pangkalan data telah ditetapkan semula.", "success");
-      }
-    });
+  elements.adminSearchStaff.addEventListener("input", renderAdminConsole);
+
+  elements.btnAdminAddTeacher.addEventListener("click", () => {
+    openEditStaffModal(null);
   });
 
-  // Print
-  elements.btnPrintView.addEventListener("click", () => {
+  elements.btnRefreshApp.addEventListener("click", () => {
+    db = getErphDatabase();
+    renderMonitoringColumns();
+    renderAdminConsole();
+    Swal.fire({ toast: true, position: "top-end", icon: "success", title: "Data dikemaskini", timer: 1000, showConfirmButton: false });
+  });
+
+  elements.btnPrintScreen.addEventListener("click", () => {
     window.print();
   });
 
-  // Refresh
-  elements.btnRefreshData.addEventListener("click", () => {
-    db = getAppDatabase();
-    renderDashboard();
-    renderJadualMatrix();
-    Swal.fire({
-      toast: true,
-      position: "top-end",
-      icon: "success",
-      title: "Data dimuat semula",
-      timer: 1000,
-      showConfirmButton: false
-    });
-  });
+  // Mobile Menu
+  elements.mobileMenuToggle.addEventListener("click", () => elements.sidebar.classList.toggle("hidden"));
+  elements.mobileMenuClose.addEventListener("click", () => elements.sidebar.classList.add("hidden"));
 
-  // Close Modals
-  elements.btnCloseRphModal.addEventListener("click", closeRphEntryModal);
-  elements.btnCancelRph.addEventListener("click", closeRphEntryModal);
-  elements.btnCloseReviewModal.addEventListener("click", closeRphReviewModal);
-  elements.btnCloseReview.addEventListener("click", closeRphReviewModal);
+  // Close modals
+  elements.btnCloseLoginModal.addEventListener("click", () => elements.modalLogin.classList.add("hidden"));
+  elements.btnClosePwdModal.addEventListener("click", () => elements.modalChangePassword.classList.add("hidden"));
+  elements.btnCloseReviewModal.addEventListener("click", () => elements.modalReviewErph.classList.add("hidden"));
+  elements.btnCloseManageStaff.addEventListener("click", () => elements.modalAdminManageStaff.classList.add("hidden"));
 
-  // Tambah Slot Jadual
-  elements.btnAddScheduleSlot.addEventListener("click", () => {
-    Swal.fire({
-      title: "Tambah Slot Jadual Waktu",
-      html: `
-        <div class="text-left space-y-2 text-xs">
-          <div>
-            <label class="font-bold text-slate-700">Kelas:</label>
-            <input id="swal-slot-kelas" class="w-full border p-2 rounded text-xs" value="6 Jayyid">
-          </div>
-          <div>
-            <label class="font-bold text-slate-700">Hari:</label>
-            <select id="swal-slot-hari" class="w-full border p-2 rounded text-xs">
-              <option value="Isnin">Isnin</option>
-              <option value="Selasa">Selasa</option>
-              <option value="Rabu">Rabu</option>
-              <option value="Khamis">Khamis</option>
-              <option value="Jumaat">Jumaat</option>
-            </select>
-          </div>
-          <div>
-            <label class="font-bold text-slate-700">Masa:</label>
-            <input id="swal-slot-masa" class="w-full border p-2 rounded text-xs" value="07:20-08:00">
-          </div>
-          <div>
-            <label class="font-bold text-slate-700">Subjek:</label>
-            <input id="swal-slot-subjek" class="w-full border p-2 rounded text-xs" value="Matematik">
-          </div>
-          <div>
-            <label class="font-bold text-slate-700">Guru:</label>
-            <select id="swal-slot-guru" class="w-full border p-2 rounded text-xs">
-              ${db.teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join("")}
-            </select>
-          </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: "Simpan Slot",
-      cancelButtonText: "Batal",
-      preConfirm: () => {
-        const k = document.getElementById("swal-slot-kelas").value;
-        const h = document.getElementById("swal-slot-hari").value;
-        const m = document.getElementById("swal-slot-masa").value;
-        const s = document.getElementById("swal-slot-subjek").value;
-        const gId = document.getElementById("swal-slot-guru").value;
-        const tObj = db.teachers.find(t => t.id === gId) || { name: "Guru" };
-        return {
-          id: `JDL-${String(db.schedule.length + 1).padStart(3, "0")}`,
-          kelas: k,
-          darjah: parseInt(k.charAt(0)) || 1,
-          hari: h,
-          masa: m,
-          subjek: s,
-          guruId: gId,
-          guruName: tObj.name
-        };
-      }
-    }).then(result => {
-      if (result.isConfirmed) {
-        db.schedule.push(result.value);
-        saveAppDatabase(db);
-        renderScheduleTable();
-        Swal.fire("Berjaya!", "Slot jadual ditambah.", "success");
-      }
-    });
-  });
-
-  // Settings Save
-  elements.btnSaveSettings.addEventListener("click", () => {
-    db.config.school.name = document.getElementById("setting-school-name").value;
-    db.config.school.code = document.getElementById("setting-school-code").value;
-    db.config.school.session = document.getElementById("setting-session").value;
-    db.config.school.currentWeek = parseInt(document.getElementById("setting-current-week").value) || 7;
-    saveAppDatabase(db);
-    Swal.fire("Berjaya", "Tetapan sistem disimpan.", "success");
-    renderDashboard();
-  });
-
-  // 17. Permulaan Aplikasi (App Boot)
-  initDropdownOptions();
-  renderDashboard();
-  renderJadualMatrix();
+  // ==============================================================
+  // BOOTSTRAP APLIKASI
+  // ==============================================================
+  initWeekOptions();
+  updateAuthDisplay();
+  renderMonitoringColumns();
+  renderCalendarFridays();
+  renderTimetableReference();
   lucide.createIcons();
 });

@@ -1,19 +1,16 @@
 /* ==========================================================================
-   SISTEM DASHBOARD & JADUAL e-RPH SK RANGGU (XBA3037)
+   SISTEM PEMANTAUAN e-RPH SK RANGGU, TAWAU (XBA3037)
    Gaya CSS Khusus & Responsif Moden
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 :root {
   --primary-navy: #0f172a;
   --sidebar-bg: #1e293b;
-  --sidebar-active: #334155;
-  --accent-blue: #2563eb;
+  --accent-sky: #0284c7;
   --accent-gold: #f59e0b;
   --status-red: #ef4444;
-  --status-yellow: #f59e0b;
-  --status-blue: #0284c7;
   --status-green: #10b981;
 }
 
@@ -24,157 +21,96 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-/* Status colors & indicators */
+/* Status Cards & Indicators */
 .status-pill-red {
   background-color: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fca5a5;
+  color: #991b1b;
+  border: 1px solid #f87171;
 }
-.status-pill-yellow {
-  background-color: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde047;
-}
-.status-pill-blue {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #7dd3fc;
-}
+
 .status-pill-green {
   background-color: #d1fae5;
-  color: #047857;
-  border: 1px solid #6ee7b7;
+  color: #065f46;
+  border: 1px solid #34d399;
 }
 
-/* Cell card status styling */
-.slot-card {
+/* Card hover animation */
+.teacher-monitor-card {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  cursor: pointer;
-  user-select: none;
 }
-
-.slot-card:hover {
+.teacher-monitor-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Status variants for schedule slots */
-.slot-status-red {
-  background-color: #fff1f2;
-  border-color: #fecdd3;
-  color: #9f1239;
+/* Soft pulse for Friday Deadline alert */
+@keyframes friday-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
 }
-.slot-status-red:hover {
-  border-color: #fb7185;
-}
-
-.slot-status-yellow {
-  background-color: #fffbeb;
-  border-color: #fef08a;
-  color: #854d0e;
-}
-.slot-status-yellow:hover {
-  border-color: #facc15;
+.pulse-friday {
+  animation: friday-pulse 2.5s infinite;
 }
 
-.slot-status-blue {
-  background-color: #f0f9ff;
-  border-color: #bae6fd;
-  color: #075985;
+/* Org Chart Styling */
+.org-box {
+  transition: all 0.25s ease;
 }
-.slot-status-blue:hover {
-  border-color: #38bdf8;
-}
-
-.slot-status-green {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
-}
-.slot-status-green:hover {
-  border-color: #4ade80;
+.org-box:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.12);
 }
 
-/* Slot Highlight effect when filter matches */
-.slot-highlighted {
-  border-width: 2.5px !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35), 0 10px 15px -3px rgba(37, 99, 235, 0.15) !important;
-  transform: scale(1.02);
-  z-index: 10;
+/* Calendar Day Highlighting */
+.calendar-friday {
+  background-color: #fef2f2;
+  border-color: #fca5a5;
+  font-weight: 700;
+  color: #b91c1c;
+}
+.calendar-friday.current {
+  background-color: #ef4444;
+  color: #ffffff;
 }
 
-/* Slot dimmed effect when filter is active and this slot doesn't match */
-.slot-dimmed {
-  opacity: 0.35 !important;
-  filter: grayscale(40%);
-  transform: scale(0.98);
+/* Modal animation */
+@keyframes modalScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.modal-animate {
+  animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Pulse animation for pending verification */
-@keyframes soft-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-.pulse-dot {
-  animation: soft-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Timetable matrix table styling */
-.timetable-table {
-  border-collapse: separate;
-  border-spacing: 0;
-  width: 100%;
-}
-
-.timetable-table th,
-.timetable-table td {
-  border: 1px solid #e2e8f0;
-}
-
-.timetable-table thead th {
-  background-color: #f8fafc;
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-
-/* KPI metric cards hover interaction */
-.kpi-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08);
-}
-
-/* Category cards hover */
-.category-card {
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-.category-card:hover {
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.06);
-}
-
-/* Print styling */
+/* Print Styling */
 @media print {
   body {
     background: white !important;
@@ -184,16 +120,14 @@ body {
   #sidebar,
   header,
   .action-buttons,
-  .filter-bar {
+  .filter-bar,
+  #top-banner {
     display: none !important;
   }
   .print-only {
     display: block !important;
   }
-  .timetable-container {
-    overflow: visible !important;
-  }
-  .slot-card {
+  .teacher-monitor-card {
     border: 1px solid #ccc !important;
     break-inside: avoid;
   }
