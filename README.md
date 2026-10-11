@@ -25,7 +25,7 @@ Sistem memaparkan 5 lajur utama mengikut barisan kepimpinan pentadbiran SK Rangg
 2. 📚 **GPK Pentadbiran (PUAN HAJAH RAHMATIAH BINTI MOHD JUDA)**:
    - Menyelia kumpulan guru Kurikulum & Akademik Sesi Pagi (11 guru).
 3. 🤝 **GPK Hal Ehwal Murid (PUAN KOMALA BINTI JOSEPH)**:
-   - Menyelia kumpulan guru HEM, Disiplin & ICT (10 guru termasuk Ts. Mohammad Fikrey).
+   - Menyelia kumpulan guru HEM & Disiplin (10 guru termasuk Ts. Mohammad Fikrey - Pembangun Sistem).
 4. 🏆 **GPK Kokurikulum (PUAN WARNAH BINTI SIRA)**:
    - Menyelia kumpulan guru Kokurikulum, Sukan & 1M1S (10 guru).
 5. 🌇 **GPK Sidang Petang (TUAN HJ EMRAN BIN HJ SELAMAT)**:

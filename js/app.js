@@ -1021,7 +1021,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         const superAdminUser = {
           id: 24,
           name: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
-          role: "Pentadbir Sistem & Penyelaras ICT (Super Admin)",
+          role: "Pembangun Sistem (Super Admin)",
           ic: "910528-12-5411",
           isSupervisor: true,
           supervisorId: null,
@@ -1082,7 +1082,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         const superAdminUser = {
           id: 24,
           name: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
-          role: "Pentadbir Sistem & Penyelaras ICT (Super Admin)",
+          role: "Pembangun Sistem (Super Admin)",
           ic: "910528-12-5411",
           isSupervisor: true,
           supervisorId: null,
@@ -1275,7 +1275,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       Swal.fire({
         icon: "warning",
         title: "Konsol Teknikal Pembangun",
-        text: "Konsol pentadbir sistem dikunci khusus untuk Ts. Mohammad Fikrey (Penyelaras ICT).",
+        text: "Konsol pentadbir sistem dikunci khusus untuk Ts. Mohammad Fikrey (Pembangun Sistem).",
         confirmButtonColor: "#d97706"
       });
       tabId = "pemantauan";
@@ -4416,7 +4416,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         state.currentUser = {
           id: 24,
           name: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
-          role: "Pentadbir Sistem & Penyelaras ICT (Super Admin)",
+          role: "Pembangun Sistem (Super Admin)",
           ic: "910528-12-5411",
           isSupervisor: true,
           supervisorId: null,

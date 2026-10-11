@@ -113,7 +113,7 @@ const PENTADBIR_COLUMNS = [
     bgClass: "bg-emerald-600",
     borderClass: "border-emerald-400",
     headerBg: "bg-gradient-to-r from-emerald-600 to-teal-700",
-    desc: "Kumpulan Guru Seliaan 2 (HEM, Disiplin & ICT)"
+    desc: "Kumpulan Guru Seliaan 2 (HEM & Disiplin)"
   },
   {
     id: 4,
@@ -171,7 +171,7 @@ const INITIAL_STAFF_LIST = [
   { id: 21, code: "G21", name: "MARIANA BINTI KASSIM", ic: "730807-12-5766", role: "Penyelaras Prasekolah • Permata Hati", supervisorId: 3, status: "Aktif", session: "Pagi", customPassword: null },
   { id: 22, code: "G22", name: "MARINI BINTI LADI", ic: "810914-12-5278", role: "Penyelaras PLC • Guru Kelas 2 Jayyid", supervisorId: 3, status: "Aktif", session: "Petang", customPassword: null },
   { id: 23, code: "G23", name: "MASTURAH BINTI TUDA", ic: "750803-12-5900", role: "Ketua Panitia Matematik • Guru Kelas 4 Khoir", supervisorId: 3, status: "Aktif", session: "Pagi", customPassword: null },
-  { id: 24, code: "G24", name: "MOHAMMAD FIKREY BIN ABDUL GAPAR", ic: "910528-12-5411", role: "Pentadbir Sistem & ICT • Guru Kelas 6 Jayyid", supervisorId: 3, status: "Aktif", session: "Pagi", customPassword: null },
+  { id: 24, code: "G24", name: "MOHAMMAD FIKREY BIN ABDUL GAPAR", ic: "910528-12-5411", role: "Pembangun Sistem", supervisorId: 3, status: "Aktif", session: "Pagi", customPassword: null },
   { id: 25, code: "G25", name: "MOHAMMAD IKHWAN BIN ABDURAIS", ic: "940502-12-5701", role: "Penyelaras Pembangunan • Guru Kelas 2 Iltizam", supervisorId: 3, status: "Aktif", session: "Petang", customPassword: null },
   { id: 26, code: "G26", name: "MOHD ALFAIZAL BIN DAUD", ic: "820403-12-6243", role: "Penyelaras Data & IDME • Guru Kelas 6 Khoir", supervisorId: 3, status: "Aktif", session: "Pagi", customPassword: null },
   { id: 27, code: "G27", name: "MOHD MUEMIN BIN MOHD AMIN JAPAR", ic: "870131-49-5381", role: "Guru Akademik / Matapelajaran", supervisorId: 3, status: "Aktif", session: "Pagi", customPassword: null },
@@ -217,12 +217,12 @@ const INITIAL_STAFF_LIST = [
 const INITIAL_UPLOADS_DATA = [];
 
 // Helper Functions untuk LocalStorage
-const ERPH_DATA_VERSION = "3.3";
+const ERPH_DATA_VERSION = "3.4";
 
 function getErphDatabase() {
   const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");
   if (savedVersion !== ERPH_DATA_VERSION) {
-    // Sinkronkan versi data terkini (v3.3: senarai guru masih merah mengikut 5 pemantau dalam ruangan kalendar)
+    // Sinkronkan versi data terkini (v3.4: penetapan peranan Ts. Mohammad Fikrey sebagai Pembangun Sistem sahaja)
     localStorage.setItem("SKR_ERPH_DATA_VERSION", ERPH_DATA_VERSION);
     
     // Pastikan konfigurasi sekolah menggunakan currentWeek: 'auto' dan mengekalkan fridays2026
@@ -248,7 +248,22 @@ function getErphDatabase() {
     }
     localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(currentConfig));
 
-    if (!localStorage.getItem("SKR_ERPH_STAFF_2026")) {
+    // Sinkronkan peranan Cikgu Mohammad Fikrey dalam cache staf sedia ada
+    const oldStaffStr = localStorage.getItem("SKR_ERPH_STAFF_2026");
+    if (oldStaffStr) {
+      try {
+        const staffArr = JSON.parse(oldStaffStr);
+        const updatedStaff = staffArr.map(s => {
+          if (s.id === 24) {
+            return { ...s, role: "Pembangun Sistem" };
+          }
+          return s;
+        });
+        localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(updatedStaff));
+      } catch (e) {
+        localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(INITIAL_STAFF_LIST));
+      }
+    } else {
       localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(INITIAL_STAFF_LIST));
     }
     // Bersihkan sebarang rekod contoh olok-olok (sample) lama yang tidak mempunyai dokumen sebenar
@@ -323,7 +338,10 @@ function getErphDatabase() {
   return {
     config: parsedConfig,
     pentadbir: PENTADBIR_COLUMNS,
-    staffList: staff ? JSON.parse(staff) : INITIAL_STAFF_LIST,
+    staffList: (staff ? JSON.parse(staff) : INITIAL_STAFF_LIST).map(s => {
+      if (s.id === 24) return { ...s, role: "Pembangun Sistem" };
+      return s;
+    }),
     uploads: parsedUploads,
     usersAuth: usersAuth ? JSON.parse(usersAuth) : {},
     timetable: timetable ? JSON.parse(timetable) : defaultTimetable
