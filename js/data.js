@@ -217,12 +217,12 @@ const INITIAL_STAFF_LIST = [
 const INITIAL_UPLOADS_DATA = [];
 
 // Helper Functions untuk LocalStorage
-const ERPH_DATA_VERSION = "2.8";
+const ERPH_DATA_VERSION = "3.0";
 
 function getErphDatabase() {
   const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");
   if (savedVersion !== ERPH_DATA_VERSION) {
-    // Sinkronkan versi data terkini (muatkan konfigurasi takwim baru & jadual waktu rasmi)
+    // Sinkronkan versi data terkini (v3.0: bersihkan sepenuhnya semua rekod dummy / olok-olok lama)
     localStorage.setItem("SKR_ERPH_DATA_VERSION", ERPH_DATA_VERSION);
     localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(ERPH_SYSTEM_CONFIG));
     if (!localStorage.getItem("SKR_ERPH_STAFF_2026")) {
@@ -233,7 +233,15 @@ function getErphDatabase() {
     if (oldUploads) {
       try {
         const parsed = JSON.parse(oldUploads);
-        const authentic = parsed.filter(u => u && (u.hasPhysicalDocument || u.fileData || (u.fileName && !u.fileUrl?.includes("sample/"))));
+        // HANYA kekalkan rekod yang sah mempunyai dokumen fizikal sebenar atau status pentadbir
+        const authentic = parsed.filter(u => {
+          if (!u) return false;
+          if (u.fileUrl && u.fileUrl.includes("sample")) return false;
+          if (u.status === "HIJAU") {
+            return Boolean(u.hasPhysicalDocument === true && (u.fileType || u.fileData));
+          }
+          return Boolean(u.status === "MERAH" || u.status === "KUNING");
+        });
         localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(authentic));
       } catch (e) {
         localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(INITIAL_UPLOADS_DATA));
@@ -252,7 +260,14 @@ function getErphDatabase() {
   let parsedUploads = INITIAL_UPLOADS_DATA;
   if (uploads) {
     try {
-      parsedUploads = JSON.parse(uploads).filter(u => u && (u.hasPhysicalDocument || u.fileData || (u.fileName && !u.fileUrl?.includes("sample/"))));
+      parsedUploads = JSON.parse(uploads).filter(u => {
+        if (!u) return false;
+        if (u.fileUrl && u.fileUrl.includes("sample")) return false;
+        if (u.status === "HIJAU") {
+          return Boolean(u.hasPhysicalDocument === true && (u.fileType || u.fileData));
+        }
+        return Boolean(u.status === "MERAH" || u.status === "KUNING");
+      });
     } catch(e) {
       parsedUploads = INITIAL_UPLOADS_DATA;
     }
@@ -281,6 +296,7 @@ function saveErphDatabase(db) {
 }
 
 function resetErphDatabase() {
+  localStorage.setItem("SKR_ERPH_DATA_VERSION", ERPH_DATA_VERSION);
   localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(ERPH_SYSTEM_CONFIG));
   localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(INITIAL_STAFF_LIST));
   localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(INITIAL_UPLOADS_DATA));

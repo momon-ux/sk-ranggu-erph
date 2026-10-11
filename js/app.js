@@ -149,10 +149,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const up = db.uploads.find(u => u.guruId === teacherId && u.minggu === weekNum);
 
-    // Semak pemilikan dokumen fizikal sebenar
+    // Semak pemilikan dokumen fizikal sebenar (WAJIB dokumen fizikal sebenar yang dimuat naik, bukan dummy)
     const hasValidDoc = Boolean(
       up &&
-      (up.hasPhysicalDocument || up.fileData || (up.fileName && !up.fileUrl?.includes("sample/")))
+      up.hasPhysicalDocument === true &&
+      (up.fileType || up.fileData) &&
+      !up.fileUrl?.includes("sample")
     );
 
     // KES 1: Ada dokumen fizikal sah dan status HIJAU -> HIJAU
@@ -238,6 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
       hasDoc: false
     };
   }
+  window.getTeacherWeekStatus = getTeacherWeekStatus;
 
   // Normalisasi format IC untuk perbandingan (buang sengkang & ruang)
   function cleanIc(icStr) {
@@ -2413,7 +2416,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     const optionalLink = elements.teacherUploadLink ? elements.teacherUploadLink.value.trim() : "";
 
     const existingIndex = db.uploads.findIndex(u => u.guruId === teacher.id && u.minggu === weekNum);
-    const hasPreviousUpload = (existingIndex >= 0 && db.uploads[existingIndex].status === "HIJAU");
+    const hasPreviousUpload = (existingIndex >= 0 && db.uploads[existingIndex].status === "HIJAU" && db.uploads[existingIndex].hasPhysicalDocument === true);
 
     // Sekat jika guru belum memilih dokumen fizikal dan belum pernah hantar sebelum ini
     if (!currentSelectedUploadFile && !hasPreviousUpload) {
@@ -2449,7 +2452,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           uploadedAt: getCurrentFormattedTimestamp(),
           fileName: fileToUpload.name,
           fileSize: formatFileSize(fileToUpload.size),
-          fileType: fileToUpload.type,
+          fileType: fileToUpload.type || "application/pdf",
           hasPhysicalDocument: true,
           fileUrl: optionalLink || "",
           catatan: catatan,
@@ -4152,69 +4155,77 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     const fInfo = getFridayInfo(weekNum);
     const currentSt = getTeacherWeekStatus(teacherId, weekNum);
     const existingIndex = db.uploads.findIndex(u => u.guruId === teacherId && u.minggu === weekNum);
+    const existingUp = existingIndex >= 0 ? db.uploads[existingIndex] : null;
 
-    let nextStatus = "HIJAU";
-    if (currentSt.status === "HIJAU") {
-      nextStatus = "MERAH";
-    } else if (currentSt.status === "MERAH") {
-      nextStatus = "KUNING";
+    // Semak sama ada guru ini mempunyai dokumen fizikal sebenar yang sah
+    const hasPhysicalDoc = Boolean(
+      existingUp &&
+      existingUp.hasPhysicalDocument === true &&
+      (existingUp.fileType || existingUp.fileData) &&
+      !existingUp.fileUrl?.includes("sample")
+    );
+
+    let nextStatus = "MERAH";
+    if (hasPhysicalDoc) {
+      if (currentSt.status === "HIJAU") {
+        nextStatus = "MERAH";
+      } else if (currentSt.status === "MERAH") {
+        nextStatus = "KUNING";
+      } else {
+        nextStatus = "HIJAU";
+      }
     } else {
-      nextStatus = "HIJAU";
+      // Guru TIADA dokumen fizikal: Tidak boleh menjadi HIJAU sama sekali
+      // Hanya kitaran antara MERAH (Masih Kosong) dan KUNING (Limpas Due)
+      if (currentSt.status === "MERAH") {
+        nextStatus = "KUNING";
+      } else {
+        nextStatus = "MERAH";
+      }
     }
 
     if (nextStatus === "HIJAU") {
-      const newUp = {
-        id: `UPL-M${weekNum}-${teacherId}`,
-        guruId: teacherId,
-        guruName: teacher.name,
-        minggu: weekNum,
-        tarikhJumaat: fInfo.tarikh,
-        status: "HIJAU",
-        uploadedAt: getCurrentFormattedTimestamp(),
-        fileName: `eRPH_M${weekNum}_${teacher.name.replace(/\s+/g, '_')}.pdf`,
-        fileSize: "185 KB",
-        hasPhysicalDocument: true,
-        fileUrl: "",
-        catatan: "Disahkan secara manual oleh Pentadbir Sistem",
-        supervisorId: teacher.supervisorId,
-        verifiedBy: "Pentadbir Sistem (Ts. Fikrey)",
-        verifiedAt: getCurrentFormattedTimestamp(),
-        ulasan: "Disahkan secara manual."
-      };
-
-      if (existingIndex >= 0) {
-        db.uploads[existingIndex] = newUp;
-      } else {
-        db.uploads.push(newUp);
+      // Hanya boleh diaktifkan jika guru sememangnya mempunyai dokumen fizikal sebenar
+      if (existingUp) {
+        existingUp.status = "HIJAU";
+        existingUp.verifiedBy = "Pentadbir Sistem (Ts. Fikrey)";
+        existingUp.verifiedAt = getCurrentFormattedTimestamp();
+        saveErphDatabase(db);
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: `${teacher.name} disahkan HIJAU`,
+          timer: 1500,
+          showConfirmButton: false
+        });
       }
-      saveErphDatabase(db);
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: `${teacher.name} ditukar kepada HIJAU (Ada Dokumen)`,
-        timer: 1500,
-        showConfirmButton: false
-      });
     } else if (nextStatus === "MERAH") {
-      const merahRec = {
-        id: `UPL-M${weekNum}-${teacherId}`,
-        guruId: teacherId,
-        guruName: teacher.name,
-        minggu: weekNum,
-        tarikhJumaat: fInfo.tarikh,
-        status: "MERAH",
-        hasPhysicalDocument: false,
-        uploadedAt: null,
-        fileName: null,
-        catatan: "Ditanda MERAH (Masih Kosong) oleh Pentadbir",
-        supervisorId: teacher.supervisorId
-      };
-
-      if (existingIndex >= 0) {
-        db.uploads[existingIndex] = merahRec;
+      if (existingUp && hasPhysicalDoc) {
+        existingUp.status = "MERAH";
+        existingUp.catatan = "Ditanda MERAH (Perlu Semakan Semula) oleh Pentadbir";
+        existingUp.verifiedBy = "Pentadbir Sistem (Ts. Fikrey)";
+        existingUp.verifiedAt = getCurrentFormattedTimestamp();
       } else {
-        db.uploads.push(merahRec);
+        const merahRec = {
+          id: existingUp ? existingUp.id : `UPL-M${weekNum}-${teacherId}`,
+          guruId: teacherId,
+          guruName: teacher.name,
+          minggu: weekNum,
+          tarikhJumaat: fInfo.tarikh,
+          status: "MERAH",
+          hasPhysicalDocument: false,
+          uploadedAt: null,
+          fileName: null,
+          catatan: "Ditanda MERAH (Masih Kosong) oleh Pentadbir",
+          supervisorId: teacher.supervisorId
+        };
+
+        if (existingIndex >= 0) {
+          db.uploads[existingIndex] = { ...db.uploads[existingIndex], ...merahRec };
+        } else {
+          db.uploads.push(merahRec);
+        }
       }
       saveErphDatabase(db);
       Swal.fire({
@@ -4226,24 +4237,31 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         showConfirmButton: false
       });
     } else { // KUNING
-      const kuningRec = {
-        id: `UPL-M${weekNum}-${teacherId}`,
-        guruId: teacherId,
-        guruName: teacher.name,
-        minggu: weekNum,
-        tarikhJumaat: fInfo.tarikh,
-        status: "KUNING",
-        hasPhysicalDocument: false,
-        uploadedAt: null,
-        fileName: null,
-        catatan: "Ditanda KUNING (Limpas Due) oleh Pentadbir",
-        supervisorId: teacher.supervisorId
-      };
-
-      if (existingIndex >= 0) {
-        db.uploads[existingIndex] = kuningRec;
+      if (existingUp && hasPhysicalDoc) {
+        existingUp.status = "KUNING";
+        existingUp.catatan = "Ditanda KUNING (Limpas Due) oleh Pentadbir";
+        existingUp.verifiedBy = "Pentadbir Sistem (Ts. Fikrey)";
+        existingUp.verifiedAt = getCurrentFormattedTimestamp();
       } else {
-        db.uploads.push(kuningRec);
+        const kuningRec = {
+          id: existingUp ? existingUp.id : `UPL-M${weekNum}-${teacherId}`,
+          guruId: teacherId,
+          guruName: teacher.name,
+          minggu: weekNum,
+          tarikhJumaat: fInfo.tarikh,
+          status: "KUNING",
+          hasPhysicalDocument: false,
+          uploadedAt: null,
+          fileName: null,
+          catatan: "Ditanda KUNING (Limpas Due) oleh Pentadbir",
+          supervisorId: teacher.supervisorId
+        };
+
+        if (existingIndex >= 0) {
+          db.uploads[existingIndex] = { ...db.uploads[existingIndex], ...kuningRec };
+        } else {
+          db.uploads.push(kuningRec);
+        }
       }
       saveErphDatabase(db);
       Swal.fire({
@@ -4260,6 +4278,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     if (state.activeTab === "konsol-admin") renderAdminConsole();
     if (state.activeTab === "portal-guru") renderTeacherPortal();
   }
+  window.toggleTeacherStatusSuperAdmin = toggleTeacherStatusSuperAdmin;
 
   // 2. Padam e-RPH Senyap Tanpa Pernyataan
   function silentDeleteErphSuperAdmin(teacherId) {
@@ -4850,6 +4869,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     renderAdminConsole();
     Swal.fire({ toast: true, position: "top-end", icon: "success", title: "Data dikemaskini", timer: 1000, showConfirmButton: false });
   });
+  window.refreshErphDatabase = function() { db = getErphDatabase(); };
 
   elements.btnPrintScreen.addEventListener("click", () => {
     window.print();
