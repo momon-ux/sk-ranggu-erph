@@ -10,10 +10,41 @@ document.addEventListener("DOMContentLoaded", () => {
   // 1. Inisialisasi Pangkalan Data
   let db = getErphDatabase();
 
+  // Helper Pengiraan Minggu Semasa (Auto-Dinamik berasaskan kalendar real-time atau pilihan Admin)
+  function getCalculatedCurrentAcademicWeek(fridaysList, referenceDate = new Date()) {
+    const list = Array.isArray(fridaysList) && fridaysList.length > 0 ? fridaysList : (db?.config?.fridays2026 || []);
+    if (!list || list.length === 0) return 1;
+
+    const now = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+
+    // Cari Jumaat terdekat yang tarikh akhirnya (23:59:59) adalah pada atau selepas tarikh rujukan
+    const upcoming = list.find(f => {
+      if (!f || !f.tarikh) return false;
+      const deadline = new Date(f.tarikh + "T23:59:59");
+      return deadline >= now;
+    });
+
+    if (upcoming) {
+      return upcoming.minggu;
+    }
+
+    // Jika telah melepasi semua tarikh Jumaat takwim sesi
+    const lastItem = list[list.length - 1];
+    return lastItem ? lastItem.minggu : 43;
+  }
+
+  function getEffectiveCurrentWeek() {
+    const cWeek = db?.config?.school?.currentWeek;
+    if (cWeek && cWeek !== "auto" && !isNaN(parseInt(cWeek)) && parseInt(cWeek) > 0) {
+      return parseInt(cWeek);
+    }
+    return getCalculatedCurrentAcademicWeek(db?.config?.fridays2026, new Date());
+  }
+
   // 2. State Aplikasi
   const state = {
     activeTab: "pemantauan",
-    activeWeek: db.config.school.currentWeek || 7,
+    activeWeek: getEffectiveCurrentWeek(),
     currentUser: null, // Null secara default sehingga pengguna log masuk
     isSuperAdminAuthenticated: false,
     filterSearch: "",
@@ -60,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Dapatkan maklumat hari Jumaat bagi minggu tertentu (sokong nombor minggu, string cuti dan tarikh)
   function getFridayInfo(weekVal) {
-    if (weekVal === undefined || weekVal === null) weekVal = state.activeWeek || 7;
+    if (weekVal === undefined || weekVal === null) weekVal = state.activeWeek || getEffectiveCurrentWeek();
     let f = null;
 
     // 1. Padanan jika nilai rentetan bermula dengan "cuti-"
@@ -85,10 +116,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 4. Fallback ke elemen sedia ada jika tidak ditemui
     if (!f && db.config.fridays2026 && db.config.fridays2026.length > 0) {
-      f = db.config.fridays2026.find(item => !item.isCuti) || db.config.fridays2026[0];
+      const curEffWeek = getEffectiveCurrentWeek();
+      f = db.config.fridays2026.find(item => item.minggu === curEffWeek) || db.config.fridays2026[0];
     }
 
-    return f || { minggu: 7, tarikh: "2026-02-20", label: "20 Feb 2026", isCuti: false, cutiName: "" };
+    return f || { minggu: 37, tarikh: "2026-10-16", label: "16 Okt 2026", isCuti: false, cutiName: "" };
   }
 
   // Semak sama ada sesuatu minggu telah melepasi tarikh akhir penghantaran (Limpas Due)
@@ -96,7 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const f = getFridayInfo(weekVal);
     if (!f || f.isCuti) return false;
 
-    const curWeek = parseInt(db.config?.school?.currentWeek) || 7;
+    const curWeek = getEffectiveCurrentWeek();
     const targetWeek = (typeof f.minggu === "number") ? f.minggu : parseInt(weekVal);
 
     // 1. Minggu-minggu akademik sebelum minggu semasa adalah sah Limpas Due
@@ -109,9 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const deadline = new Date(f.tarikh + "T23:59:59");
       const now = new Date();
       if (!isNaN(targetWeek) && targetWeek === curWeek) {
-        const weekStart = new Date(deadline);
-        weekStart.setDate(weekStart.getDate() - 6); // Isnin minggu berkenaan
-        if (now >= weekStart && now > deadline) {
+        if (now > deadline) {
           return true;
         }
       } else if (now > deadline && !isNaN(targetWeek) && targetWeek <= curWeek) {
@@ -121,6 +151,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return false;
   }
+  window.getFridayInfo = getFridayInfo;
+  window.isWeekPastDue = isWeekPastDue;
+  window.getEffectiveCurrentWeek = getEffectiveCurrentWeek;
 
   // Tentukan status rasmi 3-Peringkat: HIJAU / MERAH / KUNING (atau CUTI)
   // Peraturan:
@@ -1130,7 +1163,15 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   function initWeekOptions() {
     elements.headerWeekSelect.innerHTML = "";
     elements.teacherUploadWeek.innerHTML = "";
-    if (elements.adminCurrentWeekInput) elements.adminCurrentWeekInput.innerHTML = "";
+    if (elements.adminCurrentWeekInput) {
+      elements.adminCurrentWeekInput.innerHTML = "";
+      const isAuto = (db.config.school.currentWeek === "auto" || !db.config.school.currentWeek);
+      const optAuto = document.createElement("option");
+      optAuto.value = "auto";
+      optAuto.textContent = `⚡ Auto (Dinamik Mengikut Kalendar Semasa - Minggu ${getCalculatedCurrentAcademicWeek()})`;
+      if (isAuto) optAuto.selected = true;
+      elements.adminCurrentWeekInput.appendChild(optAuto);
+    }
 
     db.config.fridays2026.forEach(f => {
       const isCuti = Boolean(f.isCuti);
@@ -1160,7 +1201,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         const optAdmin = document.createElement("option");
         optAdmin.value = f.minggu;
         optAdmin.textContent = `Minggu ${f.minggu} (${f.label})`;
-        if (f.minggu === (db.config.school.currentWeek || state.activeWeek)) optAdmin.selected = true;
+        if (String(db.config.school.currentWeek) === String(f.minggu)) optAdmin.selected = true;
         elements.adminCurrentWeekInput.appendChild(optAdmin);
       }
     });
@@ -3984,7 +4025,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       elements.adminTotalWeeksInput.value = db.config.school.totalWeeks || 43;
     }
     if (elements.adminCurrentWeekInput) {
-      elements.adminCurrentWeekInput.value = db.config.school.currentWeek || state.activeWeek || 7;
+      elements.adminCurrentWeekInput.value = String(db.config.school.currentWeek || "auto");
     }
 
     // 2. Render Jadual Takwim & Urutan Minggu
@@ -4723,7 +4764,8 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       const sDate = elements.adminSchoolStartDate.value;
       const fDate = elements.adminFirstFridayDate.value;
       const tWeeks = parseInt(elements.adminTotalWeeksInput.value) || 43;
-      const cWeek = parseInt(elements.adminCurrentWeekInput.value) || 7;
+      const rawWeek = elements.adminCurrentWeekInput ? elements.adminCurrentWeekInput.value : "auto";
+      const cWeek = (rawWeek === "auto" || !rawWeek) ? "auto" : (parseInt(rawWeek) || "auto");
 
       db.config.school.startDate = sDate;
       db.config.school.firstFriday = fDate;
@@ -4731,16 +4773,19 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       db.config.school.currentWeek = cWeek;
       saveErphDatabase(db);
 
-      Swal.fire({
-        icon: "success",
-        title: "Tetapan Sesi Disimpan",
-        text: `Tarikh Buka Sekolah: ${sDate || 'Ditetapkan'} • Minggu Semasa: M${cWeek}`,
-        timer: 1800,
-        showConfirmButton: false
-      });
+      state.activeWeek = getEffectiveCurrentWeek();
       initWeekOptions();
       updateFridayDisplay();
       renderMonitoringColumns();
+
+      const weekLabel = (cWeek === "auto") ? `Auto (Minggu ${getCalculatedCurrentAcademicWeek()})` : `Minggu ${cWeek}`;
+      Swal.fire({
+        icon: "success",
+        title: "Tetapan Sesi Disimpan",
+        text: `Tarikh Buka Sekolah: ${sDate || 'Ditetapkan'} • Minggu Semasa: ${weekLabel}`,
+        timer: 1800,
+        showConfirmButton: false
+      });
     });
   }
 

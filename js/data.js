@@ -18,7 +18,7 @@ const ERPH_SYSTEM_CONFIG = {
     logoKpm: "assets/logo-kpm.png",
     startDate: "2026-01-05", // Tarikh Mula Buka Sekolah (Isnin Sesi 2026)
     firstFriday: "2026-01-09", // Tarikh Jumaat Pertama
-    currentWeek: 7,
+    currentWeek: "auto", // Auto-Dinamik mengikut tarikh kalendar sebenar (atau boleh ditetapkan manual oleh Admin)
     totalWeeks: 43
   },
   security: {
@@ -34,7 +34,7 @@ const ERPH_SYSTEM_CONFIG = {
     { minggu: 4, tarikh: "2026-01-30", label: "30 Jan 2026", isCuti: false, cutiName: "" },
     { minggu: 5, tarikh: "2026-02-06", label: "06 Feb 2026", isCuti: false, cutiName: "" },
     { minggu: 6, tarikh: "2026-02-13", label: "13 Feb 2026", isCuti: false, cutiName: "" },
-    { minggu: 7, tarikh: "2026-02-20", label: "20 Feb 2026", isCuti: false, cutiName: "" }, // Minggu Semasa Piawai
+    { minggu: 7, tarikh: "2026-02-20", label: "20 Feb 2026", isCuti: false, cutiName: "" },
     { minggu: 8, tarikh: "2026-02-27", label: "27 Feb 2026", isCuti: false, cutiName: "" },
     { minggu: 9, tarikh: "2026-03-06", label: "06 Mac 2026", isCuti: false, cutiName: "" },
     { minggu: 10, tarikh: "2026-03-13", label: "13 Mac 2026", isCuti: false, cutiName: "" },
@@ -217,14 +217,37 @@ const INITIAL_STAFF_LIST = [
 const INITIAL_UPLOADS_DATA = [];
 
 // Helper Functions untuk LocalStorage
-const ERPH_DATA_VERSION = "3.0";
+const ERPH_DATA_VERSION = "3.1";
 
 function getErphDatabase() {
   const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");
   if (savedVersion !== ERPH_DATA_VERSION) {
-    // Sinkronkan versi data terkini (v3.0: bersihkan sepenuhnya semua rekod dummy / olok-olok lama)
+    // Sinkronkan versi data terkini (v3.1: auto-kira minggu semasa & hapus rekod dummy lama)
     localStorage.setItem("SKR_ERPH_DATA_VERSION", ERPH_DATA_VERSION);
-    localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(ERPH_SYSTEM_CONFIG));
+    
+    // Pastikan konfigurasi sekolah menggunakan currentWeek: 'auto' dan mengekalkan fridays2026
+    let currentConfig = ERPH_SYSTEM_CONFIG;
+    const oldConfigStr = localStorage.getItem("SKR_ERPH_CONFIG_2026");
+    if (oldConfigStr) {
+      try {
+        const parsedCfg = JSON.parse(oldConfigStr);
+        if (parsedCfg && parsedCfg.school) {
+          if (parsedCfg.school.currentWeek === 7 || !parsedCfg.school.currentWeek) {
+            parsedCfg.school.currentWeek = "auto";
+          }
+          currentConfig = {
+            ...ERPH_SYSTEM_CONFIG,
+            ...parsedCfg,
+            school: { ...ERPH_SYSTEM_CONFIG.school, ...parsedCfg.school },
+            fridays2026: (Array.isArray(parsedCfg.fridays2026) && parsedCfg.fridays2026.length > 0) ? parsedCfg.fridays2026 : ERPH_SYSTEM_CONFIG.fridays2026
+          };
+        }
+      } catch (e) {
+        currentConfig = ERPH_SYSTEM_CONFIG;
+      }
+    }
+    localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(currentConfig));
+
     if (!localStorage.getItem("SKR_ERPH_STAFF_2026")) {
       localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(INITIAL_STAFF_LIST));
     }
@@ -255,6 +278,26 @@ function getErphDatabase() {
   }
 
   const cfg = localStorage.getItem("SKR_ERPH_CONFIG_2026");
+  let parsedConfig = ERPH_SYSTEM_CONFIG;
+  if (cfg) {
+    try {
+      const parsed = JSON.parse(cfg);
+      if (parsed && parsed.school) {
+        if (parsed.school.currentWeek === 7 || !parsed.school.currentWeek) {
+          parsed.school.currentWeek = "auto";
+        }
+        parsedConfig = {
+          ...ERPH_SYSTEM_CONFIG,
+          ...parsed,
+          school: { ...ERPH_SYSTEM_CONFIG.school, ...parsed.school },
+          fridays2026: (Array.isArray(parsed.fridays2026) && parsed.fridays2026.length > 0) ? parsed.fridays2026 : ERPH_SYSTEM_CONFIG.fridays2026
+        };
+        localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(parsedConfig));
+      }
+    } catch(e) {
+      parsedConfig = ERPH_SYSTEM_CONFIG;
+    }
+  }
   const staff = localStorage.getItem("SKR_ERPH_STAFF_2026");
   let uploads = localStorage.getItem("SKR_ERPH_UPLOADS_2026");
   let parsedUploads = INITIAL_UPLOADS_DATA;
@@ -278,7 +321,7 @@ function getErphDatabase() {
   const defaultTimetable = (typeof INITIAL_TIMETABLE_DATA !== "undefined" && Array.isArray(INITIAL_TIMETABLE_DATA)) ? INITIAL_TIMETABLE_DATA : [];
 
   return {
-    config: cfg ? JSON.parse(cfg) : ERPH_SYSTEM_CONFIG,
+    config: parsedConfig,
     pentadbir: PENTADBIR_COLUMNS,
     staffList: staff ? JSON.parse(staff) : INITIAL_STAFF_LIST,
     uploads: parsedUploads,
