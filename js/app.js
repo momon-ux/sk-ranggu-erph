@@ -55,13 +55,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Gateway Elements
     tabLoginBtnGuru: document.getElementById("tab-login-btn-guru"),
     tabLoginBtnAdmin: document.getElementById("tab-login-btn-admin"),
-    tabLoginBtnSuper: document.getElementById("tab-login-btn-super"),
     gatewayFormGuru: document.getElementById("gateway-form-guru"),
     gatewayGuruIc: document.getElementById("gateway-guru-ic"),
     gatewayGuruPwd: document.getElementById("gateway-guru-pwd"),
     gatewayFormAdmin: document.getElementById("gateway-form-admin"),
-    gatewayFormSuper: document.getElementById("gateway-form-super"),
-    gatewaySuperCode: document.getElementById("gateway-super-code"),
+    loginFeedbackAlert: document.getElementById("login-feedback-alert"),
+
+    // Secret Super Admin Elements (Ikon Setting ⚙️)
+    btnSecretAdminTrigger: document.getElementById("btn-secret-admin-trigger"),
+    modalSecretAdminAuth: document.getElementById("modal-secret-admin-auth"),
+    btnCloseSecretModal: document.getElementById("btn-close-secret-modal"),
+    formSecretAdminLogin: document.getElementById("form-secret-admin-login"),
+    inputSecretAdminPass: document.getElementById("input-secret-admin-pass"),
+    secretAdminFeedback: document.getElementById("secret-admin-feedback"),
 
     // App Header & Sidebar Elements
     pageTitle: document.getElementById("page-title"),
@@ -245,21 +251,56 @@ document.addEventListener("DOMContentLoaded", () => {
     lucide.createIcons();
   }
 
+  // Helper Keselamatan: Safe SweetAlert2 Wrapper (Cegah sebarang ralat jika CDN disekat)
+  function safeSwal(opts) {
+    try {
+      if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+        return Swal.fire(opts);
+      }
+    } catch (err) {
+      console.warn("SweetAlert notification:", err);
+    }
+  }
+
+  // Helper Paparan Maklum Balas Log Masuk (Inline Banner & Alert)
+  function showLoginFeedback(message, type = "error") {
+    if (elements.loginFeedbackAlert) {
+      elements.loginFeedbackAlert.classList.remove("hidden", "bg-rose-50", "text-rose-800", "border-rose-300", "bg-emerald-50", "text-emerald-800", "border-emerald-300");
+      if (type === "error") {
+        elements.loginFeedbackAlert.className = "p-3.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300 shadow-xs flex items-start space-x-2";
+        elements.loginFeedbackAlert.innerHTML = `<span class="text-rose-600 font-bold text-sm leading-none flex-shrink-0">⚠️</span> <span class="leading-relaxed">${message}</span>`;
+      } else {
+        elements.loginFeedbackAlert.className = "p-3.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs flex items-start space-x-2";
+        elements.loginFeedbackAlert.innerHTML = `<span class="text-emerald-600 font-bold text-sm leading-none flex-shrink-0">✅</span> <span class="leading-relaxed">${message}</span>`;
+      }
+      elements.loginFeedbackAlert.classList.remove("hidden");
+    }
+
+    safeSwal({
+      icon: type === "error" ? "error" : "success",
+      title: type === "error" ? "Ralat Log Masuk" : "Berjaya",
+      text: message,
+      confirmButtonColor: type === "error" ? "#e11d48" : "#0284c7"
+    });
+  }
+
   function handleLogout() {
     sessionStorage.removeItem("SKR_LOGGED_USER");
     state.currentUser = null;
     state.isSuperAdminAuthenticated = false;
 
     // Reset borang login
-    elements.gatewayGuruIc.value = "";
-    elements.gatewayGuruPwd.value = "";
-    elements.gatewaySuperCode.value = "";
+    if (elements.gatewayGuruIc) elements.gatewayGuruIc.value = "";
+    if (elements.gatewayGuruPwd) elements.gatewayGuruPwd.value = "";
+    if (elements.inputSecretAdminPass) elements.inputSecretAdminPass.value = "";
+    if (elements.loginFeedbackAlert) elements.loginFeedbackAlert.classList.add("hidden");
+    if (elements.secretAdminFeedback) elements.secretAdminFeedback.classList.add("hidden");
 
     // Sembunyikan App, buka Login Gateway
     elements.appLayout.classList.add("hidden");
     elements.loginGateway.classList.remove("hidden");
 
-    Swal.fire({
+    safeSwal({
       toast: true,
       position: "top-end",
       icon: "info",
@@ -271,120 +312,57 @@ document.addEventListener("DOMContentLoaded", () => {
     lucide.createIcons();
   }
 
-  // Gateway Tab Switching (Guru / Pentadbir / Super Admin)
-  elements.tabLoginBtnGuru.addEventListener("click", () => {
-    elements.tabLoginBtnGuru.className = "flex-1 py-2 rounded-lg transition bg-white text-sky-700 shadow-xs";
-    elements.tabLoginBtnAdmin.className = "flex-1 py-2 rounded-lg transition text-slate-600 hover:text-slate-900";
-    elements.tabLoginBtnSuper.className = "flex-1 py-2 rounded-lg transition text-slate-600 hover:text-slate-900";
+  // 1. Gateway Tab Switching (Portal Guru vs Pentadbir Sekolah)
+  if (elements.tabLoginBtnGuru) {
+    elements.tabLoginBtnGuru.addEventListener("click", (e) => {
+      e.preventDefault();
+      elements.tabLoginBtnGuru.className = "flex-1 py-2.5 rounded-lg transition bg-sky-600 text-white shadow-sm font-black cursor-pointer";
+      elements.tabLoginBtnAdmin.className = "flex-1 py-2.5 rounded-lg transition text-slate-600 hover:text-slate-900 font-bold cursor-pointer bg-transparent";
 
-    elements.gatewayFormGuru.classList.remove("hidden");
-    elements.gatewayFormAdmin.classList.add("hidden");
-    elements.gatewayFormSuper.classList.add("hidden");
-  });
-
-  elements.tabLoginBtnAdmin.addEventListener("click", () => {
-    elements.tabLoginBtnAdmin.className = "flex-1 py-2 rounded-lg transition bg-white text-sky-700 shadow-xs";
-    elements.tabLoginBtnGuru.className = "flex-1 py-2 rounded-lg transition text-slate-600 hover:text-slate-900";
-    elements.tabLoginBtnSuper.className = "flex-1 py-2 rounded-lg transition text-slate-600 hover:text-slate-900";
-
-    elements.gatewayFormAdmin.classList.remove("hidden");
-    elements.gatewayFormGuru.classList.add("hidden");
-    elements.gatewayFormSuper.classList.add("hidden");
-  });
-
-  elements.tabLoginBtnSuper.addEventListener("click", () => {
-    elements.tabLoginBtnSuper.className = "flex-1 py-2 rounded-lg transition bg-white text-sky-700 shadow-xs";
-    elements.tabLoginBtnGuru.className = "flex-1 py-2 rounded-lg transition text-slate-600 hover:text-slate-900";
-    elements.tabLoginBtnAdmin.className = "flex-1 py-2 rounded-lg transition text-slate-600 hover:text-slate-900";
-
-    elements.gatewayFormSuper.classList.remove("hidden");
-    elements.gatewayFormGuru.classList.add("hidden");
-    elements.gatewayFormAdmin.classList.add("hidden");
-  });
-
-  // 1. Submit Log Masuk Guru
-  elements.gatewayFormGuru.addEventListener("submit", (e) => {
-    e.preventDefault();
-
-    const inputIc = cleanIc(elements.gatewayGuruIc.value);
-    const inputPwd = elements.gatewayGuruPwd.value.trim();
-
-    // Cari guru dalam database staf
-    const matched = db.staffList.find(s => cleanIc(s.ic) === inputIc);
-
-    if (!matched) {
-      Swal.fire({
-        icon: "error",
-        title: "No. Kad Pengenalan Tidak Sah",
-        text: "Nombor K/P yang dimasukkan tidak ditemui dalam senarai rasmi guru SK Ranggu. Sila semak semula.",
-        confirmButtonColor: "#0284c7"
-      });
-      return;
-    }
-
-    // Sahkan kata laluan (custom atau default P3nd1d1kan)
-    const validPwd = matched.customPassword || db.config.security.defaultTeacherPassword;
-
-    if (inputPwd !== validPwd && inputPwd !== "P3nd1d1kan") {
-      Swal.fire({
-        icon: "error",
-        title: "Kata Laluan Tidak Tepat",
-        text: "Sila gunakan kata laluan sementara rasmi: P3nd1d1kan",
-        confirmButtonColor: "#0284c7"
-      });
-      return;
-    }
-
-    const userObj = {
-      id: matched.id,
-      name: matched.name,
-      role: matched.role,
-      ic: matched.ic,
-      isSupervisor: [1, 2, 3, 4, 5].includes(matched.id),
-      supervisorId: matched.supervisorId,
-      isSuperAdmin: false
-    };
-
-    Swal.fire({
-      icon: "success",
-      title: `Selamat Datang, Cikgu ${matched.name}`,
-      text: "Log masuk berjaya. Membuka Portal Peribadi e-RPH...",
-      timer: 1800,
-      showConfirmButton: false
+      elements.gatewayFormGuru.classList.remove("hidden");
+      elements.gatewayFormAdmin.classList.add("hidden");
+      if (elements.loginFeedbackAlert) elements.loginFeedbackAlert.classList.add("hidden");
+      lucide.createIcons();
     });
+  }
 
-    handleSuccessfulLogin(userObj, false);
-  });
+  if (elements.tabLoginBtnAdmin) {
+    elements.tabLoginBtnAdmin.addEventListener("click", (e) => {
+      e.preventDefault();
+      elements.tabLoginBtnAdmin.className = "flex-1 py-2.5 rounded-lg transition bg-sky-600 text-white shadow-sm font-black cursor-pointer";
+      elements.tabLoginBtnGuru.className = "flex-1 py-2.5 rounded-lg transition text-slate-600 hover:text-slate-900 font-bold cursor-pointer bg-transparent";
 
-  // 2. Select Pentadbir Sekolah (Quick Leadership Log In)
-  document.querySelectorAll(".btn-gateway-admin-select").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const adminId = parseInt(btn.dataset.gatewayAdminId);
-      const matched = db.staffList.find(s => s.id === adminId);
+      elements.gatewayFormAdmin.classList.remove("hidden");
+      elements.gatewayFormGuru.classList.add("hidden");
+      if (elements.loginFeedbackAlert) elements.loginFeedbackAlert.classList.add("hidden");
+      lucide.createIcons();
+    });
+  }
 
-      if (matched) {
-        const userObj = {
-          id: matched.id,
-          name: matched.name,
-          role: matched.role,
-          ic: matched.ic,
-          isSupervisor: true,
-          supervisorId: matched.supervisorId,
-          isSuperAdmin: false
-        };
-
-        Swal.fire({
-          icon: "success",
-          title: `Log Masuk Pentadbir`,
-          text: `Selamat bertugas, ${matched.name} (${matched.role}).`,
-          timer: 1800,
-          showConfirmButton: false
-        });
-
-        handleSuccessfulLogin(userObj, false);
+  // 2. Ikon Tetapan Tersembunyi (Super Admin Settings Trigger ⚙️)
+  if (elements.btnSecretAdminTrigger) {
+    elements.btnSecretAdminTrigger.addEventListener("click", () => {
+      if (elements.modalSecretAdminAuth) {
+        elements.modalSecretAdminAuth.classList.remove("hidden");
+        if (elements.inputSecretAdminPass) {
+          elements.inputSecretAdminPass.value = "";
+          elements.inputSecretAdminPass.focus();
+        }
+        if (elements.secretAdminFeedback) {
+          elements.secretAdminFeedback.classList.add("hidden");
+        }
+        lucide.createIcons();
       }
     });
-  });
+  }
+
+  if (elements.btnCloseSecretModal) {
+    elements.btnCloseSecretModal.addEventListener("click", () => {
+      if (elements.modalSecretAdminAuth) {
+        elements.modalSecretAdminAuth.classList.add("hidden");
+      }
+    });
+  }
 
   // Helper Keselamatan: Pengesahan Kod Rahsia Super Admin (SHA-256 Hash)
   async function verifyAdminCode(rawInput) {
@@ -402,40 +380,162 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 3. Submit Super Admin Code (Kawalan Keselamatan Pembangun Sistem)
-  elements.gatewayFormSuper.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const code = elements.gatewaySuperCode.value.trim().toUpperCase();
-    const isValid = await verifyAdminCode(code);
+  // 3. Submit Super Admin Code dari Modal Tetapan Tersembunyi
+  if (elements.formSecretAdminLogin) {
+    elements.formSecretAdminLogin.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = (elements.inputSecretAdminPass?.value || "").trim().toUpperCase();
+      const isValid = await verifyAdminCode(code);
 
-    if (isValid) {
-      const superAdminUser = {
-        id: 24,
-        name: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
-        role: "Pentadbir Sistem & Penyelaras ICT (Super Admin)",
-        ic: "910528-12-5411",
-        isSupervisor: true,
-        supervisorId: null,
-        isSuperAdmin: true
+      if (isValid) {
+        const superAdminUser = {
+          id: 24,
+          name: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
+          role: "Pentadbir Sistem & Penyelaras ICT (Super Admin)",
+          ic: "910528-12-5411",
+          isSupervisor: true,
+          supervisorId: null,
+          isSuperAdmin: true
+        };
+
+        if (elements.modalSecretAdminAuth) {
+          elements.modalSecretAdminAuth.classList.add("hidden");
+        }
+
+        safeSwal({
+          icon: "success",
+          title: "Akses Super Admin Diberikan",
+          text: "Selamat bertugas Ts. Mohammad Fikrey. Semua modul pengurusan sistem diaktifkan.",
+          timer: 1800,
+          showConfirmButton: false
+        });
+
+        handleSuccessfulLogin(superAdminUser, true);
+      } else {
+        if (elements.secretAdminFeedback) {
+          elements.secretAdminFeedback.textContent = "❌ Kod akses keselamatan tidak sah. Sila pastikan anda mempunyai hak akses.";
+          elements.secretAdminFeedback.classList.remove("hidden");
+        }
+        safeSwal({
+          icon: "error",
+          title: "Akses Ditolak",
+          text: "Kod akses keselamatan tidak sah. Sila pastikan anda mempunyai kebenaran rasmi sebagai pentadbir sistem.",
+          confirmButtonColor: "#d97706"
+        });
+      }
+    });
+  }
+
+  // 4. Submit Log Masuk Portal Guru (Smart & Resilient Matching)
+  if (elements.gatewayFormGuru) {
+    elements.gatewayFormGuru.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const rawIc = (elements.gatewayGuruIc.value || "").trim();
+      const rawPwd = (elements.gatewayGuruPwd.value || "").trim();
+
+      if (!rawIc) {
+        showLoginFeedback("Sila masukkan Nombor Kad Pengenalan anda.", "error");
+        return;
+      }
+
+      if (!rawPwd) {
+        showLoginFeedback("Sila masukkan Kata Laluan anda.", "error");
+        return;
+      }
+
+      // SEMAKAN PINTAR SUPER ADMIN: Jika Ts. Fikrey masukkan kod akses rahsia atau IC beliau
+      const isPasskeyMatch = (await verifyAdminCode(rawPwd)) || (await verifyAdminCode(rawIc));
+      const isFikreyIc = (cleanIc(rawIc) === "910528125411");
+
+      if (isPasskeyMatch || (isFikreyIc && rawPwd.toUpperCase() === "TS.FIKREY37")) {
+        const superAdminUser = {
+          id: 24,
+          name: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
+          role: "Pentadbir Sistem & Penyelaras ICT (Super Admin)",
+          ic: "910528-12-5411",
+          isSupervisor: true,
+          supervisorId: null,
+          isSuperAdmin: true
+        };
+
+        showLoginFeedback("Pengesahan Super Admin Berjaya! Membuka sistem...", "success");
+        setTimeout(() => handleSuccessfulLogin(superAdminUser, true), 300);
+        return;
+      }
+
+      const inputIcClean = cleanIc(rawIc);
+
+      // Cari guru dalam database staf mengikut pelbagai format (bersih, sengkang, kod)
+      const matched = db.staffList.find(s => {
+        const sIcClean = cleanIc(s.ic);
+        return (sIcClean && sIcClean === inputIcClean) || 
+               (s.ic && s.ic.trim() === rawIc) || 
+               (s.code && s.code.toUpperCase() === rawIc.toUpperCase());
+      });
+
+      if (!matched) {
+        showLoginFeedback(`Nombor Kad Pengenalan (${rawIc}) tidak ditemui dalam senarai rasmi guru SK Ranggu. Sila pastikan anda memasukkan 12 digit No. KP yang tepat (contoh: 730926-12-5494).`, "error");
+        return;
+      }
+
+      // Sahkan kata laluan (terima custom password, atau sementara P3nd1d1kan tidak kira huruf besar/kecil)
+      const validCustomPwd = matched.customPassword;
+      const isDefaultPwd = (rawPwd.toLowerCase() === "p3nd1d1kan");
+      const isCustomPwd = (validCustomPwd && rawPwd === validCustomPwd);
+      const isFikreyDeveloper = (matched.id === 24 && (rawPwd.toUpperCase() === "TS.FIKREY37" || isDefaultPwd));
+
+      if (!isDefaultPwd && !isCustomPwd && !isFikreyDeveloper) {
+        showLoginFeedback(`Kata laluan tidak tepat bagi Cikgu ${matched.name}. Sila gunakan kata laluan sementara rasmi: P3nd1d1kan`, "error");
+        return;
+      }
+
+      const isLeadership = [1, 2, 3, 4, 5].includes(matched.id);
+      const isSuper = (matched.id === 24 && rawPwd.toUpperCase() === "TS.FIKREY37");
+
+      const userObj = {
+        id: matched.id,
+        name: matched.name,
+        role: matched.role,
+        ic: matched.ic,
+        isSupervisor: isLeadership,
+        supervisorId: matched.supervisorId,
+        isSuperAdmin: isSuper
       };
 
-      Swal.fire({
-        icon: "success",
-        title: "Akses Super Admin Diberikan",
-        text: "Selamat bertugas Ts. Mohammad Fikrey. Semua kuasa pengurusan sistem diaktifkan.",
-        timer: 1800,
-        showConfirmButton: false
-      });
+      showLoginFeedback(`Log masuk berjaya! Selamat datang, ${matched.name}.`, "success");
+      setTimeout(() => handleSuccessfulLogin(userObj, isSuper), 300);
+    });
+  }
 
-      handleSuccessfulLogin(superAdminUser, true);
-    } else {
-      Swal.fire({
-        icon: "error",
-        title: "Akses Ditolak",
-        text: "Kod akses keselamatan tidak sah. Sila pastikan anda mempunyai kebenaran rasmi sebagai pentadbir sistem.",
-        confirmButtonColor: "#d97706"
-      });
-    }
+  // 5. Select Pentadbir Sekolah (Quick Leadership Log In)
+  document.querySelectorAll(".btn-gateway-admin-select").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const adminId = parseInt(btn.dataset.gatewayAdminId);
+      const matched = db.staffList.find(s => s.id === adminId);
+
+      if (matched) {
+        const userObj = {
+          id: matched.id,
+          name: matched.name,
+          role: matched.role,
+          ic: matched.ic,
+          isSupervisor: true,
+          supervisorId: matched.supervisorId,
+          isSuperAdmin: false
+        };
+
+        safeSwal({
+          icon: "success",
+          title: `Log Masuk Pentadbir`,
+          text: `Selamat bertugas, ${matched.name} (${matched.role}).`,
+          timer: 1600,
+          showConfirmButton: false
+        });
+
+        handleSuccessfulLogin(userObj, false);
+      }
+    });
   });
 
   // Logout Buttons

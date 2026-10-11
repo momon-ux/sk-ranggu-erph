@@ -531,7 +531,20 @@ const INITIAL_UPLOADS_DATA = [
 ];
 
 // Helper Functions untuk LocalStorage
+const ERPH_DATA_VERSION = "2.3";
+
 function getErphDatabase() {
+  const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");
+  if (savedVersion !== ERPH_DATA_VERSION) {
+    // Sinkronkan versi data terkini (pastikan semua 60 nama guru & no KP rasmi terkini dimuatkan)
+    localStorage.setItem("SKR_ERPH_DATA_VERSION", ERPH_DATA_VERSION);
+    localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(INITIAL_STAFF_LIST));
+    localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(ERPH_SYSTEM_CONFIG));
+    if (!localStorage.getItem("SKR_ERPH_UPLOADS_2026")) {
+      localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(INITIAL_UPLOADS_DATA));
+    }
+  }
+
   const cfg = localStorage.getItem("SKR_ERPH_CONFIG_2026");
   const staff = localStorage.getItem("SKR_ERPH_STAFF_2026");
   const uploads = localStorage.getItem("SKR_ERPH_UPLOADS_2026");
