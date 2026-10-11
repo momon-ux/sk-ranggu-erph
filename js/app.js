@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
     monitoringViewMode: "baris", // "baris" (Default) | "jadual" | "kolum"
     monitoringSearch: "",
     monitoringPentadbirFilter: "ALL", // "ALL" | "1" | "2" | "3" | "4" | "5"
-    monitoringStatusFilter: "ALL", // "ALL" | "HIJAU" | "MERAH"
+    monitoringStatusFilter: "ALL", // "ALL" | "HIJAU" | "MERAH" | "KUNING"
     timetableMode: "guru", // "guru" | "kelas" | "induk"
     timetableSelectedGuru: null,
     timetableSelectedKelas: "4 I",
@@ -89,6 +89,154 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     return f || { minggu: 7, tarikh: "2026-02-20", label: "20 Feb 2026", isCuti: false, cutiName: "" };
+  }
+
+  // Semak sama ada sesuatu minggu telah melepasi tarikh akhir penghantaran (Limpas Due)
+  function isWeekPastDue(weekVal) {
+    const f = getFridayInfo(weekVal);
+    if (!f || f.isCuti) return false;
+
+    const curWeek = parseInt(db.config?.school?.currentWeek) || 7;
+    const targetWeek = (typeof f.minggu === "number") ? f.minggu : parseInt(weekVal);
+
+    // 1. Minggu-minggu akademik sebelum minggu semasa adalah sah Limpas Due
+    if (!isNaN(targetWeek) && targetWeek < curWeek) {
+      return true;
+    }
+
+    // 2. Semak tarikh akhir Jumaat mengikut tarikh kalendar sebenar
+    if (f.tarikh) {
+      const deadline = new Date(f.tarikh + "T23:59:59");
+      const now = new Date();
+      if (!isNaN(targetWeek) && targetWeek === curWeek) {
+        const weekStart = new Date(deadline);
+        weekStart.setDate(weekStart.getDate() - 6); // Isnin minggu berkenaan
+        if (now >= weekStart && now > deadline) {
+          return true;
+        }
+      } else if (now > deadline && !isNaN(targetWeek) && targetWeek <= curWeek) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Tentukan status rasmi 3-Peringkat: HIJAU / MERAH / KUNING (atau CUTI)
+  // Peraturan:
+  // - HIJAU: Hanya jika guru mempunyai dokumen fizikal/fail sebenar yang dimuat naik.
+  // - MERAH: Masih kosong / belum muat naik dalam tempoh minggu aktif (belum limpas due).
+  // - KUNING: Belum muat naik dan telah melepasi tarikh akhir penghantaran (limpas due).
+  // - CUTI: Minggu cuti persekolahan (dikecualikan daripada e-RPH).
+  function getTeacherWeekStatus(teacherId, weekVal) {
+    const f = getFridayInfo(weekVal);
+    const weekNum = f.minggu || parseInt(weekVal) || 7;
+
+    if (f.isCuti) {
+      return {
+        status: "CUTI",
+        label: "CUTI SEKOLAH",
+        shortLabel: "CUTI",
+        sublabel: f.cutiName || "Cuti Persekolahan (Dikecualikan)",
+        pillClass: "bg-amber-500 text-white shadow-xs",
+        badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
+        rowClass: "bg-amber-50/20",
+        cardClass: "bg-amber-50/40 border-amber-200",
+        icon: "sun",
+        hasDoc: false
+      };
+    }
+
+    const up = db.uploads.find(u => u.guruId === teacherId && u.minggu === weekNum);
+
+    // Semak pemilikan dokumen fizikal sebenar
+    const hasValidDoc = Boolean(
+      up &&
+      (up.hasPhysicalDocument || up.fileData || (up.fileName && !up.fileUrl?.includes("sample/")))
+    );
+
+    // KES 1: Ada dokumen fizikal sah dan status HIJAU -> HIJAU
+    if (hasValidDoc && up.status === "HIJAU") {
+      return {
+        status: "HIJAU",
+        label: "HIJAU - BERJAYA",
+        shortLabel: "HIJAU",
+        sublabel: up.uploadedAt ? `Dikemaskini: ${up.uploadedAt}` : "Berjaya Muat Naik",
+        pillClass: "bg-emerald-600 text-white shadow-xs",
+        badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
+        rowClass: "bg-emerald-50/25",
+        cardClass: "bg-emerald-50/40 border-emerald-300",
+        icon: "check-circle",
+        uploadRecord: up,
+        hasDoc: true
+      };
+    }
+
+    // KES 2: Pengesahan manual status KUNING oleh pentadbir
+    if (up && up.status === "KUNING") {
+      return {
+        status: "KUNING",
+        label: "KUNING - LIMPAS DUE",
+        shortLabel: "KUNING",
+        sublabel: "Melepasi Tarikh Akhir (Tertunggak)",
+        pillClass: "bg-amber-500 text-white shadow-xs",
+        badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
+        rowClass: "bg-amber-50/25",
+        cardClass: "bg-amber-50/40 border-amber-300",
+        icon: "alert-triangle",
+        uploadRecord: up,
+        hasDoc: false
+      };
+    }
+
+    // KES 3: Pengesahan manual status MERAH oleh pentadbir
+    if (up && up.status === "MERAH") {
+      return {
+        status: "MERAH",
+        label: "MERAH - BELUM HANTAR",
+        shortLabel: "MERAH",
+        sublabel: "Masih Kosong (Belum Muat Naik)",
+        pillClass: "bg-rose-600 text-white shadow-xs",
+        badgeClass: "bg-rose-100 text-rose-800 border-rose-300",
+        rowClass: "bg-rose-50/25",
+        cardClass: "bg-rose-50/40 border-rose-200",
+        icon: "x-circle",
+        uploadRecord: up,
+        hasDoc: false
+      };
+    }
+
+    // KES 4: Tiada dokumen sebenar -> semak sama ada Limpas Due atau Masih Kosong
+    const pastDue = isWeekPastDue(weekVal);
+    if (pastDue) {
+      return {
+        status: "KUNING",
+        label: "KUNING - LIMPAS DUE",
+        shortLabel: "KUNING",
+        sublabel: "Melepasi Tarikh Akhir Jumaat",
+        pillClass: "bg-amber-500 text-white shadow-xs",
+        badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
+        rowClass: "bg-amber-50/25",
+        cardClass: "bg-amber-50/40 border-amber-300",
+        icon: "alert-triangle",
+        uploadRecord: null,
+        hasDoc: false
+      };
+    }
+
+    return {
+      status: "MERAH",
+      label: "MERAH - BELUM HANTAR",
+      shortLabel: "MERAH",
+      sublabel: "Masih Kosong (Belum Muat Naik)",
+      pillClass: "bg-rose-600 text-white shadow-xs",
+      badgeClass: "bg-rose-100 text-rose-800 border-rose-300",
+      rowClass: "bg-rose-50/25",
+      cardClass: "bg-rose-50/40 border-rose-200",
+      icon: "x-circle",
+      uploadRecord: null,
+      hasDoc: false
+    };
   }
 
   // Normalisasi format IC untuk perbandingan (buang sengkang & ruang)
@@ -428,6 +576,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     // Tab 1 Elements
     statTotalHijau: document.getElementById("stat-total-hijau"),
     statTotalMerah: document.getElementById("stat-total-merah"),
+    statTotalKuning: document.getElementById("stat-total-kuning"),
     statTotalPct: document.getElementById("stat-total-pct"),
     pentadbirColumnsWrapper: document.getElementById("pentadbir-columns-wrapper"),
     btnViewModeBaris: document.getElementById("btn-view-mode-baris"),
@@ -1289,13 +1438,16 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
     let totalHijau = 0;
     let totalMerah = 0;
+    let totalKuning = 0;
     if (isHolidayWeek) {
       totalHijau = targetStaffForStats.length;
       totalMerah = 0;
+      totalKuning = 0;
     } else {
       targetStaffForStats.forEach(t => {
-        const up = weekUploads.find(u => u.guruId === t.id);
-        if (up && up.status === "HIJAU") totalHijau++;
+        const st = getTeacherWeekStatus(t.id, state.activeWeek);
+        if (st.status === "HIJAU") totalHijau++;
+        else if (st.status === "KUNING") totalKuning++;
         else totalMerah++;
       });
     }
@@ -1306,15 +1458,18 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     if (elements.statTotalHijau && elements.statTotalMerah && elements.statTotalPct) {
       if (isHolidayWeek) {
         elements.statTotalHijau.textContent = "Cuti Persekolahan";
-        elements.statTotalMerah.textContent = "0 Guru Tertunggak (Dikecualikan)";
+        elements.statTotalMerah.textContent = "0 Merah (Dikecualikan)";
+        if (elements.statTotalKuning) elements.statTotalKuning.textContent = "0 Kuning";
         elements.statTotalPct.textContent = "100% Cuti Sekolah";
       } else if (isGpk) {
-        elements.statTotalHijau.textContent = `${totalHijau} Guru Seliaan Hijau`;
-        elements.statTotalMerah.textContent = `${totalMerah} Guru Seliaan Merah`;
+        elements.statTotalHijau.textContent = `${totalHijau} Seliaan Hijau`;
+        elements.statTotalMerah.textContent = `${totalMerah} Seliaan Merah`;
+        if (elements.statTotalKuning) elements.statTotalKuning.textContent = `${totalKuning} Seliaan Kuning`;
         elements.statTotalPct.textContent = `${overallPct}% Selesai`;
       } else {
-        elements.statTotalHijau.textContent = `${totalHijau} Guru Hijau (Sekolah)`;
-        elements.statTotalMerah.textContent = `${totalMerah} Guru Merah (Sekolah)`;
+        elements.statTotalHijau.textContent = `${totalHijau} Hijau`;
+        elements.statTotalMerah.textContent = `${totalMerah} Merah`;
+        if (elements.statTotalKuning) elements.statTotalKuning.textContent = `${totalKuning} Kuning (Limpas Due)`;
         elements.statTotalPct.textContent = `${overallPct}% Keseluruhan`;
       }
     }
@@ -1360,6 +1515,8 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-black transition bg-emerald-600 text-white shadow-2xs";
         } else if (val === "MERAH") {
           btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-black transition bg-rose-600 text-white shadow-2xs";
+        } else if (val === "KUNING") {
+          btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-black transition bg-amber-500 text-white shadow-2xs";
         } else {
           btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-black transition bg-slate-900 text-white shadow-2xs";
         }
@@ -1368,6 +1525,8 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200";
         } else if (val === "MERAH") {
           btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200";
+        } else if (val === "KUNING") {
+          btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200";
         } else {
           btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-slate-100 hover:bg-slate-200 text-slate-700";
         }
@@ -1396,10 +1555,10 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       return staffArr.filter(teacher => {
         // 1. Penapis Status
         if (state.monitoringStatusFilter !== "ALL") {
-          const up = weekUploads.find(u => u.guruId === teacher.id);
-          const isUp = Boolean(up && up.status === "HIJAU");
-          if (state.monitoringStatusFilter === "HIJAU" && !isUp) return false;
-          if (state.monitoringStatusFilter === "MERAH" && isUp) return false;
+          const st = getTeacherWeekStatus(teacher.id, state.activeWeek);
+          if (state.monitoringStatusFilter === "HIJAU" && st.status !== "HIJAU") return false;
+          if (state.monitoringStatusFilter === "MERAH" && st.status !== "MERAH") return false;
+          if (state.monitoringStatusFilter === "KUNING" && st.status !== "KUNING") return false;
         }
 
         // 2. Penapis Kata Kunci Carian
@@ -1435,13 +1594,16 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         // Statistik Pentadbir Ini
         let colHijau = 0;
         let colMerah = 0;
+        let colKuning = 0;
         if (isHolidayWeek) {
           colHijau = rawStaff.length;
           colMerah = 0;
+          colKuning = 0;
         } else {
           rawStaff.forEach(s => {
-            const up = weekUploads.find(u => u.guruId === s.id);
-            if (up && up.status === "HIJAU") colHijau++;
+            const st = getTeacherWeekStatus(s.id, state.activeWeek);
+            if (st.status === "HIJAU") colHijau++;
+            else if (st.status === "KUNING") colKuning++;
             else colMerah++;
           });
         }
@@ -1493,18 +1655,21 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           filteredStaff.forEach((teacher, idx) => {
             const isTeacherGb = (teacher.id === 1);
             const canViewGbFolder = ((state.currentUser && state.currentUser.id === 1) || isSuper);
-            const up = weekUploads.find(u => u.guruId === teacher.id);
-            const isUploaded = (up && up.status === "HIJAU");
+            const st = getTeacherWeekStatus(teacher.id, state.activeWeek);
+            const isUploaded = (st.status === "HIJAU");
+            const isLimpas = (st.status === "KUNING");
 
             let timestampDisplay = "Belum memuat naik e-RPH";
             if (isHolidayWeek) {
               timestampDisplay = `Cuti Persekolahan (Dikecualikan)`;
-            } else if (isUploaded && up.uploadedAt) {
-              timestampDisplay = `Dikemaskini: ${up.uploadedAt}`;
+            } else if (isUploaded && st.uploadRecord?.uploadedAt) {
+              timestampDisplay = `Dikemaskini: ${st.uploadRecord.uploadedAt}`;
+            } else if (isLimpas) {
+              timestampDisplay = `Limpas Due (Tarikh Akhir Berlalu)`;
             }
 
             const rowDiv = document.createElement("div");
-            rowDiv.className = `teacher-monitor-row p-3.5 sm:p-4 hover:bg-slate-50/90 transition flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 ${isHolidayWeek ? 'bg-amber-50/20' : isUploaded ? 'bg-emerald-50/25' : 'bg-rose-50/25'}`;
+            rowDiv.className = `teacher-monitor-row p-3.5 sm:p-4 hover:bg-slate-50/90 transition flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 ${isHolidayWeek ? 'bg-amber-50/20' : isUploaded ? 'bg-emerald-50/25' : isLimpas ? 'bg-amber-50/25' : 'bg-rose-50/25'}`;
 
             rowDiv.innerHTML = `
               <!-- Maklumat Utama Guru (Foto, Kod, Sesi, Nama Penuh Tanpa Terpotong & Jawatan) -->
@@ -1543,7 +1708,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
               <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 flex-shrink-0 self-stretch sm:self-auto justify-between sm:justify-end border-t lg:border-t-0 pt-2.5 lg:pt-0 border-slate-100">
                 <div class="text-left sm:text-right min-w-[130px]">
                   <div class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Tarikh & Waktu</div>
-                  <div class="text-xs font-semibold ${isHolidayWeek ? 'text-amber-800' : isUploaded ? 'text-emerald-800 font-bold' : 'text-slate-500'}">
+                  <div class="text-xs font-semibold ${isHolidayWeek ? 'text-amber-800' : isUploaded ? 'text-emerald-800 font-bold' : isLimpas ? 'text-amber-800 font-bold' : 'text-slate-500'}">
                     ${timestampDisplay}
                   </div>
                 </div>
@@ -1559,6 +1724,11 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
                     <div class="w-full py-2 px-3 rounded-xl bg-emerald-600 text-white font-black text-xs shadow-xs flex items-center justify-center gap-1.5">
                       <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
                       <span>HIJAU - BERJAYA</span>
+                    </div>
+                  ` : isLimpas ? `
+                    <div class="w-full py-2 px-3 rounded-xl bg-amber-500 text-white font-black text-xs shadow-xs flex items-center justify-center gap-1.5">
+                      <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                      <span>KUNING - LIMPAS DUE</span>
                     </div>
                   ` : `
                     <div class="w-full py-2 px-3 rounded-xl bg-rose-600 text-white font-black text-xs shadow-xs flex items-center justify-center gap-1.5">
@@ -1580,7 +1750,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
                   `}
 
                   ${isSuper ? `
-                    <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau <-> Merah)" class="btn-toggle-status-super p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer">
+                    <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau -> Merah -> Kuning)" class="btn-toggle-status-super p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer">
                       <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-amber-600"></i>
                     </button>
                     ${isUploaded ? `
@@ -1674,20 +1844,23 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
               ` : filteredStaff.map((teacher, idx) => {
                 const isTeacherGb = (teacher.id === 1);
                 const canViewGbFolder = ((state.currentUser && state.currentUser.id === 1) || isSuper);
-                const up = weekUploads.find(u => u.guruId === teacher.id);
-                const isUploaded = (up && up.status === "HIJAU");
+                const st = getTeacherWeekStatus(teacher.id, state.activeWeek);
+                const isUploaded = (st.status === "HIJAU");
+                const isLimpas = (st.status === "KUNING");
 
                 let timestampDisplay = "Belum muat naik";
                 if (isHolidayWeek) {
                   timestampDisplay = `Cuti Sekolah`;
-                } else if (isUploaded && up.uploadedAt) {
-                  timestampDisplay = up.uploadedAt;
+                } else if (isUploaded && st.uploadRecord?.uploadedAt) {
+                  timestampDisplay = st.uploadRecord.uploadedAt;
+                } else if (isLimpas) {
+                  timestampDisplay = "Limpas Due";
                 }
 
                 const supervisorCol = teacher.supervisorCol || db.pentadbir.find(c => c.id === teacher.supervisorId) || db.pentadbir[0];
 
                 return `
-                  <tr class="hover:bg-slate-50/90 transition ${isHolidayWeek ? 'bg-amber-50/10' : isUploaded ? 'bg-emerald-50/15' : 'bg-rose-50/15'}">
+                  <tr class="hover:bg-slate-50/90 transition ${isHolidayWeek ? 'bg-amber-50/10' : isUploaded ? 'bg-emerald-50/15' : isLimpas ? 'bg-amber-50/15' : 'bg-rose-50/15'}">
                     <td class="py-3 px-3 text-center font-mono font-bold text-slate-400">${idx + 1}</td>
                     
                     <td class="py-3 px-4">
@@ -1727,12 +1900,17 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
                       ` : isUploaded ? `
                         <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
                           <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
-                          <span>Hijau (Hantar)</span>
+                          <span>Hijau (Ada Dokumen)</span>
+                        </span>
+                      ` : isLimpas ? `
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-900 border border-amber-300">
+                          <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600"></i>
+                          <span>Kuning (Limpas Due)</span>
                         </span>
                       ` : `
                         <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-300">
                           <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-600"></i>
-                          <span>Merah (Belum)</span>
+                          <span>Merah (Masih Kosong)</span>
                         </span>
                       `}
                     </td>
@@ -1753,7 +1931,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
                         `}
 
                         ${isSuper ? `
-                          <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau <-> Merah)" class="btn-toggle-status-super p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer">
+                          <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau -> Merah -> Kuning)" class="btn-toggle-status-super p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer">
                             <i data-lucide="refresh-cw" class="w-3 h-3 text-amber-600"></i>
                           </button>
                           ${isUploaded ? `
@@ -1795,13 +1973,16 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
         let colHijau = 0;
         let colMerah = 0;
+        let colKuning = 0;
         if (isHolidayWeek) {
           colHijau = rawStaff.length;
           colMerah = 0;
+          colKuning = 0;
         } else {
           rawStaff.forEach(s => {
-            const up = weekUploads.find(u => u.guruId === s.id);
-            if (up && up.status === "HIJAU") colHijau++;
+            const st = getTeacherWeekStatus(s.id, state.activeWeek);
+            if (st.status === "HIJAU") colHijau++;
+            else if (st.status === "KUNING") colKuning++;
             else colMerah++;
           });
         }
@@ -1846,23 +2027,28 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           filteredStaff.forEach(teacher => {
             const isTeacherGb = (teacher.id === 1);
             const canViewGbFolder = ((state.currentUser && state.currentUser.id === 1) || isSuper);
-            const up = weekUploads.find(u => u.guruId === teacher.id);
-            const isUploaded = (up && up.status === "HIJAU");
+            const st = getTeacherWeekStatus(teacher.id, state.activeWeek);
+            const isUploaded = (st.status === "HIJAU");
+            const isLimpas = (st.status === "KUNING");
 
             const teacherCard = document.createElement("div");
             const cardBgClass = isHolidayWeek
               ? 'bg-amber-50/40 border-amber-200'
               : isUploaded
                 ? 'bg-emerald-50/40 border-emerald-300'
-                : 'bg-rose-50/40 border-rose-200';
+                : isLimpas
+                  ? 'bg-amber-50/40 border-amber-300'
+                  : 'bg-rose-50/40 border-rose-200';
 
             teacherCard.className = `teacher-monitor-card p-3 rounded-xl border ${cardBgClass} space-y-2 text-xs relative`;
 
             let timestampDisplay = "Belum memuat naik e-RPH";
             if (isHolidayWeek) {
               timestampDisplay = `Cuti Persekolahan (Dikecualikan)`;
-            } else if (isUploaded && up.uploadedAt) {
-              timestampDisplay = `Dikemaskini: ${up.uploadedAt}`;
+            } else if (isUploaded && st.uploadRecord?.uploadedAt) {
+              timestampDisplay = `Dikemaskini: ${st.uploadRecord.uploadedAt}`;
+            } else if (isLimpas) {
+              timestampDisplay = `Limpas Due (Tarikh Akhir Berlalu)`;
             }
 
             teacherCard.innerHTML = `
@@ -1898,6 +2084,11 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
                     <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
                     <span>HIJAU - BERJAYA</span>
                   </div>
+                ` : isLimpas ? `
+                  <div class="w-full py-1.5 px-2.5 rounded-lg bg-amber-500 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                    <span>KUNING - LIMPAS DUE</span>
+                  </div>
                 ` : `
                   <div class="w-full py-1.5 px-2.5 rounded-lg bg-rose-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
                     <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
@@ -1907,7 +2098,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
               </div>
 
               <div class="text-[10px] text-slate-600 font-semibold flex items-center justify-between pt-0.5">
-                <span class="break-words ${isHolidayWeek ? 'text-amber-800 font-bold' : isUploaded ? 'text-emerald-800 font-bold' : 'text-rose-700 font-medium'}">
+                <span class="break-words ${isHolidayWeek ? 'text-amber-800 font-bold' : isUploaded ? 'text-emerald-800 font-bold' : isLimpas ? 'text-amber-800 font-bold' : 'text-rose-700 font-medium'}">
                   <i data-lucide="clock" class="w-3 h-3 inline mr-0.5"></i>
                   ${timestampDisplay}
                 </span>
@@ -1925,7 +2116,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
                 ${isSuper ? `
                   <div class="flex items-center space-x-1">
-                    <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau <-> Merah)" class="btn-toggle-status-super p-1 rounded hover:bg-slate-200 text-slate-700 transition cursor-pointer">
+                    <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau -> Merah -> Kuning)" class="btn-toggle-status-super p-1 rounded hover:bg-slate-200 text-slate-700 transition cursor-pointer">
                       <i data-lucide="refresh-cw" class="w-3 h-3 text-amber-600"></i>
                     </button>
                     ${isUploaded ? `
@@ -2004,7 +2195,6 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
     // Semak status minggu aktif
     const weekNum = state.activeWeek;
-    const up = db.uploads.find(u => u.guruId === teacher.id && u.minggu === weekNum);
 
     // Reset pilihan fail baru
     currentSelectedUploadFile = null;
@@ -2014,6 +2204,8 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
     const activeFriday = getFridayInfo(state.activeWeek);
     const isHolidayWeek = Boolean(activeFriday && activeFriday.isCuti);
+    const st = getTeacherWeekStatus(teacher.id, weekNum);
+    const up = st.uploadRecord;
 
     if (isHolidayWeek) {
       elements.portalCurrentStatusBadge.textContent = `🏖️ CUTI SEKOLAH (Dikecualikan)`;
@@ -2022,8 +2214,8 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       if (elements.teacherUploadFilename) elements.teacherUploadFilename.value = "";
       if (elements.teacherUploadCatatan) elements.teacherUploadCatatan.value = `Minggu Cuti: ${activeFriday.cutiName || 'Cuti Persekolahan'}`;
       if (elements.existingFileAlert) elements.existingFileAlert.classList.add("hidden");
-    } else if (up && up.status === "HIJAU") {
-      elements.portalCurrentStatusBadge.textContent = "HIJAU (Berjaya Upload)";
+    } else if (st.status === "HIJAU" && up) {
+      elements.portalCurrentStatusBadge.textContent = "🟢 HIJAU (Berjaya Upload - Ada Dokumen)";
       elements.portalCurrentStatusBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300";
       if (elements.teacherUploadLink) elements.teacherUploadLink.value = up.fileUrl || "";
       if (elements.teacherUploadFilename) elements.teacherUploadFilename.value = up.fileName || "";
@@ -2039,8 +2231,15 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           elements.btnDownloadExistingFile.onclick = () => downloadOrViewErphDocument(up);
         }
       }
+    } else if (st.status === "KUNING") {
+      elements.portalCurrentStatusBadge.textContent = "🟡 KUNING (Limpas Due / Melepasi Tarikh Akhir)";
+      elements.portalCurrentStatusBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300";
+      if (elements.teacherUploadLink) elements.teacherUploadLink.value = "";
+      if (elements.teacherUploadFilename) elements.teacherUploadFilename.value = "";
+      if (elements.teacherUploadCatatan) elements.teacherUploadCatatan.value = "";
+      if (elements.existingFileAlert) elements.existingFileAlert.classList.add("hidden");
     } else {
-      elements.portalCurrentStatusBadge.textContent = "MERAH (Belum Upload)";
+      elements.portalCurrentStatusBadge.textContent = "🔴 MERAH (Belum Upload - Masih Kosong)";
       elements.portalCurrentStatusBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300";
       if (elements.teacherUploadLink) elements.teacherUploadLink.value = "";
       if (elements.teacherUploadFilename) elements.teacherUploadFilename.value = "";
@@ -2056,8 +2255,9 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     tbody.innerHTML = "";
 
     db.config.fridays2026.forEach(f => {
-      const historyUp = db.uploads.find(u => u.guruId === teacher.id && u.minggu === f.minggu);
-      const isSah = (historyUp && historyUp.status === "HIJAU");
+      const weekSt = getTeacherWeekStatus(teacher.id, f.minggu);
+      const isSah = (weekSt.status === "HIJAU");
+      const isLimpas = (weekSt.status === "KUNING");
       const isCuti = Boolean(f.isCuti);
       const isCurrentRow = (f.minggu === state.activeWeek || `cuti-${f.tarikh}` === String(state.activeWeek));
 
@@ -2071,13 +2271,15 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           ${isCuti ? `
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">🏖️ CUTI</span>
           ` : isSah ? `
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">HIJAU</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">🟢 HIJAU</span>
+          ` : isLimpas ? `
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">🟡 KUNING</span>
           ` : `
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">MERAH</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">🔴 MERAH</span>
           `}
         </td>
         <td class="py-2.5 px-3 text-slate-500 font-mono text-[10px]">
-          ${isCuti ? '—' : isSah ? historyUp.uploadedAt : '—'}
+          ${isCuti ? '—' : isSah ? (weekSt.uploadRecord?.uploadedAt || '—') : isLimpas ? 'Limpas Due' : '—'}
         </td>
         <td class="py-2.5 px-3">
           ${isCuti ? `
@@ -2085,20 +2287,20 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           ` : isSah ? `
             <button type="button" class="btn-download-history-row px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-300 rounded-lg font-bold text-[11px] transition inline-flex items-center gap-1 shadow-xs cursor-pointer">
               <i data-lucide="download" class="w-3 h-3 text-sky-600"></i>
-              <span class="truncate max-w-[130px]">${historyUp.fileName || 'Buka Dokumen'}</span>
+              <span class="truncate max-w-[130px]">${weekSt.uploadRecord?.fileName || 'Buka Dokumen'}</span>
             </button>
-          ` : '<span class="text-slate-400">—</span>'}
+          ` : `<span class="text-slate-400 text-[11px] italic">${isLimpas ? 'Tertunggak' : '—'}</span>`}
         </td>
         <td class="py-2.5 px-3 text-slate-600 text-[11px]">
-          ${isCuti ? `<span class="text-amber-700 font-semibold">${f.cutiName || 'Cuti Persekolahan'}</span>` : (isSah && historyUp.ulasan) ? historyUp.ulasan : '<span class="text-slate-400 italic">Menunggu semakan</span>'}
+          ${isCuti ? `<span class="text-amber-700 font-semibold">${f.cutiName || 'Cuti Persekolahan'}</span>` : (isSah && weekSt.uploadRecord?.ulasan) ? weekSt.uploadRecord.ulasan : '<span class="text-slate-400 italic">Menunggu semakan</span>'}
         </td>
       `;
 
-      if (isSah) {
+      if (isSah && weekSt.uploadRecord) {
         const btnRow = tr.querySelector(".btn-download-history-row");
         if (btnRow) {
           btnRow.addEventListener("click", () => {
-            downloadOrViewErphDocument(historyUp);
+            downloadOrViewErphDocument(weekSt.uploadRecord);
           });
         }
       }
@@ -3801,8 +4003,9 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     const weekUploads = db.uploads.filter(u => u.minggu === state.activeWeek);
 
     filtered.forEach(staff => {
-      const up = weekUploads.find(u => u.guruId === staff.id);
-      const isHijau = (up && up.status === "HIJAU");
+      const st = getTeacherWeekStatus(staff.id, state.activeWeek);
+      const isHijau = (st.status === "HIJAU");
+      const isKuning = (st.status === "KUNING");
 
       const supervisor = db.pentadbir.find(p => p.id === staff.supervisorId) || { name: "Tiada / Sendiri" };
 
@@ -3828,6 +4031,8 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         <td class="py-2.5 px-3 text-center">
           ${isHijau ? `
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">HIJAU</span>
+          ` : isKuning ? `
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">KUNING</span>
           ` : `
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">MERAH</span>
           `}
@@ -3838,8 +4043,8 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           </span>
         </td>
         <td class="py-2.5 px-3 text-center space-x-1">
-          <!-- Butang Togol Hijau / Merah -->
-          <button data-staff-id="${staff.id}" class="btn-admin-quick-toggle px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded font-bold text-[10px] transition" title="Tukar Status Hijau/Merah">
+          <!-- Butang Togol Hijau / Merah / Kuning -->
+          <button data-staff-id="${staff.id}" class="btn-admin-quick-toggle px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded font-bold text-[10px] transition" title="Tukar Status (Hijau -> Merah -> Kuning)">
             Togol Warna
           </button>
 
@@ -3938,29 +4143,26 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     });
   }
 
-  // 1. Togol Status Guru (Hijau <-> Merah)
+  // 1. Togol Status Guru (Kitaran 3 Peringkat: HIJAU -> MERAH -> KUNING -> HIJAU)
   function toggleTeacherStatusSuperAdmin(teacherId) {
     const teacher = db.staffList.find(s => s.id === teacherId);
     if (!teacher) return;
 
     const weekNum = state.activeWeek;
     const fInfo = getFridayInfo(weekNum);
+    const currentSt = getTeacherWeekStatus(teacherId, weekNum);
     const existingIndex = db.uploads.findIndex(u => u.guruId === teacherId && u.minggu === weekNum);
 
-    if (existingIndex >= 0 && db.uploads[existingIndex].status === "HIJAU") {
-      // Tukar kepada Merah
-      db.uploads[existingIndex].status = "MERAH";
-      saveErphDatabase(db);
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "warning",
-        title: `${teacher.name} ditukar kepada MERAH`,
-        timer: 1500,
-        showConfirmButton: false
-      });
+    let nextStatus = "HIJAU";
+    if (currentSt.status === "HIJAU") {
+      nextStatus = "MERAH";
+    } else if (currentSt.status === "MERAH") {
+      nextStatus = "KUNING";
     } else {
-      // Tukar kepada Hijau
+      nextStatus = "HIJAU";
+    }
+
+    if (nextStatus === "HIJAU") {
       const newUp = {
         id: `UPL-M${weekNum}-${teacherId}`,
         guruId: teacherId,
@@ -3970,12 +4172,14 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         status: "HIJAU",
         uploadedAt: getCurrentFormattedTimestamp(),
         fileName: `eRPH_M${weekNum}_${teacher.name.replace(/\s+/g, '_')}.pdf`,
-        fileUrl: "https://drive.google.com/sample/erph",
+        fileSize: "185 KB",
+        hasPhysicalDocument: true,
+        fileUrl: "",
         catatan: "Disahkan secara manual oleh Pentadbir Sistem",
         supervisorId: teacher.supervisorId,
         verifiedBy: "Pentadbir Sistem (Ts. Fikrey)",
         verifiedAt: getCurrentFormattedTimestamp(),
-        ulasan: "Disahkan."
+        ulasan: "Disahkan secara manual."
       };
 
       if (existingIndex >= 0) {
@@ -3988,7 +4192,65 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         toast: true,
         position: "top-end",
         icon: "success",
-        title: `${teacher.name} ditukar kepada HIJAU`,
+        title: `${teacher.name} ditukar kepada HIJAU (Ada Dokumen)`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } else if (nextStatus === "MERAH") {
+      const merahRec = {
+        id: `UPL-M${weekNum}-${teacherId}`,
+        guruId: teacherId,
+        guruName: teacher.name,
+        minggu: weekNum,
+        tarikhJumaat: fInfo.tarikh,
+        status: "MERAH",
+        hasPhysicalDocument: false,
+        uploadedAt: null,
+        fileName: null,
+        catatan: "Ditanda MERAH (Masih Kosong) oleh Pentadbir",
+        supervisorId: teacher.supervisorId
+      };
+
+      if (existingIndex >= 0) {
+        db.uploads[existingIndex] = merahRec;
+      } else {
+        db.uploads.push(merahRec);
+      }
+      saveErphDatabase(db);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "error",
+        title: `${teacher.name} ditukar kepada MERAH (Masih Kosong)`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } else { // KUNING
+      const kuningRec = {
+        id: `UPL-M${weekNum}-${teacherId}`,
+        guruId: teacherId,
+        guruName: teacher.name,
+        minggu: weekNum,
+        tarikhJumaat: fInfo.tarikh,
+        status: "KUNING",
+        hasPhysicalDocument: false,
+        uploadedAt: null,
+        fileName: null,
+        catatan: "Ditanda KUNING (Limpas Due) oleh Pentadbir",
+        supervisorId: teacher.supervisorId
+      };
+
+      if (existingIndex >= 0) {
+        db.uploads[existingIndex] = kuningRec;
+      } else {
+        db.uploads.push(kuningRec);
+      }
+      saveErphDatabase(db);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: `${teacher.name} ditukar kepada KUNING (Limpas Due)`,
         timer: 1500,
         showConfirmButton: false
       });
@@ -4216,7 +4478,11 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   // MODAL SEMAKAN e-RPH (UNTUK PENTADBIR)
   // ==============================================================
   function openReviewErphModal(teacher, uploadRecord) {
-    activeReviewUploadId = uploadRecord ? uploadRecord.id : null;
+    const weekNum = state.activeWeek;
+    const fInfo = getFridayInfo(weekNum);
+    const st = getTeacherWeekStatus(teacher.id, weekNum);
+    const up = st.uploadRecord || uploadRecord;
+    activeReviewUploadId = up ? up.id : null;
 
     if (elements.modalReviewAvatar) {
       if (teacher.avatar) {
@@ -4229,48 +4495,64 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     }
 
     elements.modalReviewGuruName.textContent = teacher.name;
-    elements.modalReviewWeekLabel.textContent = `Minggu ${state.activeWeek} • ${getFridayInfo(state.activeWeek).label}`;
+    elements.modalReviewWeekLabel.textContent = `Minggu ${state.activeWeek} • ${fInfo.label}`;
 
-    if (uploadRecord && uploadRecord.status === "HIJAU") {
+    if (st.status === "HIJAU" && up) {
       elements.modalReviewStatusBox.className = "p-3 rounded-xl border border-emerald-300 bg-emerald-50 flex items-center justify-between";
       elements.modalReviewStatusText.className = "font-black text-xs text-emerald-800";
-      elements.modalReviewStatusText.textContent = "STATUS: HIJAU (Berjaya Upload)";
-      elements.modalReviewTimestamp.textContent = `Dikemaskini: ${uploadRecord.uploadedAt}`;
+      elements.modalReviewStatusText.textContent = "STATUS: HIJAU (Berjaya Upload - Ada Dokumen)";
+      elements.modalReviewTimestamp.textContent = `Dikemaskini: ${up.uploadedAt || 'Telah Dihantar'}`;
 
-      elements.modalReviewFilename.textContent = uploadRecord.fileName || `eRPH_M${state.activeWeek}_${teacher.name}.pdf`;
+      elements.modalReviewFilename.textContent = up.fileName || `eRPH_M${state.activeWeek}_${teacher.name}.pdf`;
       if (elements.modalReviewFilesize) {
-        elements.modalReviewFilesize.textContent = uploadRecord.fileSize ? `Saiz Dokumen: ${uploadRecord.fileSize} • Dimuat naik ${uploadRecord.uploadedAt}` : `Dimuat naik pada ${uploadRecord.uploadedAt}`;
+        elements.modalReviewFilesize.textContent = up.fileSize ? `Saiz Dokumen: ${up.fileSize} • Dimuat naik ${up.uploadedAt || ''}` : `Dimuat naik pada ${up.uploadedAt || ''}`;
       }
 
       if (elements.btnReviewDownloadFile) {
         elements.btnReviewDownloadFile.classList.remove("hidden");
-        elements.btnReviewDownloadFile.onclick = () => downloadOrViewErphDocument(uploadRecord);
+        elements.btnReviewDownloadFile.onclick = () => downloadOrViewErphDocument(up);
       }
 
-      if (uploadRecord.fileUrl && uploadRecord.fileUrl.startsWith("http") && !uploadRecord.fileUrl.includes("sample")) {
-        elements.modalReviewOpenLink.href = uploadRecord.fileUrl;
+      if (up.fileUrl && up.fileUrl.startsWith("http") && !up.fileUrl.includes("sample")) {
+        elements.modalReviewOpenLink.href = up.fileUrl;
         elements.modalReviewOpenLink.classList.remove("hidden");
       } else {
         elements.modalReviewOpenLink.classList.add("hidden");
       }
-      elements.modalReviewCatatan.textContent = uploadRecord.catatan || "Tiada catatan tambahan.";
-      elements.modalReviewUlasanInput.value = uploadRecord.ulasan || "";
+      elements.modalReviewCatatan.textContent = up.catatan || "Tiada catatan tambahan.";
+      elements.modalReviewUlasanInput.value = up.ulasan || "";
+    } else if (st.status === "KUNING") {
+      elements.modalReviewStatusBox.className = "p-3 rounded-xl border border-amber-300 bg-amber-50 flex items-center justify-between";
+      elements.modalReviewStatusText.className = "font-black text-xs text-amber-800";
+      elements.modalReviewStatusText.textContent = "STATUS: KUNING (Limpas Due / Melepasi Tarikh Akhir)";
+      elements.modalReviewTimestamp.textContent = "Melepasi tarikh akhir penghantaran (Jumaat 11:59 PM)";
+
+      elements.modalReviewFilename.textContent = "Tiada dokumen dimuat naik";
+      if (elements.modalReviewFilesize) {
+        elements.modalReviewFilesize.textContent = "Penghantaran tertunggak - Guru belum memuat naik e-RPH minggu ini (Melepasi tarikh akhir).";
+      }
+      if (elements.btnReviewDownloadFile) {
+        elements.btnReviewDownloadFile.classList.add("hidden");
+      }
+      elements.modalReviewOpenLink.classList.add("hidden");
+      elements.modalReviewCatatan.textContent = "Status e-RPH bagi minggu ini ialah LIMPAS DUE (Belum Dihantar).";
+      elements.modalReviewUlasanInput.value = up ? (up.ulasan || "") : "";
     } else {
       elements.modalReviewStatusBox.className = "p-3 rounded-xl border border-rose-300 bg-rose-50 flex items-center justify-between";
       elements.modalReviewStatusText.className = "font-black text-xs text-rose-800";
-      elements.modalReviewStatusText.textContent = "STATUS: MERAH (Belum Upload)";
+      elements.modalReviewStatusText.textContent = "STATUS: MERAH (Belum Upload - Masih Kosong)";
       elements.modalReviewTimestamp.textContent = "Belum memuat naik";
 
       elements.modalReviewFilename.textContent = "Tiada fail dimuat naik";
       if (elements.modalReviewFilesize) {
-        elements.modalReviewFilesize.textContent = "Guru belum memuat naik e-RPH minggu ini";
+        elements.modalReviewFilesize.textContent = "Guru belum memuat naik e-RPH minggu ini (Masih Kosong).";
       }
       if (elements.btnReviewDownloadFile) {
         elements.btnReviewDownloadFile.classList.add("hidden");
       }
       elements.modalReviewOpenLink.classList.add("hidden");
       elements.modalReviewCatatan.textContent = "Guru belum membuat penghantaran bagi minggu ini.";
-      elements.modalReviewUlasanInput.value = "";
+      elements.modalReviewUlasanInput.value = up ? (up.ulasan || "") : "";
     }
 
     elements.modalReviewErph.classList.remove("hidden");
@@ -4349,8 +4631,10 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     const weekUps = db.uploads.filter(u => u.minggu === weekNum);
 
     const rows = db.staffList.filter(s => s.status === "Aktif").map(s => {
-      const up = weekUps.find(u => u.guruId === s.id);
-      const isH = (up && up.status === "HIJAU");
+      const st = getTeacherWeekStatus(s.id, weekNum);
+      const isH = (st.status === "HIJAU");
+      const isK = (st.status === "KUNING");
+      const up = st.uploadRecord;
       const sup = db.pentadbir.find(p => p.id === s.supervisorId) || { name: "Guru Besar" };
 
       return {
@@ -4361,10 +4645,10 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         "Pentadbir Penyelia": sup.name,
         "Minggu": fInfo.isCuti ? `[CUTI] ${fInfo.cutiName || 'Cuti Persekolahan'}` : `Minggu ${fInfo.minggu || weekNum}`,
         "Tarikh Jumaat": fInfo.label,
-        "Status e-RPH": fInfo.isCuti ? "DIKECUALIKAN (CUTI SEKOLAH)" : (isH ? "HIJAU (BERJAYA UPLOAD)" : "MERAH (BELUM UPLOAD)"),
-        "Waktu Kemaskini": fInfo.isCuti ? "— (Cuti Persekolahan)" : (isH ? up.uploadedAt : "—"),
-        "Nama Fail / Pautan": fInfo.isCuti ? "Dikecualikan" : (isH ? (up.fileUrl || up.fileName) : "—"),
-        "Ulasan Pentadbir": fInfo.isCuti ? (fInfo.cutiName || "Cuti Persekolahan") : (isH ? (up.ulasan || "Menunggu Semakan") : "—")
+        "Status e-RPH": fInfo.isCuti ? "DIKECUALIKAN (CUTI SEKOLAH)" : (isH ? "HIJAU (BERJAYA UPLOAD)" : isK ? "KUNING (LIMPAS DUE)" : "MERAH (BELUM UPLOAD)"),
+        "Waktu Kemaskini": fInfo.isCuti ? "— (Cuti Persekolahan)" : (isH && up ? up.uploadedAt : isK ? "Limpas Due" : "—"),
+        "Nama Fail / Pautan": fInfo.isCuti ? "Dikecualikan" : (isH && up ? (up.fileUrl || up.fileName) : "—"),
+        "Ulasan Pentadbir": fInfo.isCuti ? (fInfo.cutiName || "Cuti Persekolahan") : (isH && up ? (up.ulasan || "Menunggu Semakan") : "—")
       };
     });
 

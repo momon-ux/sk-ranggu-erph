@@ -412,25 +412,33 @@
           <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-4 text-xs font-semibold">
               <span class="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Petunjuk Status:</span>
-              <div class="flex items-center space-x-1.5">
+              <div class="flex items-center space-x-1.5" title="Hanya hijau jika telah memuat naik sebarang dokumen">
                 <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block shadow-xs"></span>
-                <span class="font-bold text-slate-800">HIJAU = Berjaya Upload</span>
+                <span class="font-bold text-slate-800">HIJAU = Berjaya Upload (Ada Dokumen)</span>
               </div>
-              <div class="flex items-center space-x-1.5">
+              <div class="flex items-center space-x-1.5" title="Merah jika masih kosong (dalam tempoh masa)">
                 <span class="w-3.5 h-3.5 rounded-full bg-rose-500 inline-block shadow-xs"></span>
-                <span class="font-bold text-slate-800">MERAH = Belum Upload</span>
+                <span class="font-bold text-slate-800">MERAH = Belum Upload (Masih Kosong)</span>
+              </div>
+              <div class="flex items-center space-x-1.5" title="Kuning jika melepasi tarikh akhir penghantaran (Limpas Due)">
+                <span class="w-3.5 h-3.5 rounded-full bg-amber-500 inline-block shadow-xs"></span>
+                <span class="font-bold text-slate-800">KUNING = Limpas Due (Melepasi Tarikh Akhir)</span>
               </div>
             </div>
 
             <!-- Overall School Submission Stats -->
-            <div class="flex items-center space-x-3 text-xs">
-              <div class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1.5">
+            <div class="flex items-center space-x-2.5 text-xs">
+              <div class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1.5" title="Guru yang telah memuat naik dokumen e-RPH">
                 <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
-                <span id="stat-total-hijau">0 Guru Hijau</span>
+                <span id="stat-total-hijau">0 Hijau</span>
               </div>
-              <div class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 font-bold flex items-center gap-1.5">
-                <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-rose-600"></i>
-                <span id="stat-total-merah">0 Guru Merah</span>
+              <div class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 font-bold flex items-center gap-1.5" title="Guru yang masih kosong (belum limpas due)">
+                <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-600"></i>
+                <span id="stat-total-merah">0 Merah</span>
+              </div>
+              <div class="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 font-bold flex items-center gap-1.5" title="Guru yang belum upload dan telah melepasi tarikh akhir">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600"></i>
+                <span id="stat-total-kuning">0 Kuning</span>
               </div>
               <div class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-bold hidden sm:inline-block">
                 Peratus: <span id="stat-total-pct" class="text-sky-700 font-black">0%</span>
@@ -481,11 +489,12 @@
               </div>
 
               <!-- Penapis Status e-RPH -->
-              <div class="flex items-center gap-1.5" id="monitoring-status-filter-group">
+              <div class="flex flex-wrap items-center gap-1.5" id="monitoring-status-filter-group">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Status:</span>
                 <button type="button" data-status-filter="ALL" class="btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-slate-800 text-white shadow-2xs">Semua</button>
-                <button type="button" data-status-filter="HIJAU" class="btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200">🟢 Hijau Selesai</button>
-                <button type="button" data-status-filter="MERAH" class="btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200">🔴 Merah Belum Hantar</button>
+                <button type="button" data-status-filter="HIJAU" class="btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200">🟢 Hijau (Ada Dokumen)</button>
+                <button type="button" data-status-filter="MERAH" class="btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200">🔴 Merah (Masih Kosong)</button>
+                <button type="button" data-status-filter="KUNING" class="btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200">🟡 Kuning (Limpas Due)</button>
               </div>
             </div>
           </div>

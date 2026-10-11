@@ -213,327 +213,11 @@ const INITIAL_STAFF_LIST = [
 ];
 
 // REKOD CONTOH PENGHANTARAN e-RPH MINGGUAN (JUMAAT MINGGU 7: 20 FEB 2026)
-const INITIAL_UPLOADS_DATA = [
-  // GPK kepada Guru Besar
-  {
-    id: "UPL-M7-02",
-    guruId: 2,
-    guruName: "RAHMATIAH BINTI MOHD JUDA",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 07:45 AM",
-    fileName: "eRPH_M7_Rahmatiah_Mohd_Juda.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-pk1",
-    catatan: "e-RPH Minggu 7 Lengkap (BM Tahun 5 & 6)",
-    supervisorId: 1,
-    verifiedBy: "YUNUS BIN PATARAI",
-    verifiedAt: "20/02/2026, 09:30 AM",
-    ulasan: "Perancangan PdP sangat mantap."
-  },
-  {
-    id: "UPL-M7-03",
-    guruId: 3,
-    guruName: "KOMALA BINTI JOSEPH",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:10 AM",
-    fileName: "eRPH_M7_Komala_Joseph.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-pkhem",
-    catatan: "e-RPH Minggu 7 (Sains)",
-    supervisorId: 1,
-    verifiedBy: "YUNUS BIN PATARAI",
-    verifiedAt: "20/02/2026, 09:35 AM",
-    ulasan: "Disahkan."
-  },
-  {
-    id: "UPL-M7-04",
-    guruId: 4,
-    guruName: "WARNAH BINTI SIRA",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:30 AM",
-    fileName: "eRPH_M7_Warnah_Sira.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-pkkoku",
-    catatan: "e-RPH Minggu 7 (PJK)",
-    supervisorId: 1,
-    verifiedBy: "YUNUS BIN PATARAI",
-    verifiedAt: "20/02/2026, 09:40 AM",
-    ulasan: "Disahkan."
-  },
-  {
-    id: "UPL-M7-05",
-    guruId: 5,
-    guruName: "EMRAN BIN HJ SELAMAT",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:45 AM",
-    fileName: "eRPH_M7_Emran_Selamat.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-pkpetang",
-    catatan: "e-RPH Minggu 7 (Pendidikan Islam)",
-    supervisorId: 1,
-    verifiedBy: "YUNUS BIN PATARAI",
-    verifiedAt: "20/02/2026, 09:45 AM",
-    ulasan: "Disahkan."
-  },
-
-  // Folder Guru Besar Sendiri (Hanya GB dan Ts. Fikrey boleh lihat)
-  {
-    id: "UPL-M7-01",
-    guruId: 1,
-    guruName: "YUNUS BIN PATARAI",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 07:15 AM",
-    fileName: "eRPH_Instruksional_GB_M7_2026.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-gb-folder-khas",
-    catatan: "Rekod Instruksional & Pemantauan PBD Minggu 7",
-    supervisorId: null,
-    isGbPrivate: true,
-    verifiedBy: "Pentadbir Sistem",
-    verifiedAt: "20/02/2026, 07:30 AM",
-    ulasan: "Arsip rasmi Guru Besar SK Ranggu."
-  },
-
-  // Guru-guru Seliaan GPK Pentadbiran
-  {
-    id: "UPL-M7-06",
-    guruId: 6,
-    guruName: "AG KU KEMAINDDRA BIN PG MOHD TAIB",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:05 AM",
-    fileName: "eRPH_M7_Kemainddra.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-kemainddra",
-    catatan: "e-RPH Minggu 7 Bahasa Inggeris Thn 6 Iltizam",
-    supervisorId: 2,
-    verifiedBy: "RAHMATIAH BINTI MOHD JUDA",
-    verifiedAt: "20/02/2026, 10:15 AM",
-    ulasan: "Lengkap dan teratur."
-  },
-  {
-    id: "UPL-M7-08",
-    guruId: 8,
-    guruName: "AINATUN NADHIRAH BINTI DHARMAWI",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:18 AM",
-    fileName: "eRPH_M7_Ainatun.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-ainatun",
-    catatan: "e-RPH Minggu 7 Thn 3 Jayyid",
-    supervisorId: 2,
-    verifiedBy: "RAHMATIAH BINTI MOHD JUDA",
-    verifiedAt: "20/02/2026, 10:20 AM",
-    ulasan: "Disahkan."
-  },
-  {
-    id: "UPL-M7-09",
-    guruId: 9,
-    guruName: "ANI BINTI PATOLA",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:40 AM",
-    fileName: "eRPH_M7_Ani_Patola.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-ani",
-    catatan: "e-RPH Bahasa Melayu Minggu 7",
-    supervisorId: 2,
-    verifiedBy: "RAHMATIAH BINTI MOHD JUDA",
-    verifiedAt: "20/02/2026, 10:25 AM",
-    ulasan: "Disahkan."
-  },
-  {
-    id: "UPL-M7-10",
-    guruId: 10,
-    guruName: "ASMADI BIN LAJJAKASI",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:55 AM",
-    fileName: "eRPH_M7_Asmadi.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-asmadi",
-    catatan: "e-RPH PJK Minggu 7",
-    supervisorId: 2,
-    verifiedBy: "RAHMATIAH BINTI MOHD JUDA",
-    verifiedAt: "20/02/2026, 10:30 AM",
-    ulasan: "Bagus."
-  },
-  {
-    id: "UPL-M7-11",
-    guruId: 11,
-    guruName: "BAJAM BINTI LADUNG",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 09:10 AM",
-    fileName: "eRPH_M7_Bajam.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-bajam",
-    catatan: "e-RPH Bahasa Melayu 6 Mumtaz",
-    supervisorId: 2,
-    verifiedBy: "RAHMATIAH BINTI MOHD JUDA",
-    verifiedAt: "20/02/2026, 10:35 AM",
-    ulasan: "Disahkan."
-  },
-
-  // Guru-guru Seliaan GPK HEM
-  {
-    id: "UPL-M7-24",
-    guruId: 24,
-    guruName: "MOHAMMAD FIKREY BIN ABDUL GAPAR",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 07:30 AM",
-    fileName: "eRPH_M7_Ts_Mohammad_Fikrey_Matematik_Sains.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-fikrey",
-    catatan: "e-RPH Minggu 7 Matematik & Sains 6 Jayyid (Inovasi Digital)",
-    supervisorId: 3,
-    verifiedBy: "KOMALA BINTI JOSEPH",
-    verifiedAt: "20/02/2026, 09:15 AM",
-    ulasan: "Perancangan berimpak tinggi dan sangat inovatif!"
-  },
-  {
-    id: "UPL-M7-23",
-    guruId: 23,
-    guruName: "MASTURAH BINTI TUDA",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:25 AM",
-    fileName: "eRPH_M7_Masturah.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-masturah",
-    catatan: "e-RPH Matematik 4 Khoir",
-    supervisorId: 3,
-    verifiedBy: "KOMALA BINTI JOSEPH",
-    verifiedAt: "20/02/2026, 09:20 AM",
-    ulasan: "Disahkan."
-  },
-  {
-    id: "UPL-M7-26",
-    guruId: 26,
-    guruName: "MOHD ALFAIZAL BIN DAUD",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 09:05 AM",
-    fileName: "eRPH_M7_Alfaizal.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-alfaizal",
-    catatan: "e-RPH Matematik 6 Khoir",
-    supervisorId: 3,
-    verifiedBy: "KOMALA BINTI JOSEPH",
-    verifiedAt: "20/02/2026, 09:25 AM",
-    ulasan: "Disahkan."
-  },
-
-  // Guru-guru Seliaan GPK Kokurikulum
-  {
-    id: "UPL-M7-30",
-    guruId: 30,
-    guruName: "NOOR SYAFIQAH NADHIRAH BINTI JAMALUDDIN",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:35 AM",
-    fileName: "eRPH_M7_Noor_Syafiqah.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-syafiqah",
-    catatan: "e-RPH Bahasa Inggeris 1 Iltizam",
-    supervisorId: 4,
-    verifiedBy: "WARNAH BINTI SIRA",
-    verifiedAt: "20/02/2026, 11:00 AM",
-    ulasan: "Disahkan."
-  },
-  {
-    id: "UPL-M7-32",
-    guruId: 32,
-    guruName: "NORLINA BINTI BAGWAS",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:50 AM",
-    fileName: "eRPH_M7_Norlina_Bagwas.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-norlina",
-    catatan: "e-RPH BM 1 Jayyid",
-    supervisorId: 4,
-    verifiedBy: "WARNAH BINTI SIRA",
-    verifiedAt: "20/02/2026, 11:05 AM",
-    ulasan: "Lengkap dan kemas."
-  },
-  {
-    id: "UPL-M7-33",
-    guruId: 33,
-    guruName: "NOZE BINTI TUKIJAN",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 09:20 AM",
-    fileName: "eRPH_M7_Noze.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-noze",
-    catatan: "e-RPH Bahasa Melayu 4 Jayyid",
-    supervisorId: 4,
-    verifiedBy: "WARNAH BINTI SIRA",
-    verifiedAt: "20/02/2026, 11:10 AM",
-    ulasan: "Disahkan."
-  },
-
-  // Guru-guru Seliaan GPK Petang
-  {
-    id: "UPL-M7-39",
-    guruId: 39,
-    guruName: "RONI BIN BACHO",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:15 AM",
-    fileName: "eRPH_M7_Roni_Bacho.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-roni",
-    catatan: "e-RPH RBT Minggu 7",
-    supervisorId: 5,
-    verifiedBy: "EMRAN BIN HJ SELAMAT",
-    verifiedAt: "20/02/2026, 10:45 AM",
-    ulasan: "Disahkan."
-  },
-  {
-    id: "UPL-M7-40",
-    guruId: 40,
-    guruName: "ROSIDIAN BIN IDRIS",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 08:50 AM",
-    fileName: "eRPH_M7_Rosidian.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-rosidian",
-    catatan: "e-RPH Matematik 4 Iltizam",
-    supervisorId: 5,
-    verifiedBy: "EMRAN BIN HJ SELAMAT",
-    verifiedAt: "20/02/2026, 10:50 AM",
-    ulasan: "Disahkan."
-  },
-  {
-    id: "UPL-M7-52",
-    guruId: 52,
-    guruName: "WAN MUHAMAD YUSUF BIN WAN ABDUL AZIZ",
-    minggu: 7,
-    tarikhJumaat: "2026-02-20",
-    status: "HIJAU",
-    uploadedAt: "20/02/2026, 09:12 AM",
-    fileName: "eRPH_M7_Wan_Yusuf.pdf",
-    fileUrl: "https://drive.google.com/sample/erph-wanyusuf",
-    catatan: "e-RPH Pendidikan Islam 5 Iltizam",
-    supervisorId: 5,
-    verifiedBy: "EMRAN BIN HJ SELAMAT",
-    verifiedAt: "20/02/2026, 10:55 AM",
-    ulasan: "Disahkan."
-  }
-];
+// REKOD CONTOH PENGHANTARAN e-RPH MINGGUAN (KOSONG SECARA LALAI)
+const INITIAL_UPLOADS_DATA = [];
 
 // Helper Functions untuk LocalStorage
-const ERPH_DATA_VERSION = "2.7";
+const ERPH_DATA_VERSION = "2.8";
 
 function getErphDatabase() {
   const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");
@@ -544,7 +228,17 @@ function getErphDatabase() {
     if (!localStorage.getItem("SKR_ERPH_STAFF_2026")) {
       localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(INITIAL_STAFF_LIST));
     }
-    if (!localStorage.getItem("SKR_ERPH_UPLOADS_2026")) {
+    // Bersihkan sebarang rekod contoh olok-olok (sample) lama yang tidak mempunyai dokumen sebenar
+    const oldUploads = localStorage.getItem("SKR_ERPH_UPLOADS_2026");
+    if (oldUploads) {
+      try {
+        const parsed = JSON.parse(oldUploads);
+        const authentic = parsed.filter(u => u && (u.hasPhysicalDocument || u.fileData || (u.fileName && !u.fileUrl?.includes("sample/"))));
+        localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(authentic));
+      } catch (e) {
+        localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(INITIAL_UPLOADS_DATA));
+      }
+    } else {
       localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(INITIAL_UPLOADS_DATA));
     }
     if (!localStorage.getItem("SKR_ERPH_TIMETABLE_2026") && typeof INITIAL_TIMETABLE_DATA !== "undefined") {
@@ -554,7 +248,15 @@ function getErphDatabase() {
 
   const cfg = localStorage.getItem("SKR_ERPH_CONFIG_2026");
   const staff = localStorage.getItem("SKR_ERPH_STAFF_2026");
-  const uploads = localStorage.getItem("SKR_ERPH_UPLOADS_2026");
+  let uploads = localStorage.getItem("SKR_ERPH_UPLOADS_2026");
+  let parsedUploads = INITIAL_UPLOADS_DATA;
+  if (uploads) {
+    try {
+      parsedUploads = JSON.parse(uploads).filter(u => u && (u.hasPhysicalDocument || u.fileData || (u.fileName && !u.fileUrl?.includes("sample/"))));
+    } catch(e) {
+      parsedUploads = INITIAL_UPLOADS_DATA;
+    }
+  }
   const usersAuth = localStorage.getItem("SKR_ERPH_USERS_AUTH_2026");
   const timetable = localStorage.getItem("SKR_ERPH_TIMETABLE_2026");
 
@@ -564,7 +266,7 @@ function getErphDatabase() {
     config: cfg ? JSON.parse(cfg) : ERPH_SYSTEM_CONFIG,
     pentadbir: PENTADBIR_COLUMNS,
     staffList: staff ? JSON.parse(staff) : INITIAL_STAFF_LIST,
-    uploads: uploads ? JSON.parse(uploads) : INITIAL_UPLOADS_DATA,
+    uploads: parsedUploads,
     usersAuth: usersAuth ? JSON.parse(usersAuth) : {},
     timetable: timetable ? JSON.parse(timetable) : defaultTimetable
   };
