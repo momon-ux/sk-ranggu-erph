@@ -531,7 +531,7 @@ const INITIAL_UPLOADS_DATA = [
 ];
 
 // Helper Functions untuk LocalStorage
-const ERPH_DATA_VERSION = "2.3";
+const ERPH_DATA_VERSION = "2.4";
 
 function getErphDatabase() {
   const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");

@@ -47,6 +47,150 @@ document.addEventListener("DOMContentLoaded", () => {
     return String(icStr).replace(/[^0-9]/g, "").trim();
   }
 
+  // Format saiz fail kepada format mesra pengguna
+  function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return "0 KB";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  }
+
+  // ==============================================================
+  // ENJIN STORAN DOKUMEN e-RPH (INDEXEDDB FILE STORAGE)
+  // Menyimpan dokumen sebenar (PDF / Word / Excel) tanpa had saiz LocalStorage
+  // ==============================================================
+  const FileStore = {
+    dbName: "SKR_ERPH_DOCUMENTS_DB",
+    storeName: "erph_files",
+    dbInstance: null,
+
+    async init() {
+      if (this.dbInstance) return this.dbInstance;
+      return new Promise((resolve) => {
+        try {
+          const req = indexedDB.open(this.dbName, 1);
+          req.onupgradeneeded = (e) => {
+            const idb = e.target.result;
+            if (!idb.objectStoreNames.contains(this.storeName)) {
+              idb.createObjectStore(this.storeName, { keyPath: "id" });
+            }
+          };
+          req.onsuccess = (e) => {
+            this.dbInstance = e.target.result;
+            resolve(this.dbInstance);
+          };
+          req.onerror = () => resolve(null);
+        } catch (err) {
+          console.warn("IndexedDB unavailable:", err);
+          resolve(null);
+        }
+      });
+    },
+
+    async saveFile(id, fileObj, dataUrl) {
+      const db = await this.init();
+      if (!db) return false;
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction([this.storeName], "readwrite");
+          const store = tx.objectStore(this.storeName);
+          store.put({
+            id: id,
+            name: fileObj.name,
+            size: fileObj.size,
+            type: fileObj.type || "application/octet-stream",
+            lastModified: fileObj.lastModified,
+            dataUrl: dataUrl
+          });
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    },
+
+    async getFile(id) {
+      const db = await this.init();
+      if (!db) return null;
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction([this.storeName], "readonly");
+          const store = tx.objectStore(this.storeName);
+          const req = store.get(id);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+  };
+
+  // Helper Muat Turun & Buka Fail e-RPH Sebenar
+  async function downloadOrViewErphDocument(uploadRecord) {
+    if (!uploadRecord) return;
+
+    // 1. Dapatkan fail sebenar daripada IndexedDB
+    const storedFile = await FileStore.getFile(uploadRecord.id);
+    if (storedFile && storedFile.dataUrl) {
+      const a = document.createElement("a");
+      a.href = storedFile.dataUrl;
+      a.download = storedFile.name || uploadRecord.fileName || `eRPH_M${uploadRecord.minggu}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    // 2. Jika ada URL luaran (cth: pautan yang dimasukkan)
+    if (uploadRecord.fileUrl && uploadRecord.fileUrl.startsWith("http") && !uploadRecord.fileUrl.includes("sample")) {
+      window.open(uploadRecord.fileUrl, "_blank");
+      return;
+    }
+
+    // 3. Jana dokumen fail rasmi e-RPH SK Ranggu secara automatik
+    const docContent = `
+========================================================================
+             KEMENTERIAN PENDIDIKAN MALAYSIA
+             SEKOLAH KEBANGSAAN RANGGU, TAWAU (XBA3037)
+             SISTEM PEMANTAUAN e-RPH SESI 2026
+========================================================================
+
+DOKUMEN PENGHANTARAN RANCANGAN PENGAJARAN HARIAN (e-RPH)
+------------------------------------------------------------------------
+Nama Guru          : ${uploadRecord.guruName}
+Minggu Persekolahan : Minggu ${uploadRecord.minggu}
+Tarikh Jumaat      : ${uploadRecord.tarikhJumaat || '-'}
+Waktu Dimuat Naik  : ${uploadRecord.uploadedAt}
+Status             : ${uploadRecord.status} (BERJAYA DIHANTAR)
+Nama Fail Dokumen  : ${uploadRecord.fileName || `eRPH_M${uploadRecord.minggu}.pdf`}
+------------------------------------------------------------------------
+CATATAN / REFLEKSI GURU:
+${uploadRecord.catatan || 'Tiada catatan tambahan.'}
+
+------------------------------------------------------------------------
+PENGESAHAN PENTADBIR:
+Disemak Oleh       : ${uploadRecord.verifiedBy || 'Dalam Proses Semakan'}
+Waktu Semakan      : ${uploadRecord.verifiedAt || '-'}
+Ulasan Pentadbir   : ${uploadRecord.ulasan || 'Menunggu ulasan pentadbir penyelia.'}
+
+========================================================================
+Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
+`;
+
+    const blob = new Blob([docContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = uploadRecord.fileName ? uploadRecord.fileName.replace(/\.pdf$/i, '.txt') : `eRPH_M${uploadRecord.minggu}_${uploadRecord.guruName.replace(/\s+/g, '_')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   // 3. Elemen DOM
   const elements = {
     loginGateway: document.getElementById("login-gateway"),
@@ -112,6 +256,19 @@ document.addEventListener("DOMContentLoaded", () => {
     teacherUploadCatatan: document.getElementById("teacher-upload-catatan"),
     portalHistoryTbody: document.getElementById("portal-history-tbody"),
 
+    // File Upload Direct Elements (Muat Naik Dokumen e-RPH Terus)
+    teacherUploadFile: document.getElementById("teacher-upload-file"),
+    dropzoneUploadFile: document.getElementById("dropzone-upload-file"),
+    btnBrowseFile: document.getElementById("btn-browse-file"),
+    fileEmptyState: document.getElementById("file-empty-state"),
+    fileSelectedState: document.getElementById("file-selected-state"),
+    selectedFileName: document.getElementById("selected-file-name"),
+    selectedFileSize: document.getElementById("selected-file-size"),
+    btnRemoveSelectedFile: document.getElementById("btn-remove-selected-file"),
+    existingFileAlert: document.getElementById("existing-file-alert"),
+    existingFileLabel: document.getElementById("existing-file-label"),
+    btnDownloadExistingFile: document.getElementById("btn-download-existing-file"),
+
     // Tab 4 Calendar & Real-Time Clock Elements
     gatewayLiveDay: document.getElementById("gateway-live-day"),
     gatewayLiveDate: document.getElementById("gateway-live-date"),
@@ -164,6 +321,8 @@ document.addEventListener("DOMContentLoaded", () => {
     modalReviewStatusText: document.getElementById("modal-review-status-text"),
     modalReviewTimestamp: document.getElementById("modal-review-timestamp"),
     modalReviewFilename: document.getElementById("modal-review-filename"),
+    modalReviewFilesize: document.getElementById("modal-review-filesize"),
+    btnReviewDownloadFile: document.getElementById("btn-review-download-file"),
     modalReviewOpenLink: document.getElementById("modal-review-open-link"),
     modalReviewCatatan: document.getElementById("modal-review-catatan"),
     modalReviewUlasanInput: document.getElementById("modal-review-ulasan-input"),
@@ -998,6 +1157,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==============================================================
   // TAB 2: PORTAL PERIBADI GURU
   // ==============================================================
+  // Pembolehubah fail yang dipilih sementara oleh guru
+  let currentSelectedUploadFile = null;
+
+  // ==============================================================
+  // TAB 2: PORTAL PERIBADI GURU
+  // ==============================================================
   function renderTeacherPortal() {
     if (!state.currentUser) return;
     const teacher = state.currentUser;
@@ -1010,18 +1175,36 @@ document.addEventListener("DOMContentLoaded", () => {
     const weekNum = state.activeWeek;
     const up = db.uploads.find(u => u.guruId === teacher.id && u.minggu === weekNum);
 
+    // Reset pilihan fail baru
+    currentSelectedUploadFile = null;
+    if (elements.teacherUploadFile) elements.teacherUploadFile.value = "";
+    if (elements.fileEmptyState) elements.fileEmptyState.classList.remove("hidden");
+    if (elements.fileSelectedState) elements.fileSelectedState.classList.add("hidden");
+
     if (up && up.status === "HIJAU") {
       elements.portalCurrentStatusBadge.textContent = "HIJAU (Berjaya Upload)";
       elements.portalCurrentStatusBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300";
-      elements.teacherUploadLink.value = up.fileUrl || "";
-      elements.teacherUploadFilename.value = up.fileName || "";
-      elements.teacherUploadCatatan.value = up.catatan || "";
+      if (elements.teacherUploadLink) elements.teacherUploadLink.value = up.fileUrl || "";
+      if (elements.teacherUploadFilename) elements.teacherUploadFilename.value = up.fileName || "";
+      if (elements.teacherUploadCatatan) elements.teacherUploadCatatan.value = up.catatan || "";
+
+      // Tunjukkan notis fail sedia ada
+      if (elements.existingFileAlert) {
+        elements.existingFileAlert.classList.remove("hidden");
+        if (elements.existingFileLabel) {
+          elements.existingFileLabel.textContent = `${up.fileName || `eRPH_M${weekNum}.pdf`}${up.fileSize ? ` (${up.fileSize})` : ''} • Dimuat naik ${up.uploadedAt}`;
+        }
+        if (elements.btnDownloadExistingFile) {
+          elements.btnDownloadExistingFile.onclick = () => downloadOrViewErphDocument(up);
+        }
+      }
     } else {
       elements.portalCurrentStatusBadge.textContent = "MERAH (Belum Upload)";
       elements.portalCurrentStatusBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300";
-      elements.teacherUploadLink.value = "";
-      elements.teacherUploadFilename.value = "";
-      elements.teacherUploadCatatan.value = "";
+      if (elements.teacherUploadLink) elements.teacherUploadLink.value = "";
+      if (elements.teacherUploadFilename) elements.teacherUploadFilename.value = "";
+      if (elements.teacherUploadCatatan) elements.teacherUploadCatatan.value = "";
+      if (elements.existingFileAlert) elements.existingFileAlert.classList.add("hidden");
     }
 
     elements.teacherUploadWeek.value = state.activeWeek;
@@ -1052,11 +1235,11 @@ document.addEventListener("DOMContentLoaded", () => {
           ${isSah ? historyUp.uploadedAt : '—'}
         </td>
         <td class="py-2.5 px-3">
-          ${isSah && historyUp.fileUrl ? `
-            <a href="${historyUp.fileUrl}" target="_blank" class="text-sky-600 hover:underline flex items-center gap-1 font-bold">
-              <i data-lucide="external-link" class="w-3 h-3"></i>
-              <span class="truncate max-w-[120px]">${historyUp.fileName || 'Pautan e-RPH'}</span>
-            </a>
+          ${isSah ? `
+            <button type="button" class="btn-download-history-row px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-300 rounded-lg font-bold text-[11px] transition inline-flex items-center gap-1 shadow-xs cursor-pointer">
+              <i data-lucide="download" class="w-3 h-3 text-sky-600"></i>
+              <span class="truncate max-w-[130px]">${historyUp.fileName || 'Buka Dokumen'}</span>
+            </button>
           ` : '<span class="text-slate-400">—</span>'}
         </td>
         <td class="py-2.5 px-3 text-slate-600 text-[11px]">
@@ -1064,62 +1247,198 @@ document.addEventListener("DOMContentLoaded", () => {
         </td>
       `;
 
+      if (isSah) {
+        const btnRow = tr.querySelector(".btn-download-history-row");
+        if (btnRow) {
+          btnRow.addEventListener("click", () => {
+            downloadOrViewErphDocument(historyUp);
+          });
+        }
+      }
+
       tbody.appendChild(tr);
     });
 
     lucide.createIcons();
   }
 
-  // Pengisian Borang Hantar e-RPH Guru
-  elements.formTeacherUpload.addEventListener("submit", (e) => {
+  // Pengendali Pemilihan Fail Dokumen Fizikal
+  function initFileUploadHandlers() {
+    if (elements.btnBrowseFile) {
+      elements.btnBrowseFile.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (elements.teacherUploadFile) elements.teacherUploadFile.click();
+      });
+    }
+
+    if (elements.dropzoneUploadFile) {
+      elements.dropzoneUploadFile.addEventListener("click", () => {
+        if (elements.teacherUploadFile) elements.teacherUploadFile.click();
+      });
+
+      // Drag and drop listeners
+      elements.dropzoneUploadFile.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        elements.dropzoneUploadFile.classList.add("border-sky-600", "bg-sky-100/70");
+      });
+
+      elements.dropzoneUploadFile.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        elements.dropzoneUploadFile.classList.remove("border-sky-600", "bg-sky-100/70");
+      });
+
+      elements.dropzoneUploadFile.addEventListener("drop", (e) => {
+        e.preventDefault();
+        elements.dropzoneUploadFile.classList.remove("border-sky-600", "bg-sky-100/70");
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          processSelectedFile(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    if (elements.teacherUploadFile) {
+      elements.teacherUploadFile.addEventListener("change", (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          processSelectedFile(e.target.files[0]);
+        }
+      });
+    }
+
+    if (elements.btnRemoveSelectedFile) {
+      elements.btnRemoveSelectedFile.addEventListener("click", (e) => {
+        e.stopPropagation();
+        currentSelectedUploadFile = null;
+        if (elements.teacherUploadFile) elements.teacherUploadFile.value = "";
+        if (elements.fileEmptyState) elements.fileEmptyState.classList.remove("hidden");
+        if (elements.fileSelectedState) elements.fileSelectedState.classList.add("hidden");
+      });
+    }
+
+    if (elements.teacherUploadWeek) {
+      elements.teacherUploadWeek.addEventListener("change", (e) => {
+        state.activeWeek = parseInt(e.target.value);
+        if (elements.headerWeekSelect) elements.headerWeekSelect.value = state.activeWeek;
+        updateFridayDisplay();
+        renderTeacherPortal();
+        renderMonitoringColumns();
+      });
+    }
+  }
+
+  function processSelectedFile(file) {
+    if (!file) return;
+    currentSelectedUploadFile = file;
+    if (elements.selectedFileName) elements.selectedFileName.textContent = file.name;
+    if (elements.selectedFileSize) elements.selectedFileSize.textContent = `${formatFileSize(file.size)} • Sedia dimuat naik`;
+    if (elements.fileEmptyState) elements.fileEmptyState.classList.add("hidden");
+    if (elements.fileSelectedState) elements.fileSelectedState.classList.remove("hidden");
+    lucide.createIcons();
+  }
+
+  // Inisialisasi event fail upload
+  initFileUploadHandlers();
+
+  // Pengisian & Penghantaran Borang Hantar Dokumen e-RPH Guru
+  elements.formTeacherUpload.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     if (!state.currentUser) return;
     const teacher = state.currentUser;
     const weekNum = parseInt(elements.teacherUploadWeek.value);
     const fInfo = getFridayInfo(weekNum);
-    const link = elements.teacherUploadLink.value.trim() || "https://drive.google.com/sample/erph-portal";
-    const filename = elements.teacherUploadFilename.value.trim() || `eRPH_M${weekNum}_${teacher.name.replace(/\s+/g, '_')}.pdf`;
     const catatan = elements.teacherUploadCatatan.value.trim();
+    const optionalLink = elements.teacherUploadLink ? elements.teacherUploadLink.value.trim() : "";
 
-    // Buat rekod upload baru atau kemaskini rekod sedia ada
     const existingIndex = db.uploads.findIndex(u => u.guruId === teacher.id && u.minggu === weekNum);
+    const hasPreviousUpload = (existingIndex >= 0 && db.uploads[existingIndex].status === "HIJAU");
 
-    const uploadRecord = {
-      id: `UPL-M${weekNum}-${teacher.id}`,
-      guruId: teacher.id,
-      guruName: teacher.name,
-      minggu: weekNum,
-      tarikhJumaat: fInfo.tarikh,
-      status: "HIJAU",
-      uploadedAt: getCurrentFormattedTimestamp(),
-      fileName: filename,
-      fileUrl: link,
-      catatan: catatan,
-      supervisorId: teacher.supervisorId,
-      verifiedBy: null,
-      verifiedAt: null,
-      ulasan: null
-    };
-
-    if (existingIndex >= 0) {
-      db.uploads[existingIndex] = { ...db.uploads[existingIndex], ...uploadRecord };
-    } else {
-      db.uploads.push(uploadRecord);
+    // Sekat jika guru belum memilih dokumen fizikal dan belum pernah hantar sebelum ini
+    if (!currentSelectedUploadFile && !hasPreviousUpload) {
+      safeSwal({
+        icon: "warning",
+        title: "Sila Muat Naik Fail Dokumen",
+        text: "Sila klik butang 'Pilih Fail Dokumen dari Peranti' untuk memuat naik fail e-RPH anda (PDF, Word, atau Excel) sebelum menghantar.",
+        confirmButtonColor: "#0284c7"
+      });
+      return;
     }
 
-    saveErphDatabase(db);
+    const fileId = `UPL-M${weekNum}-${teacher.id}`;
 
-    Swal.fire({
-      icon: "success",
-      title: "e-RPH Berjaya Dimuat Naik!",
-      text: `Status anda untuk Minggu ${weekNum} bertukar kepada HIJAU. Dinyatakan dikemaskini pada ${uploadRecord.uploadedAt}.`,
-      timer: 2500,
-      showConfirmButton: false
-    });
+    // Kes A: Guru memilih fail baru untuk di-upload
+    if (currentSelectedUploadFile) {
+      const fileToUpload = currentSelectedUploadFile;
+      const reader = new FileReader();
 
-    renderTeacherPortal();
-    renderMonitoringColumns();
+      reader.onload = async (event) => {
+        const base64Data = event.target.result;
+        
+        // Simpan fail dokumen fizikal ke IndexedDB
+        await FileStore.saveFile(fileId, fileToUpload, base64Data);
+
+        const uploadRecord = {
+          id: fileId,
+          guruId: teacher.id,
+          guruName: teacher.name,
+          minggu: weekNum,
+          tarikhJumaat: fInfo.tarikh,
+          status: "HIJAU",
+          uploadedAt: getCurrentFormattedTimestamp(),
+          fileName: fileToUpload.name,
+          fileSize: formatFileSize(fileToUpload.size),
+          fileType: fileToUpload.type,
+          hasPhysicalDocument: true,
+          fileUrl: optionalLink || "",
+          catatan: catatan,
+          supervisorId: teacher.supervisorId,
+          verifiedBy: null,
+          verifiedAt: null,
+          ulasan: null
+        };
+
+        if (existingIndex >= 0) {
+          db.uploads[existingIndex] = { ...db.uploads[existingIndex], ...uploadRecord };
+        } else {
+          db.uploads.push(uploadRecord);
+        }
+
+        saveErphDatabase(db);
+        currentSelectedUploadFile = null;
+        if (elements.teacherUploadFile) elements.teacherUploadFile.value = "";
+
+        safeSwal({
+          icon: "success",
+          title: "e-RPH Berjaya Dimuat Naik!",
+          text: `Dokumen [${uploadRecord.fileName}] telah berjaya dimuat naik ke dalam sistem. Status Minggu ${weekNum} bertukar kepada HIJAU.`,
+          timer: 2500,
+          showConfirmButton: false
+        });
+
+        renderTeacherPortal();
+        renderMonitoringColumns();
+      };
+
+      reader.readAsDataURL(fileToUpload);
+    } 
+    // Kes B: Kemaskini rekod sedia ada tanpa tukar fail
+    else {
+      const currentRec = db.uploads[existingIndex];
+      currentRec.catatan = catatan;
+      if (optionalLink) currentRec.fileUrl = optionalLink;
+      currentRec.uploadedAt = getCurrentFormattedTimestamp();
+      saveErphDatabase(db);
+
+      safeSwal({
+        icon: "success",
+        title: "e-RPH Dikemaskini",
+        text: `Maklumat e-RPH Minggu ${weekNum} telah dikemaskini. Status kekal HIJAU.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+
+      renderTeacherPortal();
+      renderMonitoringColumns();
+    }
   });
 
   // ==============================================================
@@ -1761,9 +2080,22 @@ document.addEventListener("DOMContentLoaded", () => {
       elements.modalReviewStatusText.textContent = "STATUS: HIJAU (Berjaya Upload)";
       elements.modalReviewTimestamp.textContent = `Dikemaskini: ${uploadRecord.uploadedAt}`;
 
-      elements.modalReviewFilename.textContent = uploadRecord.fileName || "Pautan e-RPH";
-      elements.modalReviewOpenLink.href = uploadRecord.fileUrl || "#";
-      elements.modalReviewOpenLink.classList.remove("hidden");
+      elements.modalReviewFilename.textContent = uploadRecord.fileName || `eRPH_M${state.activeWeek}_${teacher.name}.pdf`;
+      if (elements.modalReviewFilesize) {
+        elements.modalReviewFilesize.textContent = uploadRecord.fileSize ? `Saiz Dokumen: ${uploadRecord.fileSize} • Dimuat naik ${uploadRecord.uploadedAt}` : `Dimuat naik pada ${uploadRecord.uploadedAt}`;
+      }
+
+      if (elements.btnReviewDownloadFile) {
+        elements.btnReviewDownloadFile.classList.remove("hidden");
+        elements.btnReviewDownloadFile.onclick = () => downloadOrViewErphDocument(uploadRecord);
+      }
+
+      if (uploadRecord.fileUrl && uploadRecord.fileUrl.startsWith("http") && !uploadRecord.fileUrl.includes("sample")) {
+        elements.modalReviewOpenLink.href = uploadRecord.fileUrl;
+        elements.modalReviewOpenLink.classList.remove("hidden");
+      } else {
+        elements.modalReviewOpenLink.classList.add("hidden");
+      }
       elements.modalReviewCatatan.textContent = uploadRecord.catatan || "Tiada catatan tambahan.";
       elements.modalReviewUlasanInput.value = uploadRecord.ulasan || "";
     } else {
@@ -1773,12 +2105,19 @@ document.addEventListener("DOMContentLoaded", () => {
       elements.modalReviewTimestamp.textContent = "Belum memuat naik";
 
       elements.modalReviewFilename.textContent = "Tiada fail dimuat naik";
+      if (elements.modalReviewFilesize) {
+        elements.modalReviewFilesize.textContent = "Guru belum memuat naik e-RPH minggu ini";
+      }
+      if (elements.btnReviewDownloadFile) {
+        elements.btnReviewDownloadFile.classList.add("hidden");
+      }
       elements.modalReviewOpenLink.classList.add("hidden");
       elements.modalReviewCatatan.textContent = "Guru belum membuat penghantaran bagi minggu ini.";
       elements.modalReviewUlasanInput.value = "";
     }
 
     elements.modalReviewErph.classList.remove("hidden");
+    lucide.createIcons();
   }
 
   elements.btnSaveUlasanPentadbir.addEventListener("click", () => {
