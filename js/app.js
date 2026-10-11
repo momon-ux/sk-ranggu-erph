@@ -56,6 +56,8 @@ document.addEventListener("DOMContentLoaded", () => {
     })(), // Lalai kepada 5 Kolum Kad kemas mendatar (atau pilihan tersimpan pengguna)
     monitoringPentadbirFilter: "ALL", // "ALL" | "1" | "2" | "3" | "4" | "5"
     monitoringStatusFilter: "ALL", // "ALL" | "HIJAU" | "MERAH" | "KUNING"
+    calendarSelectedWeek: null, // Minggu pilihan dalam paparan Kalendar (lalai: minggu aktif)
+    calendarSupervisorFilter: "ALL", // "ALL" | "1" | "2" | "3" | "4" | "5"
     timetableMode: "guru", // "guru" | "kelas" | "induk"
     timetableSelectedGuru: null,
     timetableSelectedKelas: "4 I",
@@ -683,6 +685,15 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     btnCalToday: document.getElementById("btn-cal-today"),
     btnCalNextMonth: document.getElementById("btn-cal-next-month"),
     calendarFridaysGrid: document.getElementById("calendar-fridays-grid"),
+
+    // Elemen Seksyen Guru Masih Merah Kalendar
+    calRedTeachersSection: document.getElementById("cal-red-teachers-section"),
+    calRedWeekBadge: document.getElementById("cal-red-week-badge"),
+    calRedWeekSelect: document.getElementById("cal-red-week-select"),
+    btnCalJumpToMonitoring: document.getElementById("btn-cal-jump-to-monitoring"),
+    calRedPemantauFilterGroup: document.getElementById("cal-red-pemantau-filter-group"),
+    calRedTotalSummary: document.getElementById("cal-red-total-summary"),
+    calRedSupervisorsContainer: document.getElementById("cal-red-supervisors-container"),
 
     // Tab 5 Timetable Elements
     jadualRujukanContainer: document.getElementById("jadual-rujukan-container"),
@@ -2704,8 +2715,11 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       if (isToday) {
         cellClasses += "bg-amber-50 border-amber-400 ring-2 ring-amber-400/50 font-bold shadow-xs ";
       } else if (isFriday) {
+        const isSelectedFriday = (matchedFriday && !matchedFriday.isCuti && matchedFriday.minggu === state.calendarSelectedWeek);
         if (matchedFriday && matchedFriday.isCuti) {
           cellClasses += "bg-amber-50/70 border-amber-300 hover:bg-amber-100/70 font-semibold ";
+        } else if (isSelectedFriday) {
+          cellClasses += "bg-rose-100 border-rose-500 ring-2 ring-rose-500 shadow-sm font-bold ";
         } else {
           cellClasses += "bg-rose-50/80 border-rose-200 hover:bg-rose-100/70 font-semibold ";
         }
@@ -2730,14 +2744,27 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
               <span class="block text-[8px] sm:text-[9px] text-amber-800 font-bold mt-0.5 truncate">${matchedFriday.cutiName || 'Cuti'}</span>
             </div>
           `;
-        } else {
+        } else if (matchedFriday) {
+          // Kira bilangan guru masih merah bagi minggu Jumaat ini
+          let redCount = 0;
+          db.staffList.filter(s => s.status === "Aktif").forEach(teacher => {
+            const st = getTeacherWeekStatus(teacher.id, matchedFriday.minggu);
+            if (st.status !== "HIJAU") redCount++;
+          });
+
           innerHtml += `
             <div class="mt-1">
-              <span class="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-lg bg-rose-600 text-white shadow-xs">
-                <i data-lucide="check-circle" class="w-3 h-3"></i>
-                <span>${matchedFriday ? 'M' + matchedFriday.minggu : 'e-RPH'}</span>
-              </span>
-              <span class="block text-[8px] sm:text-[9px] text-rose-800 font-bold mt-0.5">Tarikh Akhir</span>
+              <div class="flex items-center gap-1 flex-wrap">
+                <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-lg bg-rose-600 text-white shadow-2xs">
+                  <i data-lucide="check-circle" class="w-2.5 h-2.5"></i>
+                  <span>M${matchedFriday.minggu}</span>
+                </span>
+                <span class="inline-flex items-center gap-0.5 text-[8.5px] font-black px-1.5 py-0.5 rounded-md ${redCount > 0 ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'}">
+                  <span class="w-1.5 h-1.5 rounded-full ${redCount > 0 ? 'bg-rose-600 animate-pulse' : 'bg-emerald-600'}"></span>
+                  <span>${redCount} Merah</span>
+                </span>
+              </div>
+              <span class="block text-[8px] sm:text-[8.5px] text-rose-800 font-bold mt-0.5">Tarikh Akhir</span>
             </div>
           `;
         }
@@ -2749,13 +2776,21 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       if (matchedFriday) {
         cell.classList.add("cursor-pointer");
         cell.title = matchedFriday.isCuti
-          ? `Klik untuk semak Takwim Cuti (${matchedFriday.cutiName || 'Cuti Persekolahan'})`
-          : `Klik untuk semak status penghantaran Minggu ${matchedFriday.minggu} (${matchedFriday.label})`;
+          ? `Takwim Cuti (${matchedFriday.cutiName || 'Cuti Persekolahan'})`
+          : `Klik untuk semak nama guru masih merah Minggu ${matchedFriday.minggu} (${matchedFriday.label})`;
+
         cell.addEventListener("click", () => {
-          state.activeWeek = matchedFriday.isCuti ? `cuti-${matchedFriday.tarikh}` : matchedFriday.minggu;
-          elements.headerWeekSelect.value = state.activeWeek;
-          updateFridayDisplay();
-          switchTab("pemantauan");
+          if (!matchedFriday.isCuti) {
+            state.calendarSelectedWeek = matchedFriday.minggu;
+            renderInteractiveMonthlyCalendar();
+            renderCalendarRedTeachers();
+            const sec = elements.calRedTeachersSection;
+            if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+          } else {
+            state.calendarSelectedWeek = `cuti-${matchedFriday.tarikh}`;
+            renderInteractiveMonthlyCalendar();
+            renderCalendarRedTeachers();
+          }
         });
       }
 
@@ -2775,8 +2810,211 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     lucide.createIcons();
   }
 
+  // ==============================================================
+  // PAPARAN SENARAI GURU MASIH MERAH MENGIKUT 5 PEMANTAU DI KALENDAR
+  // ==============================================================
+  function renderCalendarRedTeachers() {
+    if (!elements.calRedSupervisorsContainer) return;
+
+    // Pastikan calendarSelectedWeek disetkan kepada minggu yang sah
+    if (!state.calendarSelectedWeek || typeof state.calendarSelectedWeek === "string" && state.calendarSelectedWeek.startsWith("cuti")) {
+      const eff = getEffectiveCurrentWeek();
+      state.calendarSelectedWeek = (typeof eff === "number") ? eff : 1;
+    }
+
+    const currentW = state.calendarSelectedWeek;
+    const fridayObj = db.config.fridays2026.find(f => f.minggu === currentW);
+    const isHoliday = Boolean(fridayObj && fridayObj.isCuti);
+
+    // Kemaskini Lencana Minggu & Tarikh
+    if (elements.calRedWeekBadge) {
+      if (fridayObj) {
+        elements.calRedWeekBadge.textContent = isHoliday
+          ? `Jumaat Cuti: ${fridayObj.label} (${fridayObj.cutiName || 'Cuti Persekolahan'})`
+          : `Minggu ${fridayObj.minggu} • Jumaat ${fridayObj.label}`;
+      } else {
+        elements.calRedWeekBadge.textContent = `Minggu ${currentW}`;
+      }
+    }
+
+    // Isi Dropdown Pilihan Minggu jika belum lengkap
+    if (elements.calRedWeekSelect) {
+      const nonHolidays = db.config.fridays2026.filter(f => !f.isCuti && f.minggu);
+      if (elements.calRedWeekSelect.children.length === 0) {
+        nonHolidays.forEach(f => {
+          const opt = document.createElement("option");
+          opt.value = f.minggu;
+          opt.textContent = `Minggu ${f.minggu} (${f.label})`;
+          elements.calRedWeekSelect.appendChild(opt);
+        });
+      }
+      elements.calRedWeekSelect.value = String(currentW);
+    }
+
+    // Tentukan pentadbir yang dipaparkan mengikut penapis
+    let supervisors = db.pentadbir || PENTADBIR_COLUMNS;
+    if (state.calendarSupervisorFilter !== "ALL") {
+      supervisors = supervisors.filter(p => String(p.id) === String(state.calendarSupervisorFilter));
+    }
+
+    const container = elements.calRedSupervisorsContainer;
+    container.innerHTML = "";
+
+    let totalSchoolRed = 0;
+    let totalSchoolGreen = 0;
+
+    // Kira statistik keseluruhan sekolah untuk minggu ini
+    db.staffList.filter(s => s.status === "Aktif").forEach(teacher => {
+      const st = getTeacherWeekStatus(teacher.id, currentW);
+      if (st.status === "HIJAU" || isHoliday) {
+        totalSchoolGreen++;
+      } else {
+        totalSchoolRed++;
+      }
+    });
+
+    if (elements.calRedTotalSummary) {
+      elements.calRedTotalSummary.innerHTML = isHoliday
+        ? `<span class="px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 font-bold">🏖️ Cuti Persekolahan (Dikecualikan)</span>`
+        : `
+          <span class="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 border border-rose-300 font-extrabold flex items-center gap-1.5 shadow-2xs">
+            <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-600"></i>
+            <span>${totalSchoolRed} Guru Masih Merah</span>
+          </span>
+          <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold flex items-center gap-1.5 shadow-2xs">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>${totalSchoolGreen} Guru Hijau</span>
+          </span>
+        `;
+    }
+
+    // Render setiap lajur pemantau
+    supervisors.forEach(sup => {
+      let rawStaff = [];
+      if (sup.id === 1) {
+        const gpkStaff = db.staffList.filter(s => [2, 3, 4, 5].includes(s.id));
+        const gbRecord = db.staffList.filter(s => s.id === 1);
+        rawStaff = [...gbRecord, ...gpkStaff];
+      } else {
+        rawStaff = db.staffList.filter(s => s.supervisorId === sup.id && s.status === "Aktif");
+      }
+
+      // Tapis guru yang MASIH MERAH (atau kuning / limpas due)
+      const redStaff = isHoliday ? [] : rawStaff.filter(teacher => {
+        const st = getTeacherWeekStatus(teacher.id, currentW);
+        return (st.status !== "HIJAU");
+      });
+
+      const supCol = document.createElement("div");
+      supCol.className = "bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col";
+
+      supCol.innerHTML = `
+        <!-- Header Pemantau -->
+        <div class="${sup.headerBg} text-white p-3 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-[9px] font-black uppercase tracking-wider bg-black/20 px-2 py-0.5 rounded-full">${sup.shortTitle}</span>
+            <span class="text-[10px] font-black px-2 py-0.5 rounded-full ${redStaff.length > 0 ? 'bg-rose-950/40 text-rose-200 border border-rose-300/30' : 'bg-emerald-950/40 text-emerald-200'}">
+              ${isHoliday ? 'Cuti' : `${redStaff.length}/${rawStaff.length} Merah`}
+            </span>
+          </div>
+          <h4 class="font-black text-xs tracking-wide leading-tight break-words" title="${sup.name}">
+            ${sup.name}
+          </h4>
+          <p class="text-[10px] text-white/80 font-medium truncate">${sup.role}</p>
+        </div>
+
+        <!-- Subheader Status -->
+        <div class="px-2.5 py-1.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[10px] font-bold text-slate-600">
+          <span>Guru Masih Merah</span>
+          <span class="${redStaff.length > 0 ? 'text-rose-700 font-extrabold' : 'text-emerald-700 font-extrabold'}">
+            ${isHoliday ? 'Tiada (Cuti)' : `${redStaff.length} Guru`}
+          </span>
+        </div>
+
+        <!-- Senarai Guru Merah di bawah Pemantau Ini -->
+        <div class="p-2 space-y-1.5 flex-1 max-h-[560px] overflow-y-auto">
+          ${isHoliday ? `
+            <div class="p-4 text-center text-xs text-amber-700 bg-amber-50/50 rounded-xl border border-amber-200/60 font-medium">
+              🏖️ Cuti Persekolahan.<br>Tiada guru merah bagi minggu ini.
+            </div>
+          ` : redStaff.length === 0 ? `
+            <div class="p-4 text-center text-xs text-emerald-800 bg-emerald-50/60 rounded-xl border border-emerald-200 font-bold flex flex-col items-center gap-1.5">
+              <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+              <span>Tahniah! Semua ${rawStaff.length} guru seliaan telah menghantar e-RPH.</span>
+            </div>
+          ` : redStaff.map(teacher => {
+            const isTeacherGb = (teacher.id === 1);
+            const canViewGbFolder = ((state.currentUser && state.currentUser.id === 1) || isSuper);
+            const st = getTeacherWeekStatus(teacher.id, currentW);
+            const isLimpas = (st.status === "KUNING");
+
+            return `
+              <div class="p-2 rounded-xl border ${isLimpas ? 'bg-amber-50/50 border-amber-200' : 'bg-rose-50/40 border-rose-200'} text-xs relative hover:shadow-2xs transition">
+                <div class="flex items-start gap-2">
+                  ${teacher.avatar ? `
+                    <img src="${teacher.avatar}" alt="${teacher.name}" class="w-7 h-7 rounded-lg object-cover flex-shrink-0 border border-slate-200 shadow-2xs mt-0.5">
+                  ` : `
+                    <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-500 to-rose-700 text-white font-black text-xs flex items-center justify-center flex-shrink-0 shadow-2xs border border-rose-300 mt-0.5">
+                      ${teacher.name.charAt(0)}
+                    </div>
+                  `}
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1 leading-none mb-0.5">
+                      <span class="text-[9px] font-mono font-black px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 border border-slate-200">${teacher.code}</span>
+                      <span class="text-[9px] text-slate-500 font-semibold">• ${teacher.session || 'Pagi'}</span>
+                    </div>
+                    <!-- NAMA PENUH GURU TANPA TERPOTONG -->
+                    <h5 class="font-extrabold text-[11px] text-slate-900 leading-snug break-words">
+                      ${teacher.name}
+                    </h5>
+                    <p class="text-[9px] text-slate-500 truncate mt-0.5" title="${teacher.role}">
+                      ${teacher.role}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="mt-1.5 pt-1 border-t border-slate-200/60 flex items-center justify-between gap-1">
+                  <span class="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.2 rounded ${isLimpas ? 'bg-amber-500 text-white' : 'bg-rose-600 text-white'}">
+                    <i data-lucide="${isLimpas ? 'alert-triangle' : 'x-circle'}" class="w-2.5 h-2.5"></i>
+                    <span>${isLimpas ? 'LIMPAS DUE' : 'BELUM HANTAR'}</span>
+                  </span>
+
+                  ${(isTeacherGb && !canViewGbFolder) ? `
+                    <span class="text-[8.5px] text-slate-400 italic">Folder Sulit</span>
+                  ` : `
+                    <button data-teacher-id="${teacher.id}" class="btn-cal-open-review text-[9.5px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-1.5 py-0.2 rounded transition cursor-pointer flex items-center gap-0.5">
+                      <i data-lucide="folder" class="w-2.5 h-2.5"></i>
+                      <span>Perincian</span>
+                    </button>
+                  `}
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      container.appendChild(supCol);
+    });
+
+    // Pasang event listener untuk butang Perincian dalam lajur kalendar
+    container.querySelectorAll(".btn-cal-open-review").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const teacherId = parseInt(btn.dataset.teacherId);
+        const teacher = db.staffList.find(s => s.id === teacherId);
+        if (teacher) {
+          const up = db.uploads.find(u => u.guruId === teacher.id && u.minggu === currentW);
+          openReviewErphModal(teacher, up);
+        }
+      });
+    });
+
+    lucide.createIcons();
+  }
+
   function renderCalendarFridays() {
     renderInteractiveMonthlyCalendar();
+    renderCalendarRedTeachers();
 
     const grid = elements.calendarFridaysGrid;
     if (!grid) return;
@@ -2784,10 +3022,11 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
     db.config.fridays2026.forEach(f => {
       const isCuti = Boolean(f.isCuti);
-      const isCurrent = (f.minggu === state.activeWeek || `cuti-${f.tarikh}` === String(state.activeWeek));
+      const isCurrent = (!isCuti && f.minggu === state.calendarSelectedWeek);
 
-      // Kira bilangan hantar pada Jumaat tersebut
+      // Kira bilangan hantar & masih merah pada Jumaat tersebut
       const weekUps = isCuti ? [] : db.uploads.filter(u => u.minggu === f.minggu && u.status === "HIJAU");
+      const weekRedCount = isCuti ? 0 : db.staffList.filter(s => s.status === "Aktif").filter(s => getTeacherWeekStatus(s.id, f.minggu).status !== "HIJAU").length;
 
       const card = document.createElement("div");
       if (isCuti) {
@@ -2801,22 +3040,33 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           </div>
         `;
       } else {
-        card.className = `p-3 rounded-xl border text-center transition cursor-pointer ${isCurrent ? 'bg-rose-600 text-white border-rose-600 shadow-md transform scale-102' : 'bg-slate-50 hover:bg-white border-slate-200'}`;
+        card.className = `p-3 rounded-xl border text-center transition cursor-pointer ${isCurrent ? 'bg-rose-600 text-white border-rose-600 shadow-md transform scale-102 ring-2 ring-rose-400' : 'bg-slate-50 hover:bg-white border-slate-200'}`;
         card.innerHTML = `
           <span class="text-[10px] font-mono font-bold block ${isCurrent ? 'text-rose-100' : 'text-slate-400'}">JUMAAT</span>
           <div class="font-black text-sm my-0.5">Minggu ${f.minggu}</div>
           <p class="text-xs font-semibold ${isCurrent ? 'text-white' : 'text-rose-600'}">${f.label}</p>
-          <div class="mt-2 text-[10px] py-0.5 px-2 rounded-full font-bold ${isCurrent ? 'bg-black/20 text-white' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}">
-            ${weekUps.length} Hantar
+          <div class="mt-2 flex items-center justify-center gap-1 flex-wrap">
+            <span class="text-[9px] py-0.5 px-1.5 rounded-full font-bold ${isCurrent ? 'bg-black/25 text-white' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}">
+              ${weekUps.length} Hantar
+            </span>
+            ${weekRedCount > 0 ? `
+              <span class="text-[9px] py-0.5 px-1.5 rounded-full font-black ${isCurrent ? 'bg-black/35 text-rose-200 border border-rose-300/40' : 'bg-rose-100 text-rose-800 border border-rose-300'}">
+                ${weekRedCount} Merah
+              </span>
+            ` : ''}
           </div>
         `;
       }
 
       card.addEventListener("click", () => {
-        state.activeWeek = isCuti ? `cuti-${f.tarikh}` : f.minggu;
-        elements.headerWeekSelect.value = state.activeWeek;
-        updateFridayDisplay();
-        switchTab("pemantauan");
+        if (!isCuti) {
+          state.calendarSelectedWeek = f.minggu;
+          renderInteractiveMonthlyCalendar();
+          renderCalendarRedTeachers();
+          renderCalendarFridays();
+          const sec = elements.calRedTeachersSection;
+          if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       });
 
       grid.appendChild(card);
@@ -4953,6 +5203,44 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       renderInteractiveMonthlyCalendar();
     });
   }
+
+  // Pengendali Seksyen Guru Masih Merah Kalendar
+  if (elements.calRedWeekSelect) {
+    elements.calRedWeekSelect.addEventListener("change", (e) => {
+      const selectedW = parseInt(e.target.value);
+      if (!isNaN(selectedW)) {
+        state.calendarSelectedWeek = selectedW;
+        renderInteractiveMonthlyCalendar();
+        renderCalendarRedTeachers();
+        renderCalendarFridays();
+      }
+    });
+  }
+
+  if (elements.btnCalJumpToMonitoring) {
+    elements.btnCalJumpToMonitoring.addEventListener("click", () => {
+      if (state.calendarSelectedWeek) {
+        state.activeWeek = state.calendarSelectedWeek;
+        elements.headerWeekSelect.value = state.activeWeek;
+        updateFridayDisplay();
+      }
+      switchTab("pemantauan");
+    });
+  }
+
+  document.querySelectorAll(".btn-cal-pemantau-filter").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const filterVal = btn.dataset.calFilter || "ALL";
+      state.calendarSupervisorFilter = filterVal;
+      document.querySelectorAll(".btn-cal-pemantau-filter").forEach(b => {
+        const isCurrent = (b.dataset.calFilter === filterVal);
+        b.className = isCurrent
+          ? "btn-cal-pemantau-filter px-3 py-1.5 rounded-lg font-black bg-rose-600 text-white shadow-xs cursor-pointer"
+          : "btn-cal-pemantau-filter px-3 py-1.5 rounded-lg font-bold text-slate-700 hover:text-slate-950 cursor-pointer";
+      });
+      renderCalendarRedTeachers();
+    });
+  });
 
   // ==============================================================
   // PENGENDALI PENUKARAN FOTO PROFIL (PORTAL GURU & SIDEBAR)

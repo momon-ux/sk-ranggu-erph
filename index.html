@@ -910,6 +910,80 @@
             </div>
           </div>
 
+          <!-- 2B. SENARAI GURU MASIH MERAH MENGIKUT PEMANTAU (SEMUA 5 PEMANTAU) -->
+          <div id="cal-red-teachers-section" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+            <!-- Header & Selector Minggu Kalendar -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300 text-xs font-black uppercase tracking-wider">
+                    <span class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+                    <span>SENARAI GURU MASIH MERAH</span>
+                  </span>
+                  <span id="cal-red-week-badge" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-xs font-bold border border-slate-200">
+                    Minggu 37 • 16 Okt 2026
+                  </span>
+                </div>
+                <h3 class="font-black text-lg text-slate-900 mt-1.5 flex items-center gap-2">
+                  <i data-lucide="user-x" class="w-5 h-5 text-rose-600"></i>
+                  <span>Pemantauan Guru Belum Hantar e-RPH Mengikut 5 Pemantau</span>
+                </h3>
+                <p class="text-xs text-slate-500">
+                  Nama semua guru yang masih berstatus MERAH disusun kemas mengikut pentadbir penyelia masing-masing
+                </p>
+              </div>
+
+              <!-- Pilihan Minggu Pantas & Butang Aksi -->
+              <div class="flex flex-wrap items-center gap-2.5">
+                <div class="flex items-center space-x-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700">
+                  <i data-lucide="calendar" class="w-4 h-4 text-rose-600"></i>
+                  <span>Pilih Jumaat:</span>
+                  <select id="cal-red-week-select" class="bg-transparent font-extrabold text-rose-700 focus:outline-none cursor-pointer">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+
+                <button type="button" id="btn-cal-jump-to-monitoring" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer" title="Lompat ke Pemantauan 5 Lajur bagi minggu ini">
+                  <i data-lucide="columns-3" class="w-4 h-4"></i>
+                  <span>Buka Pemantauan 5 Lajur</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Penapis Pemantau & Ringkasan KPI -->
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div id="cal-red-pemantau-filter-group" class="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs">
+                <button type="button" data-cal-filter="ALL" class="btn-cal-pemantau-filter px-3 py-1.5 rounded-lg font-black bg-rose-600 text-white shadow-xs cursor-pointer">
+                  Semua Pemantau (5)
+                </button>
+                <button type="button" data-cal-filter="1" class="btn-cal-pemantau-filter px-3 py-1.5 rounded-lg font-bold text-slate-700 hover:text-slate-950 cursor-pointer">
+                  GB (Yunus)
+                </button>
+                <button type="button" data-cal-filter="2" class="btn-cal-pemantau-filter px-3 py-1.5 rounded-lg font-bold text-slate-700 hover:text-slate-950 cursor-pointer">
+                  PK 1 (Rahmatiah)
+                </button>
+                <button type="button" data-cal-filter="3" class="btn-cal-pemantau-filter px-3 py-1.5 rounded-lg font-bold text-slate-700 hover:text-slate-950 cursor-pointer">
+                  PK HEM (Komala)
+                </button>
+                <button type="button" data-cal-filter="4" class="btn-cal-pemantau-filter px-3 py-1.5 rounded-lg font-bold text-slate-700 hover:text-slate-950 cursor-pointer">
+                  PK KOKU (Warnah)
+                </button>
+                <button type="button" data-cal-filter="5" class="btn-cal-pemantau-filter px-3 py-1.5 rounded-lg font-bold text-slate-700 hover:text-slate-950 cursor-pointer">
+                  PK Petang (Emran)
+                </button>
+              </div>
+
+              <div id="cal-red-total-summary" class="text-xs font-bold text-slate-600 flex items-center gap-2">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Bekas 5 Lajur Guru Masih Merah -->
+            <div id="cal-red-supervisors-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 items-start">
+              <!-- Dynamically populated with 5 supervisor columns and their red teachers -->
+            </div>
+          </div>
+
           <!-- 3. Senarai Penuh 43 Hari Jumaat Persekolahan 2026 -->
           <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
@@ -1623,9 +1697,9 @@
     </div>
   </div>
 
-  <!-- Scripts (Cache-busting version v=3.2) -->
-  <script src="js/timetable-data.js?v=3.2"></script>
-  <script src="js/data.js?v=3.2"></script>
-  <script src="js/app.js?v=3.2"></script>
+  <!-- Scripts (Cache-busting version v=3.3) -->
+  <script src="js/timetable-data.js?v=3.3"></script>
+  <script src="js/data.js?v=3.3"></script>
+  <script src="js/app.js?v=3.3"></script>
 </body>
 </html>

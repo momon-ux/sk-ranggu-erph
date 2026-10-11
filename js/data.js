@@ -217,12 +217,12 @@ const INITIAL_STAFF_LIST = [
 const INITIAL_UPLOADS_DATA = [];
 
 // Helper Functions untuk LocalStorage
-const ERPH_DATA_VERSION = "3.2";
+const ERPH_DATA_VERSION = "3.3";
 
 function getErphDatabase() {
   const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");
   if (savedVersion !== ERPH_DATA_VERSION) {
-    // Sinkronkan versi data terkini (v3.2: susun atur kad 5 kolum kemas memanjang kiri-kanan)
+    // Sinkronkan versi data terkini (v3.3: senarai guru masih merah mengikut 5 pemantau dalam ruangan kalendar)
     localStorage.setItem("SKR_ERPH_DATA_VERSION", ERPH_DATA_VERSION);
     
     // Pastikan konfigurasi sekolah menggunakan currentWeek: 'auto' dan mengekalkan fridays2026
