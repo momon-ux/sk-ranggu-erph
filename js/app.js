@@ -47,9 +47,13 @@ document.addEventListener("DOMContentLoaded", () => {
     activeWeek: getEffectiveCurrentWeek(),
     currentUser: null, // Null secara default sehingga pengguna log masuk
     isSuperAdminAuthenticated: false,
-    filterSearch: "",
-    monitoringViewMode: "baris", // "baris" (Default) | "jadual" | "kolum"
-    monitoringSearch: "",
+    monitoringViewMode: (() => {
+      try {
+        const saved = localStorage.getItem("SKR_ERPH_VIEW_MODE");
+        if (saved && ["baris", "jadual", "kolum"].includes(saved)) return saved;
+      } catch (e) {}
+      return "kolum";
+    })(), // Lalai kepada 5 Kolum Kad kemas mendatar (atau pilihan tersimpan pengguna)
     monitoringPentadbirFilter: "ALL", // "ALL" | "1" | "2" | "3" | "4" | "5"
     monitoringStatusFilter: "ALL", // "ALL" | "HIJAU" | "MERAH" | "KUNING"
     timetableMode: "guru", // "guru" | "kelas" | "induk"
@@ -1713,7 +1717,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
             }
 
             const rowDiv = document.createElement("div");
-            rowDiv.className = `teacher-monitor-row p-3.5 sm:p-4 hover:bg-slate-50/90 transition flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 ${isHolidayWeek ? 'bg-amber-50/20' : isUploaded ? 'bg-emerald-50/25' : isLimpas ? 'bg-amber-50/25' : 'bg-rose-50/25'}`;
+            rowDiv.className = `teacher-monitor-row p-3.5 sm:p-4 hover:bg-slate-50/90 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 ${isHolidayWeek ? 'bg-amber-50/20' : isUploaded ? 'bg-emerald-50/25' : isLimpas ? 'bg-amber-50/25' : 'bg-rose-50/25'}`;
 
             rowDiv.innerHTML = `
               <!-- Maklumat Utama Guru (Foto, Kod, Sesi, Nama Penuh Tanpa Terpotong & Jawatan) -->
@@ -1749,7 +1753,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
               </div>
 
               <!-- Maklumat Masa, Badge Status & Tindakan -->
-              <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 flex-shrink-0 self-stretch sm:self-auto justify-between sm:justify-end border-t lg:border-t-0 pt-2.5 lg:pt-0 border-slate-100">
+              <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 flex-shrink-0 self-stretch sm:self-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2.5 sm:pt-0 border-slate-100">
                 <div class="text-left sm:text-right min-w-[130px]">
                   <div class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Tarikh & Waktu</div>
                   <div class="text-xs font-semibold ${isHolidayWeek ? 'text-amber-800' : isUploaded ? 'text-emerald-800 font-bold' : isLimpas ? 'text-amber-800 font-bold' : 'text-slate-500'}">
@@ -2054,7 +2058,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
             <span class="text-sky-700">${filteredStaff.length} Guru</span>
           </div>
 
-          <div class="p-2 space-y-2 flex-1 max-h-[720px] overflow-y-auto" id="col-body-${col.id}">
+          <div class="p-2 space-y-1.5 flex-1 max-h-[760px] overflow-y-auto" id="col-body-${col.id}">
           </div>
         `;
 
@@ -2077,14 +2081,14 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
             const teacherCard = document.createElement("div");
             const cardBgClass = isHolidayWeek
-              ? 'bg-amber-50/40 border-amber-200'
+              ? 'bg-amber-50/50 border-amber-200 hover:border-amber-300'
               : isUploaded
-                ? 'bg-emerald-50/40 border-emerald-300'
+                ? 'bg-emerald-50/50 border-emerald-300 hover:border-emerald-400'
                 : isLimpas
-                  ? 'bg-amber-50/40 border-amber-300'
-                  : 'bg-rose-50/40 border-rose-200';
+                  ? 'bg-amber-50/50 border-amber-300 hover:border-amber-400'
+                  : 'bg-rose-50/40 border-rose-200 hover:border-rose-300';
 
-            teacherCard.className = `teacher-monitor-card p-3 rounded-xl border ${cardBgClass} space-y-2 text-xs relative`;
+            teacherCard.className = `teacher-monitor-card p-2 sm:p-2.5 rounded-xl border ${cardBgClass} text-xs relative transition shadow-2xs hover:shadow-xs`;
 
             let timestampDisplay = "Belum memuat naik e-RPH";
             if (isHolidayWeek) {
@@ -2096,80 +2100,79 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
             }
 
             teacherCard.innerHTML = `
-              <div class="flex items-start gap-2.5">
+              <!-- SUSUN ATUR MEMANJANG KIRI-KANAN (HORIZONTAL & KEMAS) -->
+              <!-- Baris Atas: Foto Profil, Kod, Sesi & Nama Penuh Guru -->
+              <div class="flex items-start gap-2">
                 ${teacher.avatar ? `
-                  <img src="${teacher.avatar}" alt="${teacher.name}" class="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-slate-200 shadow-xs">
+                  <img src="${teacher.avatar}" alt="${teacher.name}" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover flex-shrink-0 border border-slate-200/80 shadow-2xs mt-0.5">
                 ` : `
-                  <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0 shadow-xs border border-sky-300">
+                  <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0 shadow-2xs border border-sky-300 mt-0.5">
                     ${teacher.name.charAt(0)}
                   </div>
                 `}
                 <div class="min-w-0 flex-1">
-                  <span class="text-[9px] font-mono font-bold text-slate-400 block">${teacher.code} • ${teacher.session || 'Pagi'}</span>
-                  <!-- NAMA GURU: BREAK-WORDS & SEMUA HURUF KELIHATAN -->
-                  <h4 class="font-black text-xs text-slate-900 leading-snug break-words" title="${teacher.name}">
+                  <div class="flex items-center gap-1.5 leading-none mb-0.5">
+                    <span class="text-[9px] font-mono font-black px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 border border-slate-200">${teacher.code}</span>
+                    <span class="text-[9px] font-semibold text-slate-500">${teacher.session || 'Pagi'}</span>
+                  </div>
+                  <h4 class="font-extrabold text-xs text-slate-900 leading-snug break-words" title="${teacher.name}">
                     ${teacher.name}
                   </h4>
-                  <p class="text-[10px] text-slate-500 break-words mt-0.5 leading-tight" title="${teacher.role}">
+                  <p class="text-[9.5px] text-slate-500 truncate mt-0.5 leading-tight" title="${teacher.role}">
                     ${teacher.role}
                   </p>
                 </div>
               </div>
 
-              <!-- Status Button -->
-              <div class="pt-1">
-                ${isHolidayWeek ? `
-                  <div class="w-full py-1.5 px-2.5 rounded-lg bg-amber-500 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
-                    <i data-lucide="sun" class="w-3.5 h-3.5"></i>
-                    <span>CUTI SEKOLAH</span>
-                  </div>
-                ` : isUploaded ? `
-                  <div class="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
-                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-                    <span>HIJAU - BERJAYA</span>
-                  </div>
-                ` : isLimpas ? `
-                  <div class="w-full py-1.5 px-2.5 rounded-lg bg-amber-500 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
-                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
-                    <span>KUNING - LIMPAS DUE</span>
-                  </div>
-                ` : `
-                  <div class="w-full py-1.5 px-2.5 rounded-lg bg-rose-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
-                    <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
-                    <span>MERAH - BELUM HANTAR</span>
-                  </div>
-                `}
-              </div>
+              <!-- Baris Bawah Memanjang Kiri-Kanan: Status Badge (Kiri) & Butang Aksi (Kanan) -->
+              <div class="mt-2 pt-1.5 border-t border-slate-200/70 flex items-center justify-between gap-1.5">
+                <!-- Status Badge Pill Ringkas & Kemas -->
+                <div class="flex-shrink-0">
+                  ${isHolidayWeek ? `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500 text-white font-black text-[10px] shadow-2xs">
+                      <i data-lucide="sun" class="w-2.5 h-2.5"></i>
+                      <span>CUTI</span>
+                    </span>
+                  ` : isUploaded ? `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-600 text-white font-black text-[10px] shadow-2xs" title="${timestampDisplay}">
+                      <i data-lucide="check-circle" class="w-2.5 h-2.5"></i>
+                      <span>BERJAYA</span>
+                    </span>
+                  ` : isLimpas ? `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500 text-white font-black text-[10px] shadow-2xs" title="${timestampDisplay}">
+                      <i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i>
+                      <span>LIMPAS DUE</span>
+                    </span>
+                  ` : `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-600 text-white font-black text-[10px] shadow-2xs" title="${timestampDisplay}">
+                      <i data-lucide="x-circle" class="w-2.5 h-2.5"></i>
+                      <span>BELUM HANTAR</span>
+                    </span>
+                  `}
+                </div>
 
-              <div class="text-[10px] text-slate-600 font-semibold flex items-center justify-between pt-0.5">
-                <span class="break-words ${isHolidayWeek ? 'text-amber-800 font-bold' : isUploaded ? 'text-emerald-800 font-bold' : isLimpas ? 'text-amber-800 font-bold' : 'text-rose-700 font-medium'}">
-                  <i data-lucide="clock" class="w-3 h-3 inline mr-0.5"></i>
-                  ${timestampDisplay}
-                </span>
-              </div>
+                <!-- Butang Aksi Pantas & Kawalan Pentadbir -->
+                <div class="flex items-center gap-1 flex-shrink-0">
+                  ${(isTeacherGb && !canViewGbFolder) ? `
+                    <span class="text-[9px] text-slate-400 italic">Sulit GB</span>
+                  ` : `
+                    <button data-teacher-id="${teacher.id}" class="btn-open-review text-[10px] font-bold ${isUploaded ? 'text-sky-700 hover:text-sky-950 bg-sky-50 hover:bg-sky-100 border border-sky-200' : 'text-slate-700 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 border border-slate-200'} px-2 py-0.5 rounded-md flex items-center gap-1 transition cursor-pointer">
+                      <i data-lucide="folder" class="w-2.5 h-2.5"></i>
+                      <span>${isUploaded ? 'Buka e-RPH' : 'Perincian'}</span>
+                    </button>
+                  `}
 
-              <div class="pt-1 flex items-center justify-between gap-1 border-t border-slate-200/60">
-                ${(isTeacherGb && !canViewGbFolder) ? `
-                  <span class="text-[9px] text-slate-400 italic">Folder Sulit GB</span>
-                ` : `
-                  <button data-teacher-id="${teacher.id}" class="btn-open-review text-[10px] font-bold text-sky-700 hover:text-sky-950 flex items-center gap-1 cursor-pointer">
-                    <i data-lucide="folder" class="w-3 h-3"></i>
-                    <span>${isUploaded ? 'Buka e-RPH' : 'Perincian'}</span>
-                  </button>
-                `}
-
-                ${isSuper ? `
-                  <div class="flex items-center space-x-1">
-                    <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau -> Merah -> Kuning)" class="btn-toggle-status-super p-1 rounded hover:bg-slate-200 text-slate-700 transition cursor-pointer">
-                      <i data-lucide="refresh-cw" class="w-3 h-3 text-amber-600"></i>
+                  ${isSuper ? `
+                    <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau -> Merah -> Kuning)" class="btn-toggle-status-super p-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer">
+                      <i data-lucide="refresh-cw" class="w-2.5 h-2.5 text-amber-600"></i>
                     </button>
                     ${isUploaded ? `
-                      <button data-teacher-id="${teacher.id}" title="Padam e-RPH Senyap" class="btn-silent-delete-super p-1 rounded hover:bg-rose-100 text-rose-700 transition cursor-pointer">
-                        <i data-lucide="trash-2" class="w-3 h-3"></i>
+                      <button data-teacher-id="${teacher.id}" title="Padam e-RPH Senyap" class="btn-silent-delete-super p-1 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer">
+                        <i data-lucide="trash-2" class="w-2.5 h-2.5"></i>
                       </button>
                     ` : ''}
-                  </div>
-                ` : ''}
+                  ` : ''}
+                </div>
               </div>
             `;
 
@@ -5297,6 +5300,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   if (elements.btnViewModeBaris) {
     elements.btnViewModeBaris.addEventListener("click", () => {
       state.monitoringViewMode = "baris";
+      try { localStorage.setItem("SKR_ERPH_VIEW_MODE", "baris"); } catch (e) {}
       renderMonitoringColumns();
     });
   }
@@ -5304,6 +5308,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   if (elements.btnViewModeJadual) {
     elements.btnViewModeJadual.addEventListener("click", () => {
       state.monitoringViewMode = "jadual";
+      try { localStorage.setItem("SKR_ERPH_VIEW_MODE", "jadual"); } catch (e) {}
       renderMonitoringColumns();
     });
   }
@@ -5311,6 +5316,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   if (elements.btnViewModeKolum) {
     elements.btnViewModeKolum.addEventListener("click", () => {
       state.monitoringViewMode = "kolum";
+      try { localStorage.setItem("SKR_ERPH_VIEW_MODE", "kolum"); } catch (e) {}
       renderMonitoringColumns();
     });
   }
