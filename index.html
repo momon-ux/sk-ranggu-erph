@@ -482,11 +482,17 @@
                 <input type="file" id="portal-avatar-input" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
               </div>
 
-              <!-- Change Password Button -->
-              <button id="btn-portal-change-pwd" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-300 transition flex items-center space-x-1.5 cursor-pointer">
-                <i data-lucide="key" class="w-3.5 h-3.5 text-sky-600"></i>
-                <span>Jana / Tukar Kata Laluan</span>
-              </button>
+              <!-- Butang Cetak Jadual Sendiri & Jana Kata Laluan -->
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="btn-portal-print-timetable" type="button" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold border border-indigo-200 transition flex items-center space-x-1.5 cursor-pointer" title="Cetak jadual waktu persendirian rasmi dalam 1 halaman A4">
+                  <i data-lucide="printer" class="w-3.5 h-3.5 text-indigo-600"></i>
+                  <span>Cetak Jadual Waktu Saya (1 Halaman)</span>
+                </button>
+                <button id="btn-portal-change-pwd" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-300 transition flex items-center space-x-1.5 cursor-pointer">
+                  <i data-lucide="key" class="w-3.5 h-3.5 text-sky-600"></i>
+                  <span>Jana / Tukar Kata Laluan</span>
+                </button>
+              </div>
             </div>
 
             <!-- Upload Form for Active Week -->
@@ -891,9 +897,13 @@
                   <i data-lucide="plus-circle" class="w-4 h-4"></i>
                   <span>+ Tambah Slot Jadual</span>
                 </button>
-                <button id="btn-timetable-print" type="button" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer">
+                <button id="btn-timetable-toggle-preview" type="button" class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer" title="Lihat susun atur format cetakan rasmi">
+                  <i data-lucide="file-text" class="w-4 h-4"></i>
+                  <span id="label-toggle-preview">Pratonton Rasmi (1 Halaman)</span>
+                </button>
+                <button id="btn-timetable-print" type="button" class="px-3.5 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center space-x-1.5 cursor-pointer" title="Cetak jadual rasmi dalam 1 halaman A4 Landscape">
                   <i data-lucide="printer" class="w-4 h-4"></i>
-                  <span>Cetak Jadual</span>
+                  <span>Cetak Jadual (1 Halaman)</span>
                 </button>
                 <button id="btn-timetable-reset" type="button" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-pointer" title="Pulihkan 654 slot jadual asal dari fail rasmi">
                   <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
@@ -983,9 +993,15 @@
             </div>
           </div>
 
-          <!-- BEKAS KANDUNGAN UTAMA JADUAL WAKTU -->
+          <!-- BEKAS KANDUNGAN UTAMA JADUAL WAKTU (INTERAKTIF DI SKRIN) -->
           <div id="jadual-rujukan-container" class="space-y-4">
             <!-- Rendered by JavaScript: Weekly Grid (Teacher/Class) or Master Table -->
+          </div>
+
+          <!-- HELAIAN CETAKAN RASMI 1 HALAMAN (A4 LANDSCAPE) -->
+          <!-- Siap kepala surat logo KPM & SK Ranggu, grid padat, analisis agihan waktu & ruang tandatangan guru besar -->
+          <div id="timetable-print-sheet" class="hidden bg-white text-black rounded-3xl p-6 shadow-sm border border-slate-200 print:shadow-none print:border-none print:p-0 print:m-0 print:block">
+            <!-- Populated dynamically with official letterhead, grid, subject analysis & signatures -->
           </div>
         </section>
 

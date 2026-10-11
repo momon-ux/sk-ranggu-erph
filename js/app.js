@@ -23,7 +23,8 @@ document.addEventListener("DOMContentLoaded", () => {
     timetableIndukSearch: "",
     timetableIndukHari: "ALL",
     timetableIndukKelas: "ALL",
-    timetableIndukSubjek: "ALL"
+    timetableIndukSubjek: "ALL",
+    timetableOfficialPreview: false
   };
 
   // Helper untuk format tarikh & masa Malaysia
@@ -503,6 +504,10 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     timetableFilterIndukKelas: document.getElementById("timetable-filter-induk-kelas"),
     timetableFilterIndukSubjek: document.getElementById("timetable-filter-induk-subjek"),
     timetableIndukCount: document.getElementById("timetable-induk-count"),
+    timetablePrintSheet: document.getElementById("timetable-print-sheet"),
+    btnTimetableTogglePreview: document.getElementById("btn-timetable-toggle-preview"),
+    labelTogglePreview: document.getElementById("label-toggle-preview"),
+    btnPortalPrintTimetable: document.getElementById("btn-portal-print-timetable"),
 
     // Tab 6 Admin Console Elements & Takwim
     adminSchoolStartDate: document.getElementById("admin-school-start-date"),
@@ -2209,6 +2214,196 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     }
   }
 
+  // ==============================================================
+  // PENJANA HELAIAN CETAKAN RASMI 1 HALAMAN (A4 LANDSCAPE)
+  // Dilengkapi KOP Logo KPM & SK Ranggu, Grid Padat, & Pengesahan Guru Besar
+  // ==============================================================
+  function buildOfficialPrintSheet() {
+    if (!elements.timetablePrintSheet) return;
+
+    const isClassMode = (state.timetableMode === "kelas");
+    let teacherName = state.timetableSelectedGuru || (elements.timetableSelectGuru ? elements.timetableSelectGuru.value : "");
+    if (!teacherName && state.currentUser && state.currentUser.name && state.currentUser.role !== "admin") {
+      teacherName = state.currentUser.name;
+    }
+    if (!teacherName && db.staffList && db.staffList.length > 0) {
+      teacherName = db.staffList[0].name;
+    }
+    const selectedClass = state.timetableSelectedKelas || (elements.timetableSelectKelas ? elements.timetableSelectKelas.value : "4 I");
+
+    const slots = isClassMode
+      ? (db.timetable || []).filter(s => s.kelas === selectedClass)
+      : (db.timetable || []).filter(s => s.guru === teacherName);
+
+    const totalWaktu = slots.length;
+    const staffObj = (db.staffList || []).find(s => s.name === teacherName);
+    const teacherRole = staffObj ? staffObj.role : "Guru Penolong Akademik";
+    const teacherIc = staffObj ? staffObj.ic : "-";
+
+    // Kumpul analisis mata pelajaran
+    const subjectSummaryMap = {};
+    slots.forEach(s => {
+      const key = isClassMode ? `${s.subjek} - ${s.guru}` : `${s.subjek} (${s.kelas})`;
+      subjectSummaryMap[key] = (subjectSummaryMap[key] || 0) + 1;
+    });
+
+    const now = new Date();
+    const tarikhCetak = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+    let html = `
+      <div class="official-print-document font-sans text-slate-950 bg-white leading-tight">
+        <!-- 1. KEPALA SURAT RASMI (KOP SURAT KPM & SEKOLAH) -->
+        <div class="flex items-center justify-between pb-2 mb-2 border-b-[2.5px] border-slate-900">
+          <div class="w-20 flex-shrink-0 flex items-center justify-start">
+            <img src="assets/logo-kpm.png" alt="Logo KPM" class="h-16 w-auto object-contain">
+          </div>
+          <div class="flex-1 text-center px-2">
+            <div class="text-[10px] font-bold tracking-widest text-slate-700 uppercase">KEMENTERIAN PENDIDIKAN MALAYSIA</div>
+            <div class="text-[9.5px] font-bold text-slate-800 uppercase tracking-tight">JABATAN PENDIDIKAN NEGERI SABAH • PEJABAT PENDIDIKAN DAERAH TAWAU</div>
+            <div class="text-[13px] font-black text-slate-950 uppercase tracking-normal">SEKOLAH KEBANGSAAN RANGGU, TAWAU (XBA3037)</div>
+            <div class="mt-1">
+              <span class="inline-block text-[10.5px] font-black uppercase tracking-wider px-3.5 py-0.5 bg-slate-100 border border-slate-400 rounded-sm">
+                ${isClassMode ? `JADUAL WAKTU KELAS ${selectedClass} • SESI PERSEKOLAHAN 2026` : `JADUAL WAKTU PERSENDIRIAN GURU • SESI PERSEKOLAHAN 2026`}
+              </span>
+            </div>
+          </div>
+          <div class="w-20 flex-shrink-0 flex items-center justify-end">
+            <img src="assets/logo-skrg.png" alt="Logo SK Ranggu" class="h-16 w-auto object-contain">
+          </div>
+        </div>
+
+        <!-- 2. JALUR METADATA GURU / KELAS -->
+        <div class="grid grid-cols-4 gap-2 mb-2 p-1.5 bg-slate-50 border border-slate-400 rounded text-[9.5px] leading-snug">
+          ${isClassMode ? `
+            <div><span class="font-bold text-slate-600">KELAS:</span> <span class="font-black text-slate-900">${selectedClass}</span></div>
+            <div><span class="font-bold text-slate-600">TAHAP / SESI:</span> <span class="font-bold text-slate-800">Tahap 2 (Sesi Pagi)</span></div>
+            <div><span class="font-bold text-slate-600">JUMLAH WAKTU:</span> <span class="font-black text-indigo-950">${totalWaktu} Waktu Seminggu</span></div>
+            <div><span class="font-bold text-slate-600">TARIKH KUAT KUASA:</span> <span class="font-bold text-slate-800">05 Januari 2026</span></div>
+          ` : `
+            <div class="col-span-2"><span class="font-bold text-slate-600">NAMA GURU:</span> <span class="font-black text-slate-900 uppercase">${teacherName}</span></div>
+            <div><span class="font-bold text-slate-600">JUMLAH WAKTU:</span> <span class="font-black text-indigo-950">${totalWaktu} Waktu (${(totalWaktu * 0.5).toFixed(1)} Jam)</span></div>
+            <div><span class="font-bold text-slate-600">TARIKH KUAT KUASA:</span> <span class="font-bold text-slate-800">05 Januari 2026</span></div>
+            <div class="col-span-2"><span class="font-bold text-slate-600">JAWATAN:</span> <span class="font-bold text-slate-800">${teacherRole}</span></div>
+            <div><span class="font-bold text-slate-600">NO. K/P:</span> <span class="font-mono font-bold text-slate-800">${teacherIc}</span></div>
+            <div><span class="font-bold text-slate-600">TARIKH CETAKAN:</span> <span class="font-mono text-slate-700">${tarikhCetak}</span></div>
+          `}
+        </div>
+
+        <!-- 3. JADUAL GRID RASMI 1-PAGE (CRISP & HIGH CONTRAST) -->
+        <table class="official-print-table w-full border-collapse border border-slate-800 text-center mb-2">
+          <thead>
+            <tr class="bg-slate-200 text-slate-950 text-[9.5px] font-black border-b border-slate-800">
+              <th class="border border-slate-700 py-1 px-1 w-[60px] bg-slate-300">HARI</th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W1</div><div class="text-[7.5px] font-mono font-normal">06:40-07:10</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W2</div><div class="text-[7.5px] font-mono font-normal">07:10-07:40</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W3</div><div class="text-[7.5px] font-mono font-normal">07:40-08:10</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W4</div><div class="text-[7.5px] font-mono font-normal">08:10-08:40</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W5</div><div class="text-[7.5px] font-mono font-normal">08:40-09:10</div></th>
+              <th class="border border-slate-700 py-1 px-0.5 bg-amber-100 text-amber-950 w-[46px]"><div class="font-black text-[9px]">REHAT</div><div class="text-[7.5px] font-mono font-normal">09:10-09:30</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W6</div><div class="text-[7.5px] font-mono font-normal">09:30-10:00</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W7</div><div class="text-[7.5px] font-mono font-normal">10:00-10:30</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W8</div><div class="text-[7.5px] font-mono font-normal">10:30-11:00</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W9</div><div class="text-[7.5px] font-mono font-normal">11:00-11:30</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W10</div><div class="text-[7.5px] font-mono font-normal">11:30-12:00</div></th>
+              <th class="border border-slate-700 py-1 px-0.5"><div class="font-bold">W11</div><div class="text-[7.5px] font-mono font-normal">12:00-12:30</div></th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    DEFAULT_DAYS.forEach((day) => {
+      html += `
+        <tr class="border-b border-slate-700">
+          <td class="border border-slate-700 p-1 font-black text-[10px] text-slate-900 bg-slate-100 uppercase">
+            ${day.nama}
+          </td>
+      `;
+
+      DEFAULT_PERIODS.forEach(p => {
+        if (p.isRehat) {
+          html += `<td class="border border-slate-700 p-0.5 bg-amber-50/70 text-amber-950 font-black text-[8.5px]">
+            REHAT
+          </td>`;
+          return;
+        }
+
+        if (day.id === "JUM" && p.waktu > 9) {
+          html += `<td class="border border-slate-700 p-0.5 bg-slate-100 text-slate-400 font-semibold text-[8px] italic">
+            Solat Jumaat
+          </td>`;
+          return;
+        }
+
+        const slot = slots.find(s => s.hari === day.id && Number(s.waktu) === Number(p.waktu));
+        if (slot) {
+          html += `
+            <td class="border border-slate-700 p-1 bg-white">
+              <div class="font-black text-[11px] text-slate-950 leading-none">${slot.subjek}</div>
+              <div class="text-[8.5px] font-extrabold text-slate-700 mt-0.5 truncate leading-none">${isClassMode ? slot.guru : slot.kelas}</div>
+            </td>
+          `;
+        } else {
+          html += `
+            <td class="border border-slate-700 p-1 bg-slate-50/50">
+              <span class="text-slate-200 text-[10px]">-</span>
+            </td>
+          `;
+        }
+      });
+
+      html += `</tr>`;
+    });
+
+    html += `
+          </tbody>
+        </table>
+
+        <!-- 4. BAHAGIAN ANALISIS AGIHAN SUBJEK & RUANG TANDATANGAN PENGESAHAN -->
+        <div class="grid grid-cols-12 gap-3 pt-1 border-t border-slate-400 text-[9.5px]">
+          <!-- Analisis Agihan Subjek (5 cols) -->
+          <div class="col-span-5">
+            <div class="font-black text-[9.5px] text-slate-900 mb-1 uppercase tracking-wider">Analisis Agihan Mengajar:</div>
+            <table class="w-full border-collapse border border-slate-400 text-[8.5px]">
+              <tr class="bg-slate-100 font-bold border-b border-slate-400">
+                <th class="border border-slate-400 p-0.5 text-left pl-1">Mata Pelajaran & Sasaran</th>
+                <th class="border border-slate-400 p-0.5 text-center w-16">Bil. Waktu</th>
+              </tr>
+              ${Object.entries(subjectSummaryMap).map(([item, count]) => `
+                <tr class="border-b border-slate-300">
+                  <td class="border border-slate-400 p-0.5 pl-1 font-semibold">${item}</td>
+                  <td class="border border-slate-400 p-0.5 text-center font-bold">${count}</td>
+                </tr>
+              `).join("")}
+              <tr class="bg-slate-100 font-black border-t border-slate-400">
+                <td class="border border-slate-400 p-0.5 pl-1">JUMLAH KESELURUHAN</td>
+                <td class="border border-slate-400 p-0.5 text-center font-black">${totalWaktu}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Ruang Tandatangan Rasmi Guru & Guru Besar (7 cols) -->
+          <div class="col-span-7 flex justify-between gap-6 pt-1">
+            <div class="flex-1 text-center">
+              <div class="text-[9px] font-bold text-slate-600 mb-8">Disediakan Oleh:</div>
+              <div class="border-b border-slate-700 w-36 mx-auto"></div>
+              <div class="text-[9px] font-bold text-slate-950 mt-1 uppercase">${isClassMode ? "GURU KELAS" : teacherName}</div>
+              <div class="text-[8px] text-slate-500">Tarikh: .......................................</div>
+            </div>
+            <div class="flex-1 text-center">
+              <div class="text-[9px] font-bold text-slate-600 mb-8">Disahkan Oleh:</div>
+              <div class="border-b border-slate-700 w-36 mx-auto"></div>
+              <div class="text-[9.5px] font-black text-slate-950 mt-1 uppercase">YUNUS BIN PATARAI</div>
+              <div class="text-[8px] font-bold text-slate-700">Guru Besar, SK Ranggu Tawau</div>
+              <div class="text-[8px] text-slate-500">Tarikh: .......................................</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    elements.timetablePrintSheet.innerHTML = html;
+  }
+
   // Fungsi Utama Render Jadual Waktu Rujukan
   function renderTimetableReference() {
     populateTimetableSelects();
@@ -2245,6 +2440,24 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       renderTimetableKelas();
     } else {
       renderTimetableInduk();
+    }
+
+    // Bina helaian cetakan rasmi siap siaga
+    buildOfficialPrintSheet();
+
+    // Kawal paparan mod pratonton rasmi jika diaktifkan
+    if (elements.timetablePrintSheet && elements.jadualRujukanContainer) {
+      if (state.timetableOfficialPreview) {
+        elements.timetablePrintSheet.classList.remove("hidden");
+        elements.jadualRujukanContainer.classList.add("hidden");
+        if (elements.labelTogglePreview) elements.labelTogglePreview.textContent = "Kembali ke Mod Interaktif";
+        if (elements.btnTimetableTogglePreview) elements.btnTimetableTogglePreview.className = "px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-xs";
+      } else {
+        elements.timetablePrintSheet.classList.add("hidden");
+        elements.jadualRujukanContainer.classList.remove("hidden");
+        if (elements.labelTogglePreview) elements.labelTogglePreview.textContent = "Pratonton Rasmi (1 Halaman)";
+        if (elements.btnTimetableTogglePreview) elements.btnTimetableTogglePreview.className = "px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer";
+      }
     }
 
     lucide.createIcons();
@@ -4045,8 +4258,39 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     });
   }
 
+  // Togol Pratonton Rasmi 1 Halaman A4
+  if (elements.btnTimetableTogglePreview) {
+    elements.btnTimetableTogglePreview.addEventListener("click", () => {
+      state.timetableOfficialPreview = !state.timetableOfficialPreview;
+      renderTimetableReference();
+    });
+  }
+
+  // Cetak Jadual Waktu Rasmi (1 Halaman A4 Landscape)
   if (elements.btnTimetablePrint) {
     elements.btnTimetablePrint.addEventListener("click", () => {
+      if (state.timetableMode === "induk") {
+        const targetTeacher = state.timetableSelectedGuru || (state.currentUser && state.currentUser.name) || (db.staffList && db.staffList[0] ? db.staffList[0].name : "");
+        state.timetableSelectedGuru = targetTeacher;
+        if (elements.timetableSelectGuru) elements.timetableSelectGuru.value = targetTeacher;
+      }
+      buildOfficialPrintSheet();
+      window.print();
+    });
+  }
+
+  // Cetak Jadual Waktu Sendiri dari Portal Guru (1 Halaman)
+  if (elements.btnPortalPrintTimetable) {
+    elements.btnPortalPrintTimetable.addEventListener("click", () => {
+      const currentTeacherName = (state.currentUser && state.currentUser.name)
+        ? state.currentUser.name
+        : (db.staffList && db.staffList[0] ? db.staffList[0].name : "");
+      state.timetableMode = "guru";
+      state.timetableSelectedGuru = currentTeacherName;
+      if (elements.timetableSelectGuru) {
+        elements.timetableSelectGuru.value = currentTeacherName;
+      }
+      buildOfficialPrintSheet();
       window.print();
     });
   }
