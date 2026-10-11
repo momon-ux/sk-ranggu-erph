@@ -16,7 +16,14 @@ document.addEventListener("DOMContentLoaded", () => {
     activeWeek: db.config.school.currentWeek || 7,
     currentUser: null, // Null secara default sehingga pengguna log masuk
     isSuperAdminAuthenticated: false,
-    filterSearch: ""
+    filterSearch: "",
+    timetableMode: "guru", // "guru" | "kelas" | "induk"
+    timetableSelectedGuru: null,
+    timetableSelectedKelas: "4 I",
+    timetableIndukSearch: "",
+    timetableIndukHari: "ALL",
+    timetableIndukKelas: "ALL",
+    timetableIndukSubjek: "ALL"
   };
 
   // Helper untuk format tarikh & masa Malaysia
@@ -478,6 +485,24 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
     // Tab 5 Timetable Elements
     jadualRujukanContainer: document.getElementById("jadual-rujukan-container"),
+    btnTimetableAddSlot: document.getElementById("btn-timetable-add-slot"),
+    btnTimetablePrint: document.getElementById("btn-timetable-print"),
+    btnTimetableReset: document.getElementById("btn-timetable-reset"),
+    tabTimetableModeGuru: document.getElementById("tab-timetable-mode-guru"),
+    tabTimetableModeKelas: document.getElementById("tab-timetable-mode-kelas"),
+    tabTimetableModeInduk: document.getElementById("tab-timetable-mode-induk"),
+    filterWrapperGuru: document.getElementById("filter-wrapper-guru"),
+    filterWrapperKelas: document.getElementById("filter-wrapper-kelas"),
+    filterWrapperInduk: document.getElementById("filter-wrapper-induk"),
+    timetableSelectGuru: document.getElementById("timetable-select-guru"),
+    timetableTeacherSummary: document.getElementById("timetable-teacher-summary"),
+    timetableSelectKelas: document.getElementById("timetable-select-kelas"),
+    timetableClassSummary: document.getElementById("timetable-class-summary"),
+    timetableSearchInput: document.getElementById("timetable-search-input"),
+    timetableFilterIndukHari: document.getElementById("timetable-filter-induk-hari"),
+    timetableFilterIndukKelas: document.getElementById("timetable-filter-induk-kelas"),
+    timetableFilterIndukSubjek: document.getElementById("timetable-filter-induk-subjek"),
+    timetableIndukCount: document.getElementById("timetable-induk-count"),
 
     // Tab 6 Admin Console Elements & Takwim
     adminSchoolStartDate: document.getElementById("admin-school-start-date"),
@@ -542,7 +567,24 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     staffReasonWrapper: document.getElementById("staff-reason-wrapper"),
     staffFormReason: document.getElementById("staff-form-reason"),
     btnAdminRemoveStaff: document.getElementById("btn-admin-remove-staff"),
-    modalStaffTitle: document.getElementById("modal-staff-title")
+    modalStaffTitle: document.getElementById("modal-staff-title"),
+
+    // Modal Timetable Slot
+    modalEditTimetableSlot: document.getElementById("modal-edit-timetable-slot"),
+    modalTimetableTitle: document.getElementById("modal-timetable-title"),
+    btnCloseModalTimetable: document.getElementById("btn-close-modal-timetable"),
+    btnCancelTimetableSlot: document.getElementById("btn-cancel-timetable-slot"),
+    formEditTimetableSlot: document.getElementById("form-edit-timetable-slot"),
+    slotFormId: document.getElementById("slot-form-id"),
+    slotFormGuru: document.getElementById("slot-form-guru"),
+    slotFormHari: document.getElementById("slot-form-hari"),
+    slotFormWaktu: document.getElementById("slot-form-waktu"),
+    slotFormMasa: document.getElementById("slot-form-masa"),
+    slotFormKelas: document.getElementById("slot-form-kelas"),
+    slotFormSubjek: document.getElementById("slot-form-subjek"),
+    slotClashWarning: document.getElementById("slot-clash-warning"),
+    slotClashText: document.getElementById("slot-clash-text"),
+    btnDeleteTimetableSlot: document.getElementById("btn-delete-timetable-slot")
   };
 
   let activeReviewUploadId = null;
@@ -2060,37 +2102,680 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   }
 
   // ==============================================================
-  // TAB 5: RENDER JADUAL WAKTU RUJUKAN
+  // TAB 5: PENGURUSAN JADUAL WAKTU INTERAKTIF SK RANGGU 2026
+  // (Dirujuk daripada Jadual Rasmi Bil. 2 - 654 Slot Mengajar)
   // ==============================================================
+
+  const DEFAULT_PERIODS = (typeof TIMETABLE_PERIODS !== "undefined") ? TIMETABLE_PERIODS : [
+    { waktu: 1, masa: "06:40 - 07:10", label: "W1" },
+    { waktu: 2, masa: "07:10 - 07:40", label: "W2" },
+    { waktu: 3, masa: "07:40 - 08:10", label: "W3" },
+    { waktu: 4, masa: "08:10 - 08:40", label: "W4" },
+    { waktu: 5, masa: "08:40 - 09:10", label: "W5" },
+    { waktu: "REHAT", masa: "09:10 - 09:30", label: "REHAT", isRehat: true },
+    { waktu: 6, masa: "09:30 - 10:00", label: "W6" },
+    { waktu: 7, masa: "10:00 - 10:30", label: "W7" },
+    { waktu: 8, masa: "10:30 - 11:00", label: "W8" },
+    { waktu: 9, masa: "11:00 - 11:30", label: "W9" },
+    { waktu: 10, masa: "11:30 - 12:00", label: "W10" },
+    { waktu: 11, masa: "12:00 - 12:30", label: "W11" }
+  ];
+
+  const DEFAULT_DAYS = (typeof TIMETABLE_DAYS !== "undefined") ? TIMETABLE_DAYS : [
+    { kod: 1, id: "ISN", nama: "Isnin", fullNama: "Hari Isnin", maxWaktu: 11 },
+    { kod: 2, id: "SEL", nama: "Selasa", fullNama: "Hari Selasa", maxWaktu: 11 },
+    { kod: 3, id: "RAB", nama: "Rabu", fullNama: "Hari Rabu", maxWaktu: 11 },
+    { kod: 4, id: "KHA", nama: "Khamis", fullNama: "Hari Khamis", maxWaktu: 11 },
+    { kod: 5, id: "JUM", nama: "Jumaat", fullNama: "Hari Jumaat (e-RPH)", maxWaktu: 9 }
+  ];
+
+  const DEFAULT_CLASSES = (typeof TIMETABLE_CLASSES !== "undefined") ? TIMETABLE_CLASSES : [
+    "4 I", "4 J", "4 K", "4 M",
+    "5 I", "5 J", "5 K", "5 M",
+    "6 I", "6 J", "6 K", "6 M"
+  ];
+
+  function getSubjectInfo(subjCode) {
+    const map = (typeof TIMETABLE_SUBJECTS !== "undefined") ? TIMETABLE_SUBJECTS : {};
+    return map[subjCode] || {
+      name: subjCode || "Mata Pelajaran",
+      bg: "bg-slate-50",
+      text: "text-slate-800",
+      border: "border-slate-300",
+      badge: "bg-slate-600"
+    };
+  }
+
+  function getTimeForWaktu(waktuNum) {
+    const p = DEFAULT_PERIODS.find(p => !p.isRehat && String(p.waktu) === String(waktuNum));
+    return p ? p.masa : "07:10 - 07:40";
+  }
+
+  function getTimetableTeacherList() {
+    const fromTimetable = (db.timetable || []).map(s => s.guru).filter(Boolean);
+    const fromStaff = (db.staffList || []).map(s => s.name).filter(Boolean);
+    const set = new Set([...fromTimetable, ...fromStaff]);
+    return Array.from(set).sort();
+  }
+
+  let hasPopulatedTimetableSelects = false;
+  function populateTimetableSelects(force = false) {
+    if (hasPopulatedTimetableSelects && !force) return;
+    hasPopulatedTimetableSelects = true;
+
+    const teachers = getTimetableTeacherList();
+
+    // 1. Dropdown Guru
+    if (elements.timetableSelectGuru) {
+      elements.timetableSelectGuru.innerHTML = teachers.map(t => `<option value="${t}">${t}</option>`).join("");
+      
+      if (!state.timetableSelectedGuru) {
+        if (state.currentUser && state.currentUser.name) {
+          const userClean = cleanIc(state.currentUser.ic);
+          const found = teachers.find(t => t.toLowerCase() === state.currentUser.name.toLowerCase() || (userClean && state.currentUser.name.includes(t)));
+          if (found) {
+            state.timetableSelectedGuru = found;
+          }
+        }
+        if (!state.timetableSelectedGuru && teachers.length > 0) {
+          state.timetableSelectedGuru = teachers[0];
+        }
+      }
+      if (state.timetableSelectedGuru) {
+        elements.timetableSelectGuru.value = state.timetableSelectedGuru;
+      }
+    }
+
+    // 2. Dropdown Kelas
+    if (elements.timetableSelectKelas) {
+      elements.timetableSelectKelas.innerHTML = DEFAULT_CLASSES.map(c => `<option value="${c}">${c}</option>`).join("");
+      if (state.timetableSelectedKelas) {
+        elements.timetableSelectKelas.value = state.timetableSelectedKelas;
+      }
+    }
+
+    // 3. Dropdown Penapis Induk
+    if (elements.timetableFilterIndukKelas) {
+      elements.timetableFilterIndukKelas.innerHTML = `<option value="ALL">Semua Kelas</option>` + DEFAULT_CLASSES.map(c => `<option value="${c}">Kelas ${c}</option>`).join("");
+    }
+    if (elements.timetableFilterIndukSubjek) {
+      const allSubj = Object.keys((typeof TIMETABLE_SUBJECTS !== "undefined") ? TIMETABLE_SUBJECTS : {});
+      elements.timetableFilterIndukSubjek.innerHTML = `<option value="ALL">Semua Subjek</option>` + allSubj.map(s => `<option value="${s}">${s} - ${getSubjectInfo(s).name}</option>`).join("");
+    }
+
+    // 4. Dropdown Modal Guru
+    if (elements.slotFormGuru) {
+      elements.slotFormGuru.innerHTML = teachers.map(t => `<option value="${t}">${t}</option>`).join("");
+    }
+  }
+
+  // Fungsi Utama Render Jadual Waktu Rujukan
   function renderTimetableReference() {
+    populateTimetableSelects();
+
+    // Kemaskini Gaya Tab Mod Aktif
+    if (elements.tabTimetableModeGuru) {
+      if (state.timetableMode === "guru") {
+        elements.tabTimetableModeGuru.className = "px-4 py-2 rounded-xl transition flex items-center space-x-1.5 bg-white text-indigo-700 shadow-xs cursor-pointer";
+        elements.tabTimetableModeKelas.className = "px-4 py-2 rounded-xl transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 cursor-pointer";
+        elements.tabTimetableModeInduk.className = "px-4 py-2 rounded-xl transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 cursor-pointer";
+        elements.filterWrapperGuru.classList.remove("hidden");
+        elements.filterWrapperKelas.classList.add("hidden");
+        elements.filterWrapperInduk.classList.add("hidden");
+      } else if (state.timetableMode === "kelas") {
+        elements.tabTimetableModeGuru.className = "px-4 py-2 rounded-xl transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 cursor-pointer";
+        elements.tabTimetableModeKelas.className = "px-4 py-2 rounded-xl transition flex items-center space-x-1.5 bg-white text-emerald-700 shadow-xs cursor-pointer";
+        elements.tabTimetableModeInduk.className = "px-4 py-2 rounded-xl transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 cursor-pointer";
+        elements.filterWrapperGuru.classList.add("hidden");
+        elements.filterWrapperKelas.classList.remove("hidden");
+        elements.filterWrapperInduk.classList.add("hidden");
+      } else {
+        elements.tabTimetableModeGuru.className = "px-4 py-2 rounded-xl transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 cursor-pointer";
+        elements.tabTimetableModeKelas.className = "px-4 py-2 rounded-xl transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 cursor-pointer";
+        elements.tabTimetableModeInduk.className = "px-4 py-2 rounded-xl transition flex items-center space-x-1.5 bg-white text-slate-900 shadow-xs cursor-pointer";
+        elements.filterWrapperGuru.classList.add("hidden");
+        elements.filterWrapperKelas.classList.add("hidden");
+        elements.filterWrapperInduk.classList.remove("hidden");
+      }
+    }
+
+    if (state.timetableMode === "guru") {
+      renderTimetableGuru();
+    } else if (state.timetableMode === "kelas") {
+      renderTimetableKelas();
+    } else {
+      renderTimetableInduk();
+    }
+
+    lucide.createIcons();
+  }
+
+  // 1. PANDANGAN GURU
+  function renderTimetableGuru() {
     const container = elements.jadualRujukanContainer;
-    container.innerHTML = `
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-        <h4 class="font-extrabold text-sm text-slate-800">Struktur Waktu Harian Persekolahan SK Ranggu 2026</h4>
-        <p class="text-xs text-slate-500 leading-relaxed">
-          Sesi Pagi (Tahap 2): 07:20 AM - 12:30 PM • Sesi Petang (Tahap 1): 12:40 PM - 05:40 PM.<br>
-          <span class="text-rose-600 font-bold">* Peringatan: Penghantaran e-RPH mingguan adalah wajib dihantar pada setiap hari Jumaat secara penuh dan berpusat kepada nama guru masing-masing.</span>
-        </p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-          <div class="p-3 bg-slate-50 border rounded-xl text-center">
-            <span class="font-bold text-xs text-slate-700 block">Isnin - Khamis</span>
-            <span class="text-xs text-sky-700 font-black">07:20 AM - 12:30 PM</span>
+    const teacherName = state.timetableSelectedGuru || (elements.timetableSelectGuru ? elements.timetableSelectGuru.value : "");
+    const slots = (db.timetable || []).filter(s => s.guru === teacherName);
+
+    const totalWaktu = slots.length;
+    const classesTaught = [...new Set(slots.map(s => s.kelas))].sort();
+
+    if (elements.timetableTeacherSummary) {
+      elements.timetableTeacherSummary.textContent = `${totalWaktu} Waktu Seminggu • ${classesTaught.length} Kelas Diajar`;
+    }
+
+    let html = `
+      <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+        <!-- Header Info Guru -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+              <i data-lucide="user-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h4 class="font-extrabold text-base text-slate-900">${teacherName}</h4>
+              <p class="text-xs text-slate-500">Jadual Waktu Mengajar Individu Guru • Sesi Persekolahan 2026</p>
+            </div>
           </div>
-          <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-center">
-            <span class="font-bold text-xs text-rose-800 block">Jumaat (Hari e-RPH)</span>
-            <span class="text-xs text-rose-700 font-black">07:20 AM - 11:30 AM</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-800 rounded-xl border border-indigo-200">
+              Jumlah: <b>${totalWaktu} Waktu</b> / Minggu
+            </span>
+            <span class="text-xs font-semibold px-3 py-1 bg-slate-50 text-slate-700 rounded-xl border border-slate-200">
+              Kelas: ${classesTaught.join(", ") || "-"}
+            </span>
           </div>
-          <div class="p-3 bg-slate-50 border rounded-xl text-center">
-            <span class="font-bold text-xs text-slate-700 block">Sesi Petang (Isnin-Khamis)</span>
-            <span class="text-xs text-purple-700 font-black">12:40 PM - 05:40 PM</span>
+        </div>
+
+        <!-- Jadual Grid Mingguan Guru -->
+        <div class="overflow-x-auto rounded-2xl border border-slate-200">
+          <table class="w-full border-collapse text-center text-xs min-w-[950px]">
+            <thead>
+              <tr class="bg-slate-100/90 text-slate-700 font-extrabold border-b border-slate-200">
+                <th class="p-2.5 border-r border-slate-200 w-24">HARI</th>
+    `;
+
+    DEFAULT_PERIODS.forEach(p => {
+      if (p.isRehat) {
+        html += `<th class="p-2 border-r border-slate-200 bg-amber-50 text-amber-900 w-16">
+          <div class="font-black text-[11px]">REHAT</div>
+          <div class="text-[9px] text-amber-700 font-normal">09:10-09:30</div>
+        </th>`;
+      } else {
+        html += `<th class="p-2 border-r border-slate-200">
+          <div class="font-black text-[11px] text-indigo-900">W${p.waktu}</div>
+          <div class="text-[9px] text-slate-500 font-normal font-mono">${p.masa}</div>
+        </th>`;
+      }
+    });
+
+    html += `</tr></thead><tbody>`;
+
+    DEFAULT_DAYS.forEach((day) => {
+      html += `<tr class="border-b border-slate-200 hover:bg-slate-50/50 transition">
+        <td class="p-2.5 font-black text-slate-800 border-r border-slate-200 bg-slate-50/80">
+          <span class="block">${day.nama.toUpperCase()}</span>
+          <span class="text-[9px] text-slate-400 font-normal">Hari ${day.kod}</span>
+        </td>`;
+
+      DEFAULT_PERIODS.forEach(p => {
+        if (p.isRehat) {
+          html += `<td class="p-1 border-r border-slate-200 bg-amber-50/40 text-amber-800 text-[10px] font-bold">
+            <span class="writing-mode-vertical">REHAT</span>
+          </td>`;
+          return;
+        }
+
+        if (day.id === "JUM" && p.waktu > 9) {
+          html += `<td class="p-1 border-r border-slate-200 bg-slate-100/50 text-slate-400 text-[10px] italic">
+            <div class="p-2 rounded-lg border border-dashed border-slate-200">Solat Jumaat</div>
+          </td>`;
+          return;
+        }
+
+        const slot = slots.find(s => s.hari === day.id && Number(s.waktu) === Number(p.waktu));
+        if (slot) {
+          const subjInfo = getSubjectInfo(slot.subjek);
+          html += `
+            <td class="p-1.5 border-r border-slate-200">
+              <div class="group relative p-2 rounded-xl border ${subjInfo.border} ${subjInfo.bg} cursor-pointer hover:shadow-md transition text-left"
+                   title="Klik untuk sunting slot ini"
+                   onclick="window.erphTimetableEditSlot(${slot.id})">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded ${subjInfo.badge} text-white shadow-2xs">${slot.subjek}</span>
+                  <span class="text-[10px] font-black text-slate-700 bg-white/90 px-1.5 py-0.2 rounded border border-slate-200">${slot.kelas}</span>
+                </div>
+                <div class="text-[11px] font-bold text-slate-900 truncate leading-tight">${subjInfo.name}</div>
+                <div class="text-[9px] text-slate-500 font-mono mt-0.5">${slot.masa}</div>
+                
+                <div class="opacity-0 group-hover:opacity-100 transition absolute inset-0 bg-indigo-900/10 rounded-xl flex items-center justify-center backdrop-blur-[0.5px]">
+                  <span class="text-[10px] bg-indigo-700 text-white font-bold px-2 py-0.5 rounded-lg shadow-sm flex items-center gap-1">
+                    <i data-lucide="edit-2" class="w-2.5 h-2.5"></i> Sunting
+                  </span>
+                </div>
+              </div>
+            </td>
+          `;
+        } else {
+          html += `
+            <td class="p-1.5 border-r border-slate-200">
+              <div class="group h-full min-h-[58px] rounded-xl border border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 p-1 flex items-center justify-center cursor-pointer transition text-center"
+                   title="Tambah slot pada hari ${day.nama}, Waktu ${p.waktu}"
+                   onclick="window.erphTimetableAddSlotQuick('${teacherName.replace(/'/g, "\\'")}', '${day.id}', ${p.waktu}, '${p.masa}', '')">
+                <span class="text-[10px] text-slate-300 group-hover:text-indigo-600 font-bold hidden group-hover:inline-flex items-center gap-0.5">
+                  <i data-lucide="plus" class="w-3 h-3"></i> Tambah
+                </span>
+              </div>
+            </td>
+          `;
+        }
+      });
+
+      html += `</tr>`;
+    });
+
+    html += `
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Panduan Subjek & Warna -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+          <div class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <i data-lucide="palette" class="w-3.5 h-3.5 text-indigo-600"></i>
+            <span>Petunjuk Warna Mata Pelajaran:</span>
           </div>
-          <div class="p-3 bg-purple-50 border border-purple-200 rounded-xl text-center">
-            <span class="font-bold text-xs text-purple-800 block">Sesi Petang (Jumaat)</span>
-            <span class="text-xs text-purple-700 font-black">01:30 PM - 05:40 PM</span>
+          <div class="flex flex-wrap gap-2 text-[10px]">
+    `;
+
+    Object.entries((typeof TIMETABLE_SUBJECTS !== "undefined") ? TIMETABLE_SUBJECTS : {}).forEach(([code, item]) => {
+      html += `
+        <span class="px-2 py-1 rounded-lg border ${item.border} ${item.bg} ${item.text} font-bold flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full ${item.badge}"></span>
+          <span>${code}</span>: <span class="font-normal">${item.name}</span>
+        </span>
+      `;
+    });
+
+    html += `
           </div>
         </div>
       </div>
     `;
+
+    container.innerHTML = html;
+  }
+
+  // 2. PANDANGAN KELAS
+  function renderTimetableKelas() {
+    const container = elements.jadualRujukanContainer;
+    const selectedClass = state.timetableSelectedKelas || (elements.timetableSelectKelas ? elements.timetableSelectKelas.value : "4 I");
+    const slots = (db.timetable || []).filter(s => s.kelas === selectedClass);
+
+    const totalWaktu = slots.length;
+    const teachersInvolved = [...new Set(slots.map(s => s.guru))].sort();
+
+    if (elements.timetableClassSummary) {
+      elements.timetableClassSummary.textContent = `${totalWaktu} Waktu Seminggu • ${teachersInvolved.length} Guru Terlibat`;
+    }
+
+    let html = `
+      <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+        <!-- Header Info Kelas -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+              <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h4 class="font-extrabold text-base text-slate-900">Jadual Waktu Kelas ${selectedClass}</h4>
+              <p class="text-xs text-slate-500">Jadual Pembelajaran Murid • SK Ranggu Sesi Persekolahan 2026</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold px-3 py-1 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200">
+              Jumlah: <b>${totalWaktu} Waktu</b> / Minggu
+            </span>
+            <span class="text-xs font-semibold px-3 py-1 bg-slate-50 text-slate-700 rounded-xl border border-slate-200">
+              ${teachersInvolved.length} Orang Guru
+            </span>
+          </div>
+        </div>
+
+        <!-- Jadual Grid Mingguan Kelas -->
+        <div class="overflow-x-auto rounded-2xl border border-slate-200">
+          <table class="w-full border-collapse text-center text-xs min-w-[950px]">
+            <thead>
+              <tr class="bg-slate-100/90 text-slate-700 font-extrabold border-b border-slate-200">
+                <th class="p-2.5 border-r border-slate-200 w-24">HARI</th>
+    `;
+
+    DEFAULT_PERIODS.forEach(p => {
+      if (p.isRehat) {
+        html += `<th class="p-2 border-r border-slate-200 bg-amber-50 text-amber-900 w-16">
+          <div class="font-black text-[11px]">REHAT</div>
+          <div class="text-[9px] text-amber-700 font-normal">09:10-09:30</div>
+        </th>`;
+      } else {
+        html += `<th class="p-2 border-r border-slate-200">
+          <div class="font-black text-[11px] text-emerald-900">W${p.waktu}</div>
+          <div class="text-[9px] text-slate-500 font-normal font-mono">${p.masa}</div>
+        </th>`;
+      }
+    });
+
+    html += `</tr></thead><tbody>`;
+
+    DEFAULT_DAYS.forEach((day) => {
+      html += `<tr class="border-b border-slate-200 hover:bg-slate-50/50 transition">
+        <td class="p-2.5 font-black text-slate-800 border-r border-slate-200 bg-slate-50/80">
+          <span class="block">${day.nama.toUpperCase()}</span>
+          <span class="text-[9px] text-slate-400 font-normal">Hari ${day.kod}</span>
+        </td>`;
+
+      DEFAULT_PERIODS.forEach(p => {
+        if (p.isRehat) {
+          html += `<td class="p-1 border-r border-slate-200 bg-amber-50/40 text-amber-800 text-[10px] font-bold">
+            <span class="writing-mode-vertical">REHAT</span>
+          </td>`;
+          return;
+        }
+
+        if (day.id === "JUM" && p.waktu > 9) {
+          html += `<td class="p-1 border-r border-slate-200 bg-slate-100/50 text-slate-400 text-[10px] italic">
+            <div class="p-2 rounded-lg border border-dashed border-slate-200">Solat Jumaat</div>
+          </td>`;
+          return;
+        }
+
+        const slot = slots.find(s => s.hari === day.id && Number(s.waktu) === Number(p.waktu));
+        if (slot) {
+          const subjInfo = getSubjectInfo(slot.subjek);
+          html += `
+            <td class="p-1.5 border-r border-slate-200">
+              <div class="group relative p-2 rounded-xl border ${subjInfo.border} ${subjInfo.bg} cursor-pointer hover:shadow-md transition text-left"
+                   title="Klik untuk sunting slot ini"
+                   onclick="window.erphTimetableEditSlot(${slot.id})">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded ${subjInfo.badge} text-white shadow-2xs">${slot.subjek}</span>
+                </div>
+                <div class="text-[11px] font-bold text-slate-900 truncate leading-tight">${slot.guru}</div>
+                <div class="text-[9px] text-slate-500 font-mono mt-0.5">${slot.masa}</div>
+                
+                <div class="opacity-0 group-hover:opacity-100 transition absolute inset-0 bg-emerald-900/10 rounded-xl flex items-center justify-center backdrop-blur-[0.5px]">
+                  <span class="text-[10px] bg-emerald-700 text-white font-bold px-2 py-0.5 rounded-lg shadow-sm flex items-center gap-1">
+                    <i data-lucide="edit-2" class="w-2.5 h-2.5"></i> Sunting
+                  </span>
+                </div>
+              </div>
+            </td>
+          `;
+        } else {
+          html += `
+            <td class="p-1.5 border-r border-slate-200">
+              <div class="group h-full min-h-[58px] rounded-xl border border-dashed border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/50 p-1 flex items-center justify-center cursor-pointer transition text-center"
+                   title="Tambah slot pada hari ${day.nama}, Waktu ${p.waktu}"
+                   onclick="window.erphTimetableAddSlotQuick('', '${day.id}', ${p.waktu}, '${p.masa}', '${selectedClass}')">
+                <span class="text-[10px] text-slate-300 group-hover:text-emerald-600 font-bold hidden group-hover:inline-flex items-center gap-0.5">
+                  <i data-lucide="plus" class="w-3 h-3"></i> Tambah
+                </span>
+              </div>
+            </td>
+          `;
+        }
+      });
+
+      html += `</tr>`;
+    });
+
+    html += `
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Senarai Guru Terlibat -->
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+          <div class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Senarai Guru Pengajar Kelas ${selectedClass}:</span>
+          </div>
+          <div class="flex flex-wrap gap-2 text-[11px]">
+            ${teachersInvolved.map(t => `<span class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-bold text-slate-700 shadow-2xs">${t}</span>`).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = html;
+  }
+
+  // 3. JADUAL INDUK & CARIAN SLOT (654 SLOT)
+  function renderTimetableInduk() {
+    const container = elements.jadualRujukanContainer;
+    const allSlots = db.timetable || [];
+    const search = (state.timetableIndukSearch || "").toLowerCase().trim();
+    const fHari = state.timetableIndukHari || "ALL";
+    const fKelas = state.timetableIndukKelas || "ALL";
+    const fSubjek = state.timetableIndukSubjek || "ALL";
+
+    const filtered = allSlots.filter(s => {
+      if (fHari !== "ALL" && s.hari !== fHari) return false;
+      if (fKelas !== "ALL" && s.kelas !== fKelas) return false;
+      if (fSubjek !== "ALL" && s.subjek !== fSubjek) return false;
+      if (search) {
+        const str = `${s.guru} ${s.kelas} ${s.subjek} ${s.hari} ${s.masa}`.toLowerCase();
+        if (!str.includes(search)) return false;
+      }
+      return true;
+    });
+
+    if (elements.timetableIndukCount) {
+      elements.timetableIndukCount.textContent = `Menunjukkan ${filtered.length} daripada ${allSlots.length} slot`;
+    }
+
+    let html = `
+      <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <h4 class="font-extrabold text-base text-slate-900">Jadual Induk & Pangkalan Carian Slot (${allSlots.length} Slot)</h4>
+            <p class="text-xs text-slate-500">Senarai penuh seluruh jadual waktu PdP SK Ranggu 2026 • Tapisan dan kemas kini pantas</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-800 rounded-xl border border-indigo-200">
+              ${filtered.length} Slot Ditemui
+            </span>
+            <button type="button" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    onclick="window.erphTimetableAddSlotQuick()">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>Tambah Slot</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-200 max-h-[600px] overflow-y-auto">
+          <table class="w-full border-collapse text-left text-xs min-w-[750px]">
+            <thead class="sticky top-0 bg-slate-100 text-slate-700 font-extrabold border-b border-slate-200 z-10">
+              <tr>
+                <th class="p-3 w-12 text-center">#</th>
+                <th class="p-3 w-20">HARI</th>
+                <th class="p-3 w-36">WAKTU & MASA</th>
+                <th class="p-3 w-24">KELAS</th>
+                <th class="p-3 w-32">SUBJEK</th>
+                <th class="p-3">NAMA GURU</th>
+                <th class="p-3 w-28 text-center">TINDAKAN</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-medium">
+    `;
+
+    if (filtered.length === 0) {
+      html += `
+        <tr>
+          <td colspan="7" class="p-8 text-center text-slate-400 italic">
+            Tiada slot jadual ditemui mengikut tapisan semasa.
+          </td>
+        </tr>
+      `;
+    } else {
+      const displaySlots = filtered.slice(0, 200);
+      displaySlots.forEach((slot, idx) => {
+        const subjInfo = getSubjectInfo(slot.subjek);
+        html += `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="p-3 text-center text-slate-400 font-mono text-[11px]">${idx + 1}</td>
+            <td class="p-3 font-bold text-slate-800">
+              <span class="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-bold border border-slate-200">${slot.hari}</span>
+            </td>
+            <td class="p-3 font-mono text-[11px] text-slate-600">
+              <span class="font-bold text-indigo-700">W${slot.waktu}</span> (${slot.masa})
+            </td>
+            <td class="p-3 font-extrabold text-slate-900">
+              <span class="px-2 py-0.5 bg-slate-100 rounded text-slate-800 border border-slate-200">${slot.kelas}</span>
+            </td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded ${subjInfo.badge} text-white font-black text-[10px] shadow-2xs">${slot.subjek}</span>
+              <span class="text-[11px] text-slate-600 ml-1 font-semibold">${subjInfo.name}</span>
+            </td>
+            <td class="p-3 font-bold text-slate-800 uppercase">
+              ${slot.guru}
+            </td>
+            <td class="p-3 text-center">
+              <div class="inline-flex items-center gap-1">
+                <button type="button" class="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition cursor-pointer"
+                        title="Sunting slot ini" onclick="window.erphTimetableEditSlot(${slot.id})">
+                  <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                </button>
+                <button type="button" class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                        title="Padam slot ini" onclick="window.erphTimetableDeleteDirect(${slot.id})">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      if (filtered.length > 200) {
+        html += `
+          <tr>
+            <td colspan="7" class="p-4 text-center bg-slate-50 text-slate-500 font-bold">
+              Menunjukkan 200 daripada ${filtered.length} slot. Gunakan carian untuk menyaring secara spesifik.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    html += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = html;
+  }
+
+  // FUNGSI WINDOW UNTUK TINDAKAN EDIT & TAMBAH SLOT
+  window.erphTimetableEditSlot = function(slotId) {
+    populateTimetableSelects();
+    const slot = (db.timetable || []).find(s => s.id === slotId);
+    if (!slot) return;
+
+    elements.slotFormId.value = slot.id;
+    elements.modalTimetableTitle.textContent = `Sunting Slot: ${slot.subjek} (${slot.kelas})`;
+    elements.slotFormGuru.value = slot.guru;
+    elements.slotFormHari.value = slot.hari;
+    elements.slotFormWaktu.value = slot.waktu;
+    elements.slotFormMasa.value = slot.masa || getTimeForWaktu(slot.waktu);
+    elements.slotFormKelas.value = slot.kelas;
+    elements.slotFormSubjek.value = slot.subjek;
+
+    if (elements.btnDeleteTimetableSlot) {
+      elements.btnDeleteTimetableSlot.classList.remove("hidden");
+    }
+    if (elements.slotClashWarning) {
+      elements.slotClashWarning.classList.add("hidden");
+    }
+
+    elements.modalEditTimetableSlot.classList.remove("hidden");
+    lucide.createIcons();
+  };
+
+  window.erphTimetableAddSlotQuick = function(guru = "", hari = "ISN", waktu = 1, masa = "", kelas = "4 I", subjek = "BM") {
+    populateTimetableSelects();
+    elements.slotFormId.value = "";
+    elements.modalTimetableTitle.textContent = "Tambah Slot Jadual Waktu Baru";
+    
+    if (guru) elements.slotFormGuru.value = guru;
+    else if (state.timetableSelectedGuru) elements.slotFormGuru.value = state.timetableSelectedGuru;
+
+    if (hari) elements.slotFormHari.value = hari;
+    if (waktu) elements.slotFormWaktu.value = waktu;
+    if (masa) elements.slotFormMasa.value = masa;
+    else if (waktu) elements.slotFormMasa.value = getTimeForWaktu(waktu);
+
+    if (kelas) elements.slotFormKelas.value = kelas;
+    else if (state.timetableSelectedKelas) elements.slotFormKelas.value = state.timetableSelectedKelas;
+
+    if (subjek) elements.slotFormSubjek.value = subjek;
+
+    if (elements.btnDeleteTimetableSlot) {
+      elements.btnDeleteTimetableSlot.classList.add("hidden");
+    }
+    if (elements.slotClashWarning) {
+      elements.slotClashWarning.classList.add("hidden");
+    }
+
+    elements.modalEditTimetableSlot.classList.remove("hidden");
+    lucide.createIcons();
+  };
+
+  window.erphTimetableDeleteDirect = function(slotId) {
+    const slot = (db.timetable || []).find(s => s.id === slotId);
+    if (!slot) return;
+
+    Swal.fire({
+      title: "Padam Slot Ini?",
+      html: `Adakah anda pasti ingin memadam slot <b>${slot.subjek}</b> untuk <b>${slot.kelas}</b> (${slot.guru}, ${slot.hari} W${slot.waktu})?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#e11d48",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Ya, Padam!",
+      cancelButtonText: "Batal"
+    }).then(result => {
+      if (result.isConfirmed) {
+        db.timetable = db.timetable.filter(s => s.id !== slotId);
+        saveErphDatabase(db);
+        safeSwal({
+          icon: "success",
+          title: "Dipadam",
+          text: "Slot jadual waktu berjaya dipadam.",
+          toast: true,
+          position: "top-end",
+          timer: 1500,
+          showConfirmButton: false
+        });
+        renderTimetableReference();
+      }
+    });
+  };
+
+  // Semakan Pertindihan Slot (Clash Detection)
+  function checkSlotClash(guru, hari, waktu, kelas, excludeId) {
+    const clashTeacher = (db.timetable || []).find(s => s.id !== excludeId && s.guru === guru && s.hari === hari && Number(s.waktu) === Number(waktu));
+    const clashClass = (db.timetable || []).find(s => s.id !== excludeId && s.kelas === kelas && s.hari === hari && Number(s.waktu) === Number(waktu));
+
+    if (clashTeacher && clashClass) {
+      return `Pertindihan Ganda: Guru ${guru} telah mengajar kelas ${clashTeacher.kelas} (${clashTeacher.subjek}), dan kelas ${kelas} telah diajar oleh ${clashClass.guru} (${clashClass.subjek}) pada waktu ini.`;
+    }
+    if (clashTeacher) {
+      return `Pertindihan Guru: ${guru} telah mempunyai jadual ${clashTeacher.subjek} di kelas ${clashTeacher.kelas} pada waktu ini.`;
+    }
+    if (clashClass) {
+      return `Pertindihan Kelas: Kelas ${kelas} telah mempunyai jadual ${clashClass.subjek} bersama guru ${clashClass.guru} pada waktu ini.`;
+    }
+    return null;
   }
 
   // ==============================================================
@@ -3277,6 +3962,271 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   if (elements.btnAdminModalPickAvatar) {
     elements.btnAdminModalPickAvatar.addEventListener("click", () => {
       if (elements.adminStaffModalAvatarInput) elements.adminStaffModalAvatarInput.click();
+    });
+  }
+
+  // ==============================================================
+  // PENGENDALI ACARA JADUAL WAKTU INTERAKTIF (TAB 5)
+  // ==============================================================
+  if (elements.tabTimetableModeGuru) {
+    elements.tabTimetableModeGuru.addEventListener("click", () => {
+      state.timetableMode = "guru";
+      renderTimetableReference();
+    });
+  }
+
+  if (elements.tabTimetableModeKelas) {
+    elements.tabTimetableModeKelas.addEventListener("click", () => {
+      state.timetableMode = "kelas";
+      renderTimetableReference();
+    });
+  }
+
+  if (elements.tabTimetableModeInduk) {
+    elements.tabTimetableModeInduk.addEventListener("click", () => {
+      state.timetableMode = "induk";
+      renderTimetableReference();
+    });
+  }
+
+  // Penapis Guru
+  if (elements.timetableSelectGuru) {
+    elements.timetableSelectGuru.addEventListener("change", (e) => {
+      state.timetableSelectedGuru = e.target.value;
+      renderTimetableReference();
+    });
+  }
+
+  // Penapis Kelas
+  if (elements.timetableSelectKelas) {
+    elements.timetableSelectKelas.addEventListener("change", (e) => {
+      state.timetableSelectedKelas = e.target.value;
+      renderTimetableReference();
+    });
+  }
+
+  // Carian & Penapis Induk
+  if (elements.timetableSearchInput) {
+    elements.timetableSearchInput.addEventListener("input", (e) => {
+      state.timetableIndukSearch = e.target.value;
+      renderTimetableInduk();
+      lucide.createIcons();
+    });
+  }
+
+  if (elements.timetableFilterIndukHari) {
+    elements.timetableFilterIndukHari.addEventListener("change", (e) => {
+      state.timetableIndukHari = e.target.value;
+      renderTimetableInduk();
+      lucide.createIcons();
+    });
+  }
+
+  if (elements.timetableFilterIndukKelas) {
+    elements.timetableFilterIndukKelas.addEventListener("change", (e) => {
+      state.timetableIndukKelas = e.target.value;
+      renderTimetableInduk();
+      lucide.createIcons();
+    });
+  }
+
+  if (elements.timetableFilterIndukSubjek) {
+    elements.timetableFilterIndukSubjek.addEventListener("change", (e) => {
+      state.timetableIndukSubjek = e.target.value;
+      renderTimetableInduk();
+      lucide.createIcons();
+    });
+  }
+
+  // Butang Global Jadual
+  if (elements.btnTimetableAddSlot) {
+    elements.btnTimetableAddSlot.addEventListener("click", () => {
+      window.erphTimetableAddSlotQuick();
+    });
+  }
+
+  if (elements.btnTimetablePrint) {
+    elements.btnTimetablePrint.addEventListener("click", () => {
+      window.print();
+    });
+  }
+
+  if (elements.btnTimetableReset) {
+    elements.btnTimetableReset.addEventListener("click", () => {
+      Swal.fire({
+        title: "Set Semula Jadual Piawai?",
+        html: "Adakah anda pasti ingin mengembalikan semua data jadual waktu kepada <b>654 slot rasmi SK Ranggu</b> dari fail asal?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#4f46e5",
+        cancelButtonColor: "#64748b",
+        confirmButtonText: "Ya, Set Semula",
+        cancelButtonText: "Batal"
+      }).then(result => {
+        if (result.isConfirmed) {
+          if (typeof INITIAL_TIMETABLE_DATA !== "undefined") {
+            db.timetable = JSON.parse(JSON.stringify(INITIAL_TIMETABLE_DATA));
+            saveErphDatabase(db);
+            populateTimetableSelects(true);
+            renderTimetableReference();
+            safeSwal({
+              icon: "success",
+              title: "Berjaya",
+              text: "Jadual waktu telah diset semula kepada 654 slot rasmi.",
+              toast: true,
+              position: "top-end",
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }
+        }
+      });
+    });
+  }
+
+  // Tutup Modal Slot
+  if (elements.btnCloseModalTimetable) {
+    elements.btnCloseModalTimetable.addEventListener("click", () => {
+      elements.modalEditTimetableSlot.classList.add("hidden");
+    });
+  }
+
+  if (elements.btnCancelTimetableSlot) {
+    elements.btnCancelTimetableSlot.addEventListener("click", () => {
+      elements.modalEditTimetableSlot.classList.add("hidden");
+    });
+  }
+
+  // Auto-kemaskini masa apabila waktu ditukar dalam modal
+  if (elements.slotFormWaktu) {
+    elements.slotFormWaktu.addEventListener("change", (e) => {
+      if (elements.slotFormMasa) {
+        elements.slotFormMasa.value = getTimeForWaktu(e.target.value);
+      }
+      checkModalClashLive();
+    });
+  }
+
+  function checkModalClashLive() {
+    if (!elements.slotClashWarning) return;
+    const guru = elements.slotFormGuru.value;
+    const hari = elements.slotFormHari.value;
+    const waktu = elements.slotFormWaktu.value;
+    const kelas = elements.slotFormKelas.value;
+    const excludeId = elements.slotFormId.value ? parseInt(elements.slotFormId.value) : -1;
+
+    const clashMsg = checkSlotClash(guru, hari, waktu, kelas, excludeId);
+    if (clashMsg) {
+      elements.slotClashText.textContent = clashMsg;
+      elements.slotClashWarning.classList.remove("hidden");
+    } else {
+      elements.slotClashWarning.classList.add("hidden");
+    }
+  }
+
+  if (elements.slotFormGuru) elements.slotFormGuru.addEventListener("change", checkModalClashLive);
+  if (elements.slotFormHari) elements.slotFormHari.addEventListener("change", checkModalClashLive);
+  if (elements.slotFormKelas) elements.slotFormKelas.addEventListener("change", checkModalClashLive);
+
+  // Padam Slot Melalui Modal
+  if (elements.btnDeleteTimetableSlot) {
+    elements.btnDeleteTimetableSlot.addEventListener("click", () => {
+      const slotId = elements.slotFormId.value ? parseInt(elements.slotFormId.value) : null;
+      if (slotId) {
+        elements.modalEditTimetableSlot.classList.add("hidden");
+        window.erphTimetableDeleteDirect(slotId);
+      }
+    });
+  }
+
+  // Simpan / Tambah Slot (Submit Form)
+  if (elements.formEditTimetableSlot) {
+    elements.formEditTimetableSlot.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const slotId = elements.slotFormId.value ? parseInt(elements.slotFormId.value) : null;
+      const guru = elements.slotFormGuru.value.trim();
+      const hari = elements.slotFormHari.value;
+      const waktu = parseInt(elements.slotFormWaktu.value);
+      const masa = elements.slotFormMasa.value.trim() || getTimeForWaktu(waktu);
+      const kelas = elements.slotFormKelas.value;
+      const subjek = elements.slotFormSubjek.value;
+
+      const kodHariMap = { "ISN": 1, "SEL": 2, "RAB": 3, "KHA": 4, "JUM": 5 };
+      const kodHari = kodHariMap[hari] || 1;
+
+      // Semak pertindihan
+      const clashMsg = checkSlotClash(guru, hari, waktu, kelas, slotId || -1);
+
+      function commitSaveSlot() {
+        if (!db.timetable) db.timetable = [];
+
+        if (slotId) {
+          // Kemaskini slot sedia ada
+          const idx = db.timetable.findIndex(s => s.id === slotId);
+          if (idx !== -1) {
+            db.timetable[idx] = {
+              ...db.timetable[idx],
+              guru,
+              hari,
+              kodHari,
+              waktu,
+              masa,
+              kelas,
+              subjek,
+              paparan: `${kelas} ${subjek}`
+            };
+          }
+        } else {
+          // Tambah slot baru
+          const nextId = db.timetable.reduce((max, s) => Math.max(max, s.id || 0), 0) + 1;
+          db.timetable.push({
+            id: nextId,
+            guru,
+            hari,
+            kodHari,
+            waktu,
+            masa,
+            kelas,
+            subjek,
+            paparan: `${kelas} ${subjek}`,
+            halamanPdf: 1
+          });
+        }
+
+        saveErphDatabase(db);
+        elements.modalEditTimetableSlot.classList.add("hidden");
+        populateTimetableSelects(true);
+        renderTimetableReference();
+
+        safeSwal({
+          icon: "success",
+          title: "Berjaya",
+          text: `Slot ${subjek} (${kelas}) untuk ${guru} telah disimpan.`,
+          toast: true,
+          position: "top-end",
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+
+      if (clashMsg) {
+        Swal.fire({
+          title: "Amaran Pertindihan Slot",
+          html: `${clashMsg}<br><br><span class="text-xs text-slate-500">Adakah anda tetap ingin meneruskan penyimpanan slot ini?</span>`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#4f46e5",
+          cancelButtonColor: "#64748b",
+          confirmButtonText: "Ya, Teruskan",
+          cancelButtonText: "Semak Semula"
+        }).then(res => {
+          if (res.isConfirmed) {
+            commitSaveSlot();
+          }
+        });
+      } else {
+        commitSaveSlot();
+      }
     });
   }
 

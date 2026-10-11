@@ -533,12 +533,12 @@ const INITIAL_UPLOADS_DATA = [
 ];
 
 // Helper Functions untuk LocalStorage
-const ERPH_DATA_VERSION = "2.6";
+const ERPH_DATA_VERSION = "2.7";
 
 function getErphDatabase() {
   const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");
   if (savedVersion !== ERPH_DATA_VERSION) {
-    // Sinkronkan versi data terkini (muatkan konfigurasi takwim baru dengan auto-cascade & cuti)
+    // Sinkronkan versi data terkini (muatkan konfigurasi takwim baru & jadual waktu rasmi)
     localStorage.setItem("SKR_ERPH_DATA_VERSION", ERPH_DATA_VERSION);
     localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(ERPH_SYSTEM_CONFIG));
     if (!localStorage.getItem("SKR_ERPH_STAFF_2026")) {
@@ -547,19 +547,26 @@ function getErphDatabase() {
     if (!localStorage.getItem("SKR_ERPH_UPLOADS_2026")) {
       localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(INITIAL_UPLOADS_DATA));
     }
+    if (!localStorage.getItem("SKR_ERPH_TIMETABLE_2026") && typeof INITIAL_TIMETABLE_DATA !== "undefined") {
+      localStorage.setItem("SKR_ERPH_TIMETABLE_2026", JSON.stringify(INITIAL_TIMETABLE_DATA));
+    }
   }
 
   const cfg = localStorage.getItem("SKR_ERPH_CONFIG_2026");
   const staff = localStorage.getItem("SKR_ERPH_STAFF_2026");
   const uploads = localStorage.getItem("SKR_ERPH_UPLOADS_2026");
   const usersAuth = localStorage.getItem("SKR_ERPH_USERS_AUTH_2026");
+  const timetable = localStorage.getItem("SKR_ERPH_TIMETABLE_2026");
+
+  const defaultTimetable = (typeof INITIAL_TIMETABLE_DATA !== "undefined" && Array.isArray(INITIAL_TIMETABLE_DATA)) ? INITIAL_TIMETABLE_DATA : [];
 
   return {
     config: cfg ? JSON.parse(cfg) : ERPH_SYSTEM_CONFIG,
     pentadbir: PENTADBIR_COLUMNS,
     staffList: staff ? JSON.parse(staff) : INITIAL_STAFF_LIST,
     uploads: uploads ? JSON.parse(uploads) : INITIAL_UPLOADS_DATA,
-    usersAuth: usersAuth ? JSON.parse(usersAuth) : {}
+    usersAuth: usersAuth ? JSON.parse(usersAuth) : {},
+    timetable: timetable ? JSON.parse(timetable) : defaultTimetable
   };
 }
 
@@ -568,11 +575,15 @@ function saveErphDatabase(db) {
   if (db.staffList) localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(db.staffList));
   if (db.uploads) localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(db.uploads));
   if (db.usersAuth) localStorage.setItem("SKR_ERPH_USERS_AUTH_2026", JSON.stringify(db.usersAuth));
+  if (db.timetable) localStorage.setItem("SKR_ERPH_TIMETABLE_2026", JSON.stringify(db.timetable));
 }
 
 function resetErphDatabase() {
   localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(ERPH_SYSTEM_CONFIG));
   localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(INITIAL_STAFF_LIST));
   localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(INITIAL_UPLOADS_DATA));
+  if (typeof INITIAL_TIMETABLE_DATA !== "undefined") {
+    localStorage.setItem("SKR_ERPH_TIMETABLE_2026", JSON.stringify(INITIAL_TIMETABLE_DATA));
+  }
   localStorage.removeItem("SKR_ERPH_USERS_AUTH_2026");
 }

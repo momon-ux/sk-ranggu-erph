@@ -865,19 +865,127 @@
         <!-- ============================================================== -->
         <!-- TAB 5: JADUAL WAKTU RUJUKAN                                    -->
         <!-- ============================================================== -->
+        <!-- ============================================================== -->
+        <!-- TAB 5: JADUAL WAKTU RUJUKAN                                    -->
+        <!-- ============================================================== -->
         <section id="tab-jadual-rujukan" class="tab-content hidden space-y-4">
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 class="font-black text-base text-slate-900">Jadual Waktu Persekolahan SK Ranggu</h3>
-              <p class="text-xs text-slate-500">Rujukan Waktu Kelas & Guru (Penghantaran e-RPH tetap berasaskan Jumaat mengikut nama guru)</p>
+          <!-- KAD ATAS: HEADER & MOD PENUKARAN -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-600 text-white flex items-center justify-center font-bold shadow-sm">
+                  <i data-lucide="calendar-range" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <h3 class="font-black text-lg text-slate-900 flex items-center gap-2">
+                    <span>Jadual Waktu Persekolahan SK Ranggu 2026</span>
+                    <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold border border-indigo-200">Bil. 2 (654 Slot)</span>
+                  </h3>
+                  <p class="text-xs text-slate-500">Rujukan PdP harian guru & kelas mengikut jadual rasmi sekolah • Penghantaran e-RPH tetap berasaskan Jumaat mengikut nama guru</p>
+                </div>
+              </div>
+
+              <!-- Butang Tindakan Global -->
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="btn-timetable-add-slot" type="button" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center space-x-1.5 cursor-pointer">
+                  <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                  <span>+ Tambah Slot Jadual</span>
+                </button>
+                <button id="btn-timetable-print" type="button" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer">
+                  <i data-lucide="printer" class="w-4 h-4"></i>
+                  <span>Cetak Jadual</span>
+                </button>
+                <button id="btn-timetable-reset" type="button" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center space-x-1 cursor-pointer" title="Pulihkan 654 slot jadual asal dari fail rasmi">
+                  <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                  <span>Set Semula</span>
+                </button>
+              </div>
             </div>
-            <div class="text-xs text-slate-500 italic">
-              Paparan rujukan kurikulum sekolah
+
+            <!-- TAB PENUKAR MOD PAPARAN (GURU / KELAS / JADUAL INDUK) -->
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="inline-flex p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold">
+                <button type="button" id="tab-timetable-mode-guru" class="px-4 py-2 rounded-xl transition flex items-center space-x-1.5 bg-white text-indigo-700 shadow-xs cursor-pointer">
+                  <i data-lucide="user" class="w-4 h-4"></i>
+                  <span>Pandangan Guru</span>
+                </button>
+                <button type="button" id="tab-timetable-mode-kelas" class="px-4 py-2 rounded-xl transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 cursor-pointer">
+                  <i data-lucide="school" class="w-4 h-4"></i>
+                  <span>Pandangan Kelas</span>
+                </button>
+                <button type="button" id="tab-timetable-mode-induk" class="px-4 py-2 rounded-xl transition flex items-center space-x-1.5 text-slate-600 hover:text-slate-900 cursor-pointer">
+                  <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                  <span>Jadual Induk & Carian (654 Slot)</span>
+                </button>
+              </div>
+
+              <!-- Badge Pemberitahuan -->
+              <div class="text-[11px] text-slate-500 bg-amber-50 text-amber-800 px-3 py-1 rounded-full border border-amber-200 flex items-center gap-1.5">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-amber-600"></i>
+                <span>Klik mana-mana slot di dalam jadual untuk <b>mengedit atau memadam</b> slot tersebut.</span>
+              </div>
+            </div>
+
+            <!-- BAR PENAPIS & PEMILIHAN DINAMIK -->
+            <div id="timetable-filters-bar" class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <!-- Penapis Mod Guru -->
+              <div id="filter-wrapper-guru" class="flex flex-wrap items-center gap-2">
+                <label class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  <i data-lucide="user-check" class="w-4 h-4 text-indigo-600"></i>
+                  <span>Pilih Nama Guru:</span>
+                </label>
+                <select id="timetable-select-guru" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-[260px]">
+                  <!-- Populated dynamically with teachers -->
+                </select>
+                <span id="timetable-teacher-summary" class="text-xs text-indigo-700 font-bold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
+                  <!-- e.g. 28 Waktu Seminggu -->
+                </span>
+              </div>
+
+              <!-- Penapis Mod Kelas -->
+              <div id="filter-wrapper-kelas" class="hidden flex flex-wrap items-center gap-2">
+                <label class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  <i data-lucide="graduation-cap" class="w-4 h-4 text-emerald-600"></i>
+                  <span>Pilih Kelas:</span>
+                </label>
+                <select id="timetable-select-kelas" class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[180px]">
+                  <!-- Populated dynamically with classes 4 I to 6 M -->
+                </select>
+                <span id="timetable-class-summary" class="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                  <!-- e.g. 48 Waktu Seminggu -->
+                </span>
+              </div>
+
+              <!-- Penapis Mod Induk -->
+              <div id="filter-wrapper-induk" class="hidden flex flex-wrap items-center gap-2 w-full">
+                <div class="relative flex-1 min-w-[200px]">
+                  <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                  <input type="text" id="timetable-search-input" placeholder="Cari guru, kelas, subjek, hari..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <select id="timetable-filter-induk-hari" class="bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700">
+                  <option value="ALL">Semua Hari</option>
+                  <option value="ISN">Isnin</option>
+                  <option value="SEL">Selasa</option>
+                  <option value="RAB">Rabu</option>
+                  <option value="KHA">Khamis</option>
+                  <option value="JUM">Jumaat</option>
+                </select>
+                <select id="timetable-filter-induk-kelas" class="bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700">
+                  <option value="ALL">Semua Kelas</option>
+                </select>
+                <select id="timetable-filter-induk-subjek" class="bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700">
+                  <option value="ALL">Semua Subjek</option>
+                </select>
+                <span id="timetable-induk-count" class="text-xs font-bold text-slate-500 px-2 py-1">
+                  654 Slot
+                </span>
+              </div>
             </div>
           </div>
 
+          <!-- BEKAS KANDUNGAN UTAMA JADUAL WAKTU -->
           <div id="jadual-rujukan-container" class="space-y-4">
-            <!-- Populated from existing timetable data -->
+            <!-- Rendered by JavaScript: Weekly Grid (Teacher/Class) or Master Table -->
           </div>
         </section>
 
@@ -1301,8 +1409,146 @@
     </div>
   </div>
 
-  <!-- Scripts (Cache-busting version v=2.6) -->
-  <script src="js/data.js?v=2.6"></script>
-  <script src="js/app.js?v=2.6"></script>
+  <!-- MODAL EDIT / TAMBAH SLOT JADUAL WAKTU -->
+  <div id="modal-edit-timetable-slot" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-150">
+      <div class="bg-gradient-to-r from-indigo-700 to-sky-700 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-bold">
+            <i data-lucide="calendar-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 id="modal-timetable-title" class="font-extrabold text-base">Sunting Slot Jadual Waktu</h3>
+            <p class="text-xs text-indigo-100">Jadual Waktu Persekolahan SK Ranggu 2026</p>
+          </div>
+        </div>
+        <button type="button" id="btn-close-modal-timetable" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="form-edit-timetable-slot" class="p-6 space-y-4 text-xs">
+        <input type="hidden" id="slot-form-id" value="">
+
+        <!-- Guru -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Nama Guru</label>
+          <select id="slot-form-guru" required class="w-full border border-slate-300 p-2.5 rounded-xl bg-slate-50 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Hari -->
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Hari</label>
+            <select id="slot-form-hari" required class="w-full border border-slate-300 p-2.5 rounded-xl bg-slate-50 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="ISN">ISNIN</option>
+              <option value="SEL">SELASA</option>
+              <option value="RAB">RABU</option>
+              <option value="KHA">KHAMIS</option>
+              <option value="JUM">JUMAAT</option>
+            </select>
+          </div>
+
+          <!-- Waktu -->
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Waktu</label>
+            <select id="slot-form-waktu" required class="w-full border border-slate-300 p-2.5 rounded-xl bg-slate-50 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="1">Waktu 1 (06:40 - 07:10)</option>
+              <option value="2">Waktu 2 (07:10 - 07:40)</option>
+              <option value="3">Waktu 3 (07:40 - 08:10)</option>
+              <option value="4">Waktu 4 (08:10 - 08:40)</option>
+              <option value="5">Waktu 5 (08:40 - 09:10)</option>
+              <option value="6">Waktu 6 (09:30 - 10:00)</option>
+              <option value="7">Waktu 7 (10:00 - 10:30)</option>
+              <option value="8">Waktu 8 (10:30 - 11:00)</option>
+              <option value="9">Waktu 9 (11:00 - 11:30)</option>
+              <option value="10">Waktu 10 (11:30 - 12:00)</option>
+              <option value="11">Waktu 11 (12:00 - 12:30)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Masa -->
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Masa PdP</label>
+            <input type="text" id="slot-form-masa" required placeholder="cth: 07:10 - 07:40" class="w-full border border-slate-300 p-2.5 rounded-xl bg-slate-50 font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+
+          <!-- Kelas -->
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Kelas</label>
+            <select id="slot-form-kelas" required class="w-full border border-slate-300 p-2.5 rounded-xl bg-slate-50 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="4 I">4 Iltizam (4 I)</option>
+              <option value="4 J">4 Jauhar (4 J)</option>
+              <option value="4 K">4 Karisma (4 K)</option>
+              <option value="4 M">4 Maju (4 M)</option>
+              <option value="5 I">5 Iltizam (5 I)</option>
+              <option value="5 J">5 Jauhar (5 J)</option>
+              <option value="5 K">5 Karisma (5 K)</option>
+              <option value="5 M">5 Maju (5 M)</option>
+              <option value="6 I">6 Iltizam (6 I)</option>
+              <option value="6 J">6 Jauhar (6 J)</option>
+              <option value="6 K">6 Karisma (6 K)</option>
+              <option value="6 M">6 Maju (6 M)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Subjek -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mata Pelajaran (Subjek)</label>
+          <select id="slot-form-subjek" required class="w-full border border-slate-300 p-2.5 rounded-xl bg-slate-50 font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <option value="BM">Bahasa Melayu (BM)</option>
+            <option value="BI">Bahasa Inggeris (BI)</option>
+            <option value="MT">Matematik (MT)</option>
+            <option value="SN">Sains (SN)</option>
+            <option value="PI">Pendidikan Islam (PI)</option>
+            <option value="PI/PM">Pend. Islam / Pend. Moral (PI/PM)</option>
+            <option value="PJ">Pendidikan Jasmani (PJ)</option>
+            <option value="PK">Pendidikan Kesihatan (PK)</option>
+            <option value="PSV">Pendidikan Seni Visual (PSV)</option>
+            <option value="PMZ">Pendidikan Muzik (PMZ)</option>
+            <option value="RBT">Reka Bentuk & Teknologi (RBT)</option>
+            <option value="SEJ">Sejarah (SEJ)</option>
+            <option value="BA">Bahasa Arab (BA)</option>
+          </select>
+        </div>
+
+        <!-- Amaran Pertindihan (Clash warning) -->
+        <div id="slot-clash-warning" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
+          <div class="flex items-center gap-1.5 font-bold">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
+            <span>Perhatian: Pertindihan Slot Dikesan!</span>
+          </div>
+          <p id="slot-clash-text" class="text-[11px] mt-1 text-amber-800">
+            Guru atau kelas ini telah mempunyai jadual pada waktu tersebut.
+          </p>
+        </div>
+
+        <div class="pt-3 border-t flex items-center justify-between">
+          <button type="button" id="btn-delete-timetable-slot" class="text-rose-600 hover:text-rose-800 font-bold text-xs flex items-center gap-1 cursor-pointer">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            <span>Padam Slot Ini</span>
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" id="btn-cancel-timetable-slot" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer">
+              Batal
+            </button>
+            <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xs transition cursor-pointer">
+              Simpan Slot
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts (Cache-busting version v=2.7) -->
+  <script src="js/timetable-data.js?v=2.7"></script>
+  <script src="js/data.js?v=2.7"></script>
+  <script src="js/app.js?v=2.7"></script>
 </body>
 </html>
