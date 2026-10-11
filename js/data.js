@@ -16,6 +16,8 @@ const ERPH_SYSTEM_CONFIG = {
     session: "Sesi Persekolahan 2026",
     logo: "assets/logo-skrg.png",
     logoKpm: "assets/logo-kpm.png",
+    startDate: "2026-01-05", // Tarikh Mula Buka Sekolah (Isnin Sesi 2026)
+    firstFriday: "2026-01-09", // Tarikh Jumaat Pertama
     currentWeek: 7,
     totalWeeks: 43
   },
@@ -24,51 +26,51 @@ const ERPH_SYSTEM_CONFIG = {
     systemAdminName: "Ts. Mohammad Fikrey bin Abdul Gapar",
     defaultTeacherPassword: "P3nd1d1kan"
   },
-  // Senarai tarikh Jumaat bagi 43 Minggu Persekolahan 2026
+  // Senarai tarikh Jumaat bagi 43 Minggu Persekolahan 2026 (Boleh diedit & auto-cascade oleh Admin)
   fridays2026: [
-    { minggu: 1, tarikh: "2026-01-09", label: "09 Jan 2026" },
-    { minggu: 2, tarikh: "2026-01-16", label: "16 Jan 2026" },
-    { minggu: 3, tarikh: "2026-01-23", label: "23 Jan 2026" },
-    { minggu: 4, tarikh: "2026-01-30", label: "30 Jan 2026" },
-    { minggu: 5, tarikh: "2026-02-06", label: "06 Feb 2026" },
-    { minggu: 6, tarikh: "2026-02-13", label: "13 Feb 2026" },
-    { minggu: 7, tarikh: "2026-02-20", label: "20 Feb 2026" }, // Minggu Semasa Piawai
-    { minggu: 8, tarikh: "2026-02-27", label: "27 Feb 2026" },
-    { minggu: 9, tarikh: "2026-03-06", label: "06 Mac 2026" },
-    { minggu: 10, tarikh: "2026-03-13", label: "13 Mac 2026" },
-    { minggu: 11, tarikh: "2026-03-20", label: "20 Mac 2026" },
-    { minggu: 12, tarikh: "2026-03-27", label: "27 Mac 2026" },
-    { minggu: 13, tarikh: "2026-04-03", label: "03 Apr 2026" },
-    { minggu: 14, tarikh: "2026-04-10", label: "10 Apr 2026" },
-    { minggu: 15, tarikh: "2026-04-17", label: "17 Apr 2026" },
-    { minggu: 16, tarikh: "2026-04-24", label: "24 Apr 2026" },
-    { minggu: 17, tarikh: "2026-05-01", label: "01 Mei 2026" },
-    { minggu: 18, tarikh: "2026-05-08", label: "08 Mei 2026" },
-    { minggu: 19, tarikh: "2026-05-15", label: "15 Mei 2026" },
-    { minggu: 20, tarikh: "2026-05-22", label: "22 Mei 2026" },
-    { minggu: 21, tarikh: "2026-06-12", label: "12 Jun 2026" },
-    { minggu: 22, tarikh: "2026-06-19", label: "19 Jun 2026" },
-    { minggu: 23, tarikh: "2026-06-26", label: "26 Jun 2026" },
-    { minggu: 24, tarikh: "2026-07-03", label: "03 Jul 2026" },
-    { minggu: 25, tarikh: "2026-07-10", label: "10 Jul 2026" },
-    { minggu: 26, tarikh: "2026-07-17", label: "17 Jul 2026" },
-    { minggu: 27, tarikh: "2026-07-24", label: "24 Jul 2026" },
-    { minggu: 28, tarikh: "2026-07-31", label: "31 Jul 2026" },
-    { minggu: 29, tarikh: "2026-08-07", label: "07 Ogo 2026" },
-    { minggu: 30, tarikh: "2026-08-14", label: "14 Ogo 2026" },
-    { minggu: 31, tarikh: "2026-08-21", label: "21 Ogo 2026" },
-    { minggu: 32, tarikh: "2026-08-28", label: "28 Ogo 2026" },
-    { minggu: 33, tarikh: "2026-09-04", label: "04 Sep 2026" },
-    { minggu: 34, tarikh: "2026-09-25", label: "25 Sep 2026" },
-    { minggu: 35, tarikh: "2026-10-02", label: "02 Okt 2026" },
-    { minggu: 36, tarikh: "2026-10-09", label: "09 Okt 2026" },
-    { minggu: 37, tarikh: "2026-10-16", label: "16 Okt 2026" },
-    { minggu: 38, tarikh: "2026-10-23", label: "23 Okt 2026" },
-    { minggu: 39, tarikh: "2026-10-30", label: "30 Okt 2026" },
-    { minggu: 40, tarikh: "2026-11-06", label: "06 Nov 2026" },
-    { minggu: 41, tarikh: "2026-11-13", label: "13 Nov 2026" },
-    { minggu: 42, tarikh: "2026-11-20", label: "20 Nov 2026" },
-    { minggu: 43, tarikh: "2026-12-04", label: "04 Dis 2026" }
+    { minggu: 1, tarikh: "2026-01-09", label: "09 Jan 2026", isCuti: false, cutiName: "" },
+    { minggu: 2, tarikh: "2026-01-16", label: "16 Jan 2026", isCuti: false, cutiName: "" },
+    { minggu: 3, tarikh: "2026-01-23", label: "23 Jan 2026", isCuti: false, cutiName: "" },
+    { minggu: 4, tarikh: "2026-01-30", label: "30 Jan 2026", isCuti: false, cutiName: "" },
+    { minggu: 5, tarikh: "2026-02-06", label: "06 Feb 2026", isCuti: false, cutiName: "" },
+    { minggu: 6, tarikh: "2026-02-13", label: "13 Feb 2026", isCuti: false, cutiName: "" },
+    { minggu: 7, tarikh: "2026-02-20", label: "20 Feb 2026", isCuti: false, cutiName: "" }, // Minggu Semasa Piawai
+    { minggu: 8, tarikh: "2026-02-27", label: "27 Feb 2026", isCuti: false, cutiName: "" },
+    { minggu: 9, tarikh: "2026-03-06", label: "06 Mac 2026", isCuti: false, cutiName: "" },
+    { minggu: 10, tarikh: "2026-03-13", label: "13 Mac 2026", isCuti: false, cutiName: "" },
+    { minggu: 11, tarikh: "2026-03-20", label: "20 Mac 2026", isCuti: false, cutiName: "" },
+    { minggu: 12, tarikh: "2026-03-27", label: "27 Mac 2026", isCuti: false, cutiName: "" },
+    { minggu: 13, tarikh: "2026-04-03", label: "03 Apr 2026", isCuti: false, cutiName: "" },
+    { minggu: 14, tarikh: "2026-04-10", label: "10 Apr 2026", isCuti: false, cutiName: "" },
+    { minggu: 15, tarikh: "2026-04-17", label: "17 Apr 2026", isCuti: false, cutiName: "" },
+    { minggu: 16, tarikh: "2026-04-24", label: "24 Apr 2026", isCuti: false, cutiName: "" },
+    { minggu: 17, tarikh: "2026-05-01", label: "01 Mei 2026", isCuti: false, cutiName: "" },
+    { minggu: 18, tarikh: "2026-05-08", label: "08 Mei 2026", isCuti: false, cutiName: "" },
+    { minggu: 19, tarikh: "2026-05-15", label: "15 Mei 2026", isCuti: false, cutiName: "" },
+    { minggu: 20, tarikh: "2026-05-22", label: "22 Mei 2026", isCuti: false, cutiName: "" },
+    { minggu: 21, tarikh: "2026-06-12", label: "12 Jun 2026", isCuti: false, cutiName: "" },
+    { minggu: 22, tarikh: "2026-06-19", label: "19 Jun 2026", isCuti: false, cutiName: "" },
+    { minggu: 23, tarikh: "2026-06-26", label: "26 Jun 2026", isCuti: false, cutiName: "" },
+    { minggu: 24, tarikh: "2026-07-03", label: "03 Jul 2026", isCuti: false, cutiName: "" },
+    { minggu: 25, tarikh: "2026-07-10", label: "10 Jul 2026", isCuti: false, cutiName: "" },
+    { minggu: 26, tarikh: "2026-07-17", label: "17 Jul 2026", isCuti: false, cutiName: "" },
+    { minggu: 27, tarikh: "2026-07-24", label: "24 Jul 2026", isCuti: false, cutiName: "" },
+    { minggu: 28, tarikh: "2026-07-31", label: "31 Jul 2026", isCuti: false, cutiName: "" },
+    { minggu: 29, tarikh: "2026-08-07", label: "07 Ogo 2026", isCuti: false, cutiName: "" },
+    { minggu: 30, tarikh: "2026-08-14", label: "14 Ogo 2026", isCuti: false, cutiName: "" },
+    { minggu: 31, tarikh: "2026-08-21", label: "21 Ogo 2026", isCuti: false, cutiName: "" },
+    { minggu: 32, tarikh: "2026-08-28", label: "28 Ogo 2026", isCuti: false, cutiName: "" },
+    { minggu: 33, tarikh: "2026-09-04", label: "04 Sep 2026", isCuti: false, cutiName: "" },
+    { minggu: 34, tarikh: "2026-09-25", label: "25 Sep 2026", isCuti: false, cutiName: "" },
+    { minggu: 35, tarikh: "2026-10-02", label: "02 Okt 2026", isCuti: false, cutiName: "" },
+    { minggu: 36, tarikh: "2026-10-09", label: "09 Okt 2026", isCuti: false, cutiName: "" },
+    { minggu: 37, tarikh: "2026-10-16", label: "16 Okt 2026", isCuti: false, cutiName: "" },
+    { minggu: 38, tarikh: "2026-10-23", label: "23 Okt 2026", isCuti: false, cutiName: "" },
+    { minggu: 39, tarikh: "2026-10-30", label: "30 Okt 2026", isCuti: false, cutiName: "" },
+    { minggu: 40, tarikh: "2026-11-06", label: "06 Nov 2026", isCuti: false, cutiName: "" },
+    { minggu: 41, tarikh: "2026-11-13", label: "13 Nov 2026", isCuti: false, cutiName: "" },
+    { minggu: 42, tarikh: "2026-11-20", label: "20 Nov 2026", isCuti: false, cutiName: "" },
+    { minggu: 43, tarikh: "2026-12-04", label: "04 Dis 2026", isCuti: false, cutiName: "" }
   ]
 };
 
@@ -531,15 +533,17 @@ const INITIAL_UPLOADS_DATA = [
 ];
 
 // Helper Functions untuk LocalStorage
-const ERPH_DATA_VERSION = "2.4";
+const ERPH_DATA_VERSION = "2.5";
 
 function getErphDatabase() {
   const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");
   if (savedVersion !== ERPH_DATA_VERSION) {
-    // Sinkronkan versi data terkini (pastikan semua 60 nama guru & no KP rasmi terkini dimuatkan)
+    // Sinkronkan versi data terkini (muatkan konfigurasi takwim baru dengan auto-cascade & cuti)
     localStorage.setItem("SKR_ERPH_DATA_VERSION", ERPH_DATA_VERSION);
-    localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(INITIAL_STAFF_LIST));
     localStorage.setItem("SKR_ERPH_CONFIG_2026", JSON.stringify(ERPH_SYSTEM_CONFIG));
+    if (!localStorage.getItem("SKR_ERPH_STAFF_2026")) {
+      localStorage.setItem("SKR_ERPH_STAFF_2026", JSON.stringify(INITIAL_STAFF_LIST));
+    }
     if (!localStorage.getItem("SKR_ERPH_UPLOADS_2026")) {
       localStorage.setItem("SKR_ERPH_UPLOADS_2026", JSON.stringify(INITIAL_UPLOADS_DATA));
     }

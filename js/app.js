@@ -35,10 +35,48 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${day}/${month}/${year}, ${strHours}:${minutes} ${ampm}`;
   }
 
-  // Dapatkan maklumat hari Jumaat bagi minggu tertentu
-  function getFridayInfo(weekNum) {
-    const f = db.config.fridays2026.find(item => item.minggu === parseInt(weekNum));
-    return f || { minggu: weekNum, tarikh: "2026-02-20", label: "Jumaat" };
+  // Helper untuk format label tarikh Bahasa Melayu (cth: 09 Jan 2026)
+  const MALAY_MONTH_SHORT = ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogo", "Sep", "Okt", "Nov", "Dis"];
+  function formatMalayDateLabel(dateObjOrStr) {
+    if (!dateObjOrStr) return "";
+    const d = (typeof dateObjOrStr === "string") ? new Date(dateObjOrStr + "T00:00:00") : dateObjOrStr;
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = MALAY_MONTH_SHORT[d.getMonth()];
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
+  }
+
+  // Dapatkan maklumat hari Jumaat bagi minggu tertentu (sokong nombor minggu, string cuti dan tarikh)
+  function getFridayInfo(weekVal) {
+    if (weekVal === undefined || weekVal === null) weekVal = state.activeWeek || 7;
+    let f = null;
+
+    // 1. Padanan jika nilai rentetan bermula dengan "cuti-"
+    if (typeof weekVal === "string" && weekVal.startsWith("cuti-")) {
+      const datePart = weekVal.replace("cuti-", "");
+      f = db.config.fridays2026.find(item => item.tarikh === datePart);
+    }
+
+    // 2. Padanan jika format tarikh YYYY-MM-DD
+    if (!f && typeof weekVal === "string" && /^\d{4}-\d{2}-\d{2}$/.test(weekVal)) {
+      f = db.config.fridays2026.find(item => item.tarikh === weekVal);
+    }
+
+    // 3. Padanan nombor minggu persekolahan akademik
+    const num = parseInt(weekVal);
+    if (!f && !isNaN(num) && num > 0) {
+      f = db.config.fridays2026.find(item => !item.isCuti && item.minggu === num);
+      if (!f) {
+        f = db.config.fridays2026.find(item => item.minggu === num);
+      }
+    }
+
+    // 4. Fallback ke elemen sedia ada jika tidak ditemui
+    if (!f && db.config.fridays2026 && db.config.fridays2026.length > 0) {
+      f = db.config.fridays2026.find(item => !item.isCuti) || db.config.fridays2026[0];
+    }
+
+    return f || { minggu: 7, tarikh: "2026-02-20", label: "20 Feb 2026", isCuti: false, cutiName: "" };
   }
 
   // Normalisasi format IC untuk perbandingan (buang sengkang & ruang)
@@ -296,7 +334,20 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     // Tab 5 Timetable Elements
     jadualRujukanContainer: document.getElementById("jadual-rujukan-container"),
 
-    // Tab 6 Admin Console Elements
+    // Tab 6 Admin Console Elements & Takwim
+    adminSchoolStartDate: document.getElementById("admin-school-start-date"),
+    adminFirstFridayDate: document.getElementById("admin-first-friday-date"),
+    adminTotalWeeksInput: document.getElementById("admin-total-weeks-input"),
+    adminCurrentWeekInput: document.getElementById("admin-current-week-input"),
+    btnAdminSaveSession: document.getElementById("btn-admin-save-session"),
+    btnAdminGenerateFridays: document.getElementById("btn-admin-generate-fridays"),
+    btnAdminAutoCascadeAll: document.getElementById("btn-admin-auto-cascade-all"),
+    btnAdminAddWeekRow: document.getElementById("btn-admin-add-week-row"),
+    adminSearchWeek: document.getElementById("admin-search-week"),
+    adminTotalFridaysCount: document.getElementById("admin-total-fridays-count"),
+    adminActiveWeeksCount: document.getElementById("admin-active-weeks-count"),
+    adminHolidayWeeksCount: document.getElementById("admin-holiday-weeks-count"),
+    adminWeeksTbody: document.getElementById("admin-weeks-tbody"),
     adminSearchStaff: document.getElementById("admin-search-staff"),
     adminStaffCount: document.getElementById("admin-staff-count"),
     adminStaffTbody: document.getElementById("admin-staff-tbody"),
@@ -707,29 +758,55 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   function initWeekOptions() {
     elements.headerWeekSelect.innerHTML = "";
     elements.teacherUploadWeek.innerHTML = "";
+    if (elements.adminCurrentWeekInput) elements.adminCurrentWeekInput.innerHTML = "";
 
-    for (let w = 1; w <= db.config.school.totalWeeks; w++) {
+    db.config.fridays2026.forEach(f => {
+      const isCuti = Boolean(f.isCuti);
+      const val = isCuti ? `cuti-${f.tarikh}` : f.minggu;
+      const labelText = isCuti
+        ? `🏖️ [CUTI] ${f.cutiName || 'Cuti Persekolahan'} • ${f.label}`
+        : `Minggu ${f.minggu} • ${f.label}`;
+
+      const isSelected = (String(f.minggu) === String(state.activeWeek) || `cuti-${f.tarikh}` === String(state.activeWeek));
+
+      // 1. Dropdown Header Utama
       const opt = document.createElement("option");
-      opt.value = w;
-      opt.textContent = `Minggu ${w}`;
-      if (w === state.activeWeek) opt.selected = true;
+      opt.value = val;
+      opt.textContent = labelText;
+      if (isSelected) opt.selected = true;
       elements.headerWeekSelect.appendChild(opt);
 
+      // 2. Dropdown Portal Guru
       const optPortal = document.createElement("option");
-      optPortal.value = w;
-      optPortal.textContent = `Minggu ${w}`;
-      if (w === state.activeWeek) optPortal.selected = true;
+      optPortal.value = val;
+      optPortal.textContent = labelText;
+      if (isSelected) optPortal.selected = true;
       elements.teacherUploadWeek.appendChild(optPortal);
-    }
+
+      // 3. Dropdown Tetapan Admin
+      if (elements.adminCurrentWeekInput && !isCuti) {
+        const optAdmin = document.createElement("option");
+        optAdmin.value = f.minggu;
+        optAdmin.textContent = `Minggu ${f.minggu} (${f.label})`;
+        if (f.minggu === (db.config.school.currentWeek || state.activeWeek)) optAdmin.selected = true;
+        elements.adminCurrentWeekInput.appendChild(optAdmin);
+      }
+    });
 
     updateFridayDisplay();
   }
 
   function updateFridayDisplay() {
     const f = getFridayInfo(state.activeWeek);
-    elements.headerFridayDate.textContent = f.label;
-    elements.teacherUploadDate.value = f.label;
-    elements.portalUploadWeekTitle.textContent = `Penghantaran e-RPH Minggu ${state.activeWeek} (${f.label})`;
+    if (f.isCuti) {
+      elements.headerFridayDate.textContent = `${f.label} (🏖️ CUTI)`;
+      elements.teacherUploadDate.value = `${f.label} [Cuti: ${f.cutiName || 'Persekolahan'}]`;
+      elements.portalUploadWeekTitle.textContent = `🏖️ Minggu Cuti: ${f.cutiName || 'Cuti Persekolahan'} (${f.label})`;
+    } else {
+      elements.headerFridayDate.textContent = f.label;
+      elements.teacherUploadDate.value = f.label;
+      elements.portalUploadWeekTitle.textContent = `Penghantaran e-RPH Minggu ${f.minggu} (${f.label})`;
+    }
   }
 
   // ==============================================================
@@ -943,7 +1020,34 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     const container = elements.pentadbirColumnsWrapper;
     container.innerHTML = "";
 
-    const weekNum = state.activeWeek;
+    const activeFriday = getFridayInfo(state.activeWeek);
+    const isHolidayWeek = Boolean(activeFriday && activeFriday.isCuti);
+    const weekNum = activeFriday.minggu || state.activeWeek;
+
+    // Paparkan Notis Banner Pengecualian Cuti Persekolahan
+    if (isHolidayWeek) {
+      const holidayBanner = document.createElement("div");
+      holidayBanner.className = "col-span-full mb-2 p-4 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs";
+      holidayBanner.innerHTML = `
+        <div class="flex items-center space-x-3.5">
+          <div class="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold text-xl shadow-xs flex-shrink-0">
+            🏖️
+          </div>
+          <div>
+            <h4 class="font-black text-sm text-amber-950 uppercase tracking-wide">
+              MINGGU CUTI PERSEKOLAHAN: ${activeFriday.cutiName || 'Cuti Persekolahan'} (${activeFriday.label})
+            </h4>
+            <p class="text-xs text-amber-900 font-semibold mt-0.5 leading-snug">
+              Penghantaran e-RPH bagi minggu ini adalah <strong>DIKECUALIKAN</strong>. Sistem tidak mengira atau mengenakan status MERAH kepada para guru.
+            </p>
+          </div>
+        </div>
+        <span class="px-3.5 py-1.5 rounded-full bg-amber-300/90 text-amber-950 font-black text-xs border border-amber-400 self-start sm:self-center shadow-xs">
+          DIKECUALIKAN DARI e-RPH
+        </span>
+      `;
+      container.appendChild(holidayBanner);
+    }
 
     // Ambil semua guru aktif
     const activeTeachers = db.staffList.filter(s => s.status === "Aktif");
@@ -970,16 +1074,25 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
     let totalHijau = 0;
     let totalMerah = 0;
-    targetStaffForStats.forEach(t => {
-      const up = weekUploads.find(u => u.guruId === t.id);
-      if (up && up.status === "HIJAU") totalHijau++;
-      else totalMerah++;
-    });
+    if (isHolidayWeek) {
+      totalHijau = targetStaffForStats.length;
+      totalMerah = 0;
+    } else {
+      targetStaffForStats.forEach(t => {
+        const up = weekUploads.find(u => u.guruId === t.id);
+        if (up && up.status === "HIJAU") totalHijau++;
+        else totalMerah++;
+      });
+    }
 
     const totalActive = targetStaffForStats.length || 1;
-    const overallPct = Math.round((totalHijau / totalActive) * 100);
+    const overallPct = isHolidayWeek ? 100 : Math.round((totalHijau / totalActive) * 100);
 
-    if (isGpk) {
+    if (isHolidayWeek) {
+      elements.statTotalHijau.textContent = "Cuti Persekolahan";
+      elements.statTotalMerah.textContent = "0 Guru Tertunggak (Dikecualikan)";
+      elements.statTotalPct.textContent = "100% Cuti Sekolah";
+    } else if (isGpk) {
       elements.statTotalHijau.textContent = `${totalHijau} Guru Seliaan Hijau`;
       elements.statTotalMerah.textContent = `${totalMerah} Guru Seliaan Merah`;
       elements.statTotalPct.textContent = `${overallPct}% Selesai`;
@@ -1005,13 +1118,18 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       // Kira bilangan hijau & merah dalam lajur ini
       let colHijau = 0;
       let colMerah = 0;
-      columnStaff.forEach(s => {
-        const up = weekUploads.find(u => u.guruId === s.id);
-        if (up && up.status === "HIJAU") colHijau++;
-        else colMerah++;
-      });
+      if (isHolidayWeek) {
+        colHijau = columnStaff.length;
+        colMerah = 0;
+      } else {
+        columnStaff.forEach(s => {
+          const up = weekUploads.find(u => u.guruId === s.id);
+          if (up && up.status === "HIJAU") colHijau++;
+          else colMerah++;
+        });
+      }
       const colTotal = columnStaff.length || 1;
-      const colPct = Math.round((colHijau / colTotal) * 100);
+      const colPct = isHolidayWeek ? 100 : Math.round((colHijau / colTotal) * 100);
 
       // Cipta Elemen Lajur
       const colCard = document.createElement("div");
@@ -1022,7 +1140,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         <div class="${col.headerBg} text-white p-3.5 space-y-1">
           <div class="flex items-center justify-between">
             <span class="text-[9px] font-black uppercase tracking-wider bg-black/20 px-2 py-0.5 rounded-full">${col.shortTitle}</span>
-            <span class="text-[11px] font-black">${colHijau}/${columnStaff.length} Hantar (${colPct}%)</span>
+            <span class="text-[11px] font-black">${isHolidayWeek ? `${columnStaff.length}/${columnStaff.length} (Cuti 100%)` : `${colHijau}/${columnStaff.length} Hantar (${colPct}%)`}</span>
           </div>
           <h3 class="font-black text-xs sm:text-sm tracking-wide leading-tight truncate" title="${col.name}">${col.name}</h3>
           <p class="text-[10px] text-white/80 font-medium">${col.role}</p>
@@ -1052,11 +1170,19 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         const isUploaded = (up && up.status === "HIJAU");
 
         const teacherCard = document.createElement("div");
-        teacherCard.className = `teacher-monitor-card p-3 rounded-xl border ${isUploaded ? 'bg-emerald-50/40 border-emerald-300' : 'bg-rose-50/40 border-rose-200'} space-y-2 text-xs relative`;
+        const cardBgClass = isHolidayWeek
+          ? 'bg-amber-50/40 border-amber-200'
+          : isUploaded
+            ? 'bg-emerald-50/40 border-emerald-300'
+            : 'bg-rose-50/40 border-rose-200';
+
+        teacherCard.className = `teacher-monitor-card p-3 rounded-xl border ${cardBgClass} space-y-2 text-xs relative`;
 
         // Maklumat Masa Kemaskini
         let timestampDisplay = "Belum memuat naik e-RPH";
-        if (isUploaded && up.uploadedAt) {
+        if (isHolidayWeek) {
+          timestampDisplay = `Cuti Persekolahan (Dikecualikan)`;
+        } else if (isUploaded && up.uploadedAt) {
           timestampDisplay = `Dikemaskini: ${up.uploadedAt}`;
         }
 
@@ -1073,9 +1199,14 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
             </div>
           </div>
 
-          <!-- Status Button (Merah / Hijau) -->
+          <!-- Status Button (Merah / Hijau / Cuti) -->
           <div class="pt-1">
-            ${isUploaded ? `
+            ${isHolidayWeek ? `
+              <div class="w-full py-1.5 px-2.5 rounded-lg bg-amber-500 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
+                <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+                <span>CUTI SEKOLAH - DIKECUALIKAN</span>
+              </div>
+            ` : isUploaded ? `
               <div class="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
                 <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
                 <span>HIJAU - BERJAYA UPLOAD</span>
@@ -1090,7 +1221,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
           <!-- Timestamp Text Dinyatakan Dengan Jelas -->
           <div class="text-[10px] text-slate-600 font-semibold flex items-center justify-between pt-0.5">
-            <span class="truncate ${isUploaded ? 'text-emerald-800 font-bold' : 'text-rose-700 font-medium'}">
+            <span class="truncate ${isHolidayWeek ? 'text-amber-800 font-bold' : isUploaded ? 'text-emerald-800 font-bold' : 'text-rose-700 font-medium'}">
               <i data-lucide="clock" class="w-3 h-3 inline mr-0.5"></i>
               ${timestampDisplay}
             </span>
@@ -1181,7 +1312,17 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     if (elements.fileEmptyState) elements.fileEmptyState.classList.remove("hidden");
     if (elements.fileSelectedState) elements.fileSelectedState.classList.add("hidden");
 
-    if (up && up.status === "HIJAU") {
+    const activeFriday = getFridayInfo(state.activeWeek);
+    const isHolidayWeek = Boolean(activeFriday && activeFriday.isCuti);
+
+    if (isHolidayWeek) {
+      elements.portalCurrentStatusBadge.textContent = `🏖️ CUTI SEKOLAH (Dikecualikan)`;
+      elements.portalCurrentStatusBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300";
+      if (elements.teacherUploadLink) elements.teacherUploadLink.value = "";
+      if (elements.teacherUploadFilename) elements.teacherUploadFilename.value = "";
+      if (elements.teacherUploadCatatan) elements.teacherUploadCatatan.value = `Minggu Cuti: ${activeFriday.cutiName || 'Cuti Persekolahan'}`;
+      if (elements.existingFileAlert) elements.existingFileAlert.classList.add("hidden");
+    } else if (up && up.status === "HIJAU") {
       elements.portalCurrentStatusBadge.textContent = "HIJAU (Berjaya Upload)";
       elements.portalCurrentStatusBadge.className = "px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300";
       if (elements.teacherUploadLink) elements.teacherUploadLink.value = up.fileUrl || "";
@@ -1207,35 +1348,41 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       if (elements.existingFileAlert) elements.existingFileAlert.classList.add("hidden");
     }
 
-    elements.teacherUploadWeek.value = state.activeWeek;
+    elements.teacherUploadWeek.value = isHolidayWeek ? `cuti-${activeFriday.tarikh}` : state.activeWeek;
     updateFridayDisplay();
 
-    // Render Jadual Sejarah 43 Minggu
+    // Render Jadual Sejarah Takwim Minggu Sesi
     const tbody = elements.portalHistoryTbody;
     tbody.innerHTML = "";
 
     db.config.fridays2026.forEach(f => {
       const historyUp = db.uploads.find(u => u.guruId === teacher.id && u.minggu === f.minggu);
       const isSah = (historyUp && historyUp.status === "HIJAU");
+      const isCuti = Boolean(f.isCuti);
+      const isCurrentRow = (f.minggu === state.activeWeek || `cuti-${f.tarikh}` === String(state.activeWeek));
 
       const tr = document.createElement("tr");
-      tr.className = f.minggu === state.activeWeek ? "bg-sky-50/70 font-bold" : "hover:bg-slate-50";
+      tr.className = isCurrentRow ? "bg-sky-50/70 font-bold" : "hover:bg-slate-50";
 
       tr.innerHTML = `
-        <td class="py-2.5 px-3 font-mono font-bold">M${f.minggu}</td>
+        <td class="py-2.5 px-3 font-mono font-bold">${isCuti ? '<span class="text-amber-800 font-black">CUTI</span>' : 'M' + f.minggu}</td>
         <td class="py-2.5 px-3 text-slate-600">${f.label}</td>
         <td class="py-2.5 px-3">
-          ${isSah ? `
+          ${isCuti ? `
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">🏖️ CUTI</span>
+          ` : isSah ? `
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">HIJAU</span>
           ` : `
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">MERAH</span>
           `}
         </td>
         <td class="py-2.5 px-3 text-slate-500 font-mono text-[10px]">
-          ${isSah ? historyUp.uploadedAt : '—'}
+          ${isCuti ? '—' : isSah ? historyUp.uploadedAt : '—'}
         </td>
         <td class="py-2.5 px-3">
-          ${isSah ? `
+          ${isCuti ? `
+            <span class="text-slate-400 italic text-[11px]">Dikecualikan</span>
+          ` : isSah ? `
             <button type="button" class="btn-download-history-row px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-300 rounded-lg font-bold text-[11px] transition inline-flex items-center gap-1 shadow-xs cursor-pointer">
               <i data-lucide="download" class="w-3 h-3 text-sky-600"></i>
               <span class="truncate max-w-[130px]">${historyUp.fileName || 'Buka Dokumen'}</span>
@@ -1243,7 +1390,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
           ` : '<span class="text-slate-400">—</span>'}
         </td>
         <td class="py-2.5 px-3 text-slate-600 text-[11px]">
-          ${isSah && historyUp.ulasan ? historyUp.ulasan : '<span class="text-slate-400 italic">Menunggu semakan</span>'}
+          ${isCuti ? `<span class="text-amber-700 font-semibold">${f.cutiName || 'Cuti Persekolahan'}</span>` : (isSah && historyUp.ulasan) ? historyUp.ulasan : '<span class="text-slate-400 italic">Menunggu semakan</span>'}
         </td>
       `;
 
@@ -1316,7 +1463,8 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
     if (elements.teacherUploadWeek) {
       elements.teacherUploadWeek.addEventListener("change", (e) => {
-        state.activeWeek = parseInt(e.target.value);
+        const val = e.target.value;
+        state.activeWeek = (typeof val === "string" && val.startsWith("cuti-")) ? val : (parseInt(val) || val);
         if (elements.headerWeekSelect) elements.headerWeekSelect.value = state.activeWeek;
         updateFridayDisplay();
         renderTeacherPortal();
@@ -1344,8 +1492,21 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
     if (!state.currentUser) return;
     const teacher = state.currentUser;
-    const weekNum = parseInt(elements.teacherUploadWeek.value);
-    const fInfo = getFridayInfo(weekNum);
+    const weekVal = elements.teacherUploadWeek.value;
+    const fInfo = getFridayInfo(weekVal);
+
+    // Sekat jika minggu cuti persekolahan
+    if (fInfo.isCuti) {
+      safeSwal({
+        icon: "info",
+        title: "Minggu Cuti Persekolahan",
+        text: `Minggu ini (${fInfo.label}) merupakan ${fInfo.cutiName || 'Cuti Persekolahan'}. Penghantaran e-RPH adalah dikecualikan dan tidak diperlukan.`,
+        confirmButtonColor: "#d97706"
+      });
+      return;
+    }
+
+    const weekNum = fInfo.minggu || parseInt(weekVal);
     const catatan = elements.teacherUploadCatatan.value.trim();
     const optionalLink = elements.teacherUploadLink ? elements.teacherUploadLink.value.trim() : "";
 
@@ -1494,33 +1655,48 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     let countdownTitle = "Peringatan Hari Jumaat:";
     let countdownText = "";
 
-    const activeFriday = db.config.fridays2026.find(f => f.minggu === state.activeWeek);
+    const activeFriday = getFridayInfo(state.activeWeek);
     const fridayLabel = activeFriday ? activeFriday.label : "Jumaat Minggu Ini";
-    if (elements.calHeroFridayTarget) elements.calHeroFridayTarget.textContent = `${fridayLabel} (11:59 PM)`;
 
-    if (dayIdx === 5) {
-      countdownTitle = "🚨 PERINGATAN HARI INI:";
-      countdownText = "HARI INI IALAH HARI JUMAAT! Sila pastikan e-RPH telah dihantar sebelum tamat tempoh.";
-      if (elements.calHeroCountdownText) {
-        elements.calHeroCountdownText.className = "text-sm font-black text-emerald-400 leading-snug animate-pulse";
-      }
-    } else if (dayIdx === 4) {
-      countdownTitle = "⚠️ PERINGATAN KEMUNCAK:";
-      countdownText = `ESOK IALAH HARI JUMAAT (${fridayLabel})! Tarikh akhir muat naik e-RPH Minggu ${state.activeWeek}.`;
+    if (activeFriday && activeFriday.isCuti) {
+      countdownTitle = "🏖️ CUTI PERSEKOLAHAN:";
+      countdownText = `Minggu ini (${fridayLabel}) merupakan ${activeFriday.cutiName || 'Cuti Persekolahan'}. Penghantaran e-RPH dikecualikan.`;
       if (elements.calHeroCountdownText) {
         elements.calHeroCountdownText.className = "text-sm font-black text-amber-300 leading-snug";
       }
+      if (elements.calHeroFridayTarget) {
+        elements.calHeroFridayTarget.textContent = `${fridayLabel} (Cuti)`;
+      }
+      if (elements.calHeroWeekBadge) {
+        elements.calHeroWeekBadge.textContent = "Cuti Sekolah";
+      }
     } else {
-      countdownTitle = "Kiraan Detik Penghantaran:";
-      countdownText = `Baki ${daysToFriday} hari lagi sebelum Tarikh Akhir Jumaat (${fridayLabel}).`;
-      if (elements.calHeroCountdownText) {
-        elements.calHeroCountdownText.className = "text-sm font-black text-rose-300 leading-snug";
+      if (elements.calHeroFridayTarget) elements.calHeroFridayTarget.textContent = `${fridayLabel} (11:59 PM)`;
+      if (elements.calHeroWeekBadge) elements.calHeroWeekBadge.textContent = `Minggu ${activeFriday.minggu || state.activeWeek}`;
+
+      if (dayIdx === 5) {
+        countdownTitle = "🚨 PERINGATAN HARI INI:";
+        countdownText = "HARI INI IALAH HARI JUMAAT! Sila pastikan e-RPH telah dihantar sebelum tamat tempoh.";
+        if (elements.calHeroCountdownText) {
+          elements.calHeroCountdownText.className = "text-sm font-black text-emerald-400 leading-snug animate-pulse";
+        }
+      } else if (dayIdx === 4) {
+        countdownTitle = "⚠️ PERINGATAN KEMUNCAK:";
+        countdownText = `ESOK IALAH HARI JUMAAT (${fridayLabel})! Tarikh akhir muat naik e-RPH Minggu ${activeFriday.minggu || state.activeWeek}.`;
+        if (elements.calHeroCountdownText) {
+          elements.calHeroCountdownText.className = "text-sm font-black text-amber-300 leading-snug";
+        }
+      } else {
+        countdownTitle = "Kiraan Detik Penghantaran:";
+        countdownText = `Baki ${daysToFriday} hari lagi sebelum Tarikh Akhir Jumaat (${fridayLabel}).`;
+        if (elements.calHeroCountdownText) {
+          elements.calHeroCountdownText.className = "text-sm font-black text-rose-300 leading-snug";
+        }
       }
     }
 
     if (elements.calHeroCountdownTitle) elements.calHeroCountdownTitle.textContent = countdownTitle;
     if (elements.calHeroCountdownText) elements.calHeroCountdownText.textContent = countdownText;
-    if (elements.calHeroWeekBadge) elements.calHeroWeekBadge.textContent = `Minggu ${state.activeWeek}`;
   }
 
   function startRealTimeClockEngine() {
@@ -1579,28 +1755,43 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       if (isToday) {
         cellClasses += "bg-amber-50 border-amber-400 ring-2 ring-amber-400/50 font-bold shadow-xs ";
       } else if (isFriday) {
-        cellClasses += "bg-rose-50/80 border-rose-200 hover:bg-rose-100/70 font-semibold ";
+        if (matchedFriday && matchedFriday.isCuti) {
+          cellClasses += "bg-amber-50/70 border-amber-300 hover:bg-amber-100/70 font-semibold ";
+        } else {
+          cellClasses += "bg-rose-50/80 border-rose-200 hover:bg-rose-100/70 font-semibold ";
+        }
       } else {
         cellClasses += "bg-white border-slate-200 hover:bg-slate-50 ";
       }
 
       let innerHtml = `
         <div class="flex items-center justify-between">
-          <span class="font-extrabold ${isToday ? 'text-amber-900 text-sm' : isFriday ? 'text-rose-700 font-black' : 'text-slate-700'}">${d}</span>
+          <span class="font-extrabold ${isToday ? 'text-amber-900 text-sm' : isFriday ? (matchedFriday && matchedFriday.isCuti ? 'text-amber-800 font-black' : 'text-rose-700 font-black') : 'text-slate-700'}">${d}</span>
           ${isToday ? '<span class="text-[9px] bg-amber-500 text-white font-black px-1.5 py-0.5 rounded shadow-xs">HARI INI</span>' : ''}
         </div>
       `;
 
       if (isFriday) {
-        innerHtml += `
-          <div class="mt-1">
-            <span class="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-lg bg-rose-600 text-white shadow-xs">
-              <i data-lucide="check-circle" class="w-3 h-3"></i>
-              <span>${matchedFriday ? 'M' + matchedFriday.minggu : 'e-RPH'}</span>
-            </span>
-            <span class="block text-[8px] sm:text-[9px] text-rose-800 font-bold mt-0.5">Tarikh Akhir</span>
-          </div>
-        `;
+        if (matchedFriday && matchedFriday.isCuti) {
+          innerHtml += `
+            <div class="mt-1">
+              <span class="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-lg bg-amber-500 text-white shadow-xs">
+                <span>🏖️ CUTI</span>
+              </span>
+              <span class="block text-[8px] sm:text-[9px] text-amber-800 font-bold mt-0.5 truncate">${matchedFriday.cutiName || 'Cuti'}</span>
+            </div>
+          `;
+        } else {
+          innerHtml += `
+            <div class="mt-1">
+              <span class="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-lg bg-rose-600 text-white shadow-xs">
+                <i data-lucide="check-circle" class="w-3 h-3"></i>
+                <span>${matchedFriday ? 'M' + matchedFriday.minggu : 'e-RPH'}</span>
+              </span>
+              <span class="block text-[8px] sm:text-[9px] text-rose-800 font-bold mt-0.5">Tarikh Akhir</span>
+            </div>
+          `;
+        }
       }
 
       cell.className = cellClasses;
@@ -1608,10 +1799,12 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
       if (matchedFriday) {
         cell.classList.add("cursor-pointer");
-        cell.title = `Klik untuk semak status penghantaran Minggu ${matchedFriday.minggu} (${matchedFriday.label})`;
+        cell.title = matchedFriday.isCuti
+          ? `Klik untuk semak Takwim Cuti (${matchedFriday.cutiName || 'Cuti Persekolahan'})`
+          : `Klik untuk semak status penghantaran Minggu ${matchedFriday.minggu} (${matchedFriday.label})`;
         cell.addEventListener("click", () => {
-          state.activeWeek = matchedFriday.minggu;
-          elements.headerWeekSelect.value = matchedFriday.minggu;
+          state.activeWeek = matchedFriday.isCuti ? `cuti-${matchedFriday.tarikh}` : matchedFriday.minggu;
+          elements.headerWeekSelect.value = state.activeWeek;
           updateFridayDisplay();
           switchTab("pemantauan");
         });
@@ -1641,26 +1834,38 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     grid.innerHTML = "";
 
     db.config.fridays2026.forEach(f => {
-      const isCurrent = (f.minggu === state.activeWeek);
+      const isCuti = Boolean(f.isCuti);
+      const isCurrent = (f.minggu === state.activeWeek || `cuti-${f.tarikh}` === String(state.activeWeek));
 
       // Kira bilangan hantar pada Jumaat tersebut
-      const weekUps = db.uploads.filter(u => u.minggu === f.minggu && u.status === "HIJAU");
+      const weekUps = isCuti ? [] : db.uploads.filter(u => u.minggu === f.minggu && u.status === "HIJAU");
 
       const card = document.createElement("div");
-      card.className = `p-3 rounded-xl border text-center transition cursor-pointer ${isCurrent ? 'bg-rose-600 text-white border-rose-600 shadow-md transform scale-102' : 'bg-slate-50 hover:bg-white border-slate-200'}`;
-
-      card.innerHTML = `
-        <span class="text-[10px] font-mono font-bold block ${isCurrent ? 'text-rose-100' : 'text-slate-400'}">JUMAAT</span>
-        <div class="font-black text-sm my-0.5">Minggu ${f.minggu}</div>
-        <p class="text-xs font-semibold ${isCurrent ? 'text-white' : 'text-rose-600'}">${f.label}</p>
-        <div class="mt-2 text-[10px] py-0.5 px-2 rounded-full font-bold ${isCurrent ? 'bg-black/20 text-white' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}">
-          ${weekUps.length} Hantar
-        </div>
-      `;
+      if (isCuti) {
+        card.className = `p-3 rounded-xl border text-center transition cursor-pointer ${isCurrent ? 'bg-amber-500 text-white border-amber-600 shadow-md transform scale-102' : 'bg-amber-50/70 hover:bg-amber-100/70 border-amber-200'}`;
+        card.innerHTML = `
+          <span class="text-[10px] font-mono font-bold block ${isCurrent ? 'text-amber-100' : 'text-amber-700'}">JUMAAT CUTI</span>
+          <div class="font-black text-xs my-0.5 truncate" title="${f.cutiName || 'Cuti'}">🏖️ ${f.cutiName || 'Cuti'}</div>
+          <p class="text-xs font-semibold ${isCurrent ? 'text-white' : 'text-amber-900'}">${f.label}</p>
+          <div class="mt-2 text-[10px] py-0.5 px-2 rounded-full font-bold ${isCurrent ? 'bg-black/20 text-white' : 'bg-amber-200/80 text-amber-950 border border-amber-300'}">
+            Dikecualikan
+          </div>
+        `;
+      } else {
+        card.className = `p-3 rounded-xl border text-center transition cursor-pointer ${isCurrent ? 'bg-rose-600 text-white border-rose-600 shadow-md transform scale-102' : 'bg-slate-50 hover:bg-white border-slate-200'}`;
+        card.innerHTML = `
+          <span class="text-[10px] font-mono font-bold block ${isCurrent ? 'text-rose-100' : 'text-slate-400'}">JUMAAT</span>
+          <div class="font-black text-sm my-0.5">Minggu ${f.minggu}</div>
+          <p class="text-xs font-semibold ${isCurrent ? 'text-white' : 'text-rose-600'}">${f.label}</p>
+          <div class="mt-2 text-[10px] py-0.5 px-2 rounded-full font-bold ${isCurrent ? 'bg-black/20 text-white' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}">
+            ${weekUps.length} Hantar
+          </div>
+        `;
+      }
 
       card.addEventListener("click", () => {
-        state.activeWeek = f.minggu;
-        elements.headerWeekSelect.value = f.minggu;
+        state.activeWeek = isCuti ? `cuti-${f.tarikh}` : f.minggu;
+        elements.headerWeekSelect.value = state.activeWeek;
         updateFridayDisplay();
         switchTab("pemantauan");
       });
@@ -1704,9 +1909,332 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   }
 
   // ==============================================================
+  // ENJIN TAKWIM PERSEKOLAHAN & PENGIRAAN MINGGU (AUTO-CASCADE)
+  // ==============================================================
+
+  // Fungsi mengira semula urutan minggu bermula dari startIndex
+  function cascadeRenumberWeeks(startIndex, startWeekNum) {
+    let nextNum;
+    if (startWeekNum === null || startWeekNum === undefined) {
+      let prev = 0;
+      for (let k = startIndex - 1; k >= 0; k--) {
+        if (!db.config.fridays2026[k].isCuti && db.config.fridays2026[k].minggu) {
+          prev = db.config.fridays2026[k].minggu;
+          break;
+        }
+      }
+      nextNum = prev + 1;
+    } else {
+      nextNum = parseInt(startWeekNum);
+      if (isNaN(nextNum) || nextNum < 1) nextNum = 1;
+    }
+
+    for (let i = startIndex; i < db.config.fridays2026.length; i++) {
+      const row = db.config.fridays2026[i];
+      if (row.isCuti) {
+        row.minggu = null; // Cuti tidak dikira dalam urutan minggu persekolahan ("sistem xkira")
+      } else {
+        row.minggu = nextNum;
+        nextNum++;
+      }
+    }
+
+    const nonHolidays = db.config.fridays2026.filter(f => !f.isCuti && f.minggu);
+    if (nonHolidays.length > 0) {
+      db.config.school.totalWeeks = Math.max(...nonHolidays.map(f => f.minggu));
+    }
+
+    saveErphDatabase(db);
+    initWeekOptions();
+    renderCalendarFridays();
+    renderAdminWeeksTable();
+    renderMonitoringColumns();
+    updateFridayDisplay();
+
+    const activeFr = db.config.fridays2026[startIndex];
+    const fromLabel = activeFr && activeFr.minggu ? `Minggu ${activeFr.minggu}` : `Indeks ${startIndex + 1}`;
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "Auto-Cascade Berjaya!",
+      text: `Minggu seterusnya disusun secara automatik: ${fromLabel} ➔ ${nextNum - 1}.`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  }
+
+  // Fungsi mengira semula urutan keseluruhan takwim (1, 2, 3...)
+  function autoCascadeAllWeeks() {
+    let currentAcademicWeek = 1;
+
+    db.config.fridays2026.forEach(row => {
+      if (row.isCuti) {
+        row.minggu = null;
+      } else {
+        row.minggu = currentAcademicWeek;
+        currentAcademicWeek++;
+      }
+    });
+
+    db.config.school.totalWeeks = currentAcademicWeek - 1;
+    saveErphDatabase(db);
+
+    initWeekOptions();
+    renderCalendarFridays();
+    renderAdminWeeksTable();
+    renderMonitoringColumns();
+    updateFridayDisplay();
+
+    Swal.fire({
+      icon: "success",
+      title: "Kira Semula Selesai",
+      text: `Semua minggu persekolahan telah disusun secara berurutan (1 hingga ${db.config.school.totalWeeks}) dengan melangkau minggu cuti.`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  }
+
+  // Jana semula senarai Jumaat daripada tarikh mula buka sekolah
+  function generateSchoolFridays(firstFridayStr, totalCount) {
+    const startD = new Date(firstFridayStr + "T00:00:00");
+    const newFridays = [];
+
+    for (let i = 0; i < totalCount; i++) {
+      const curD = new Date(startD);
+      curD.setDate(startD.getDate() + (i * 7));
+
+      const year = curD.getFullYear();
+      const month = String(curD.getMonth() + 1).padStart(2, "0");
+      const day = String(curD.getDate()).padStart(2, "0");
+      const dateStr = `${year}-${month}-${day}`;
+      const labelStr = formatMalayDateLabel(curD);
+
+      newFridays.push({
+        minggu: i + 1,
+        tarikh: dateStr,
+        label: labelStr,
+        isCuti: false,
+        cutiName: ""
+      });
+    }
+
+    db.config.fridays2026 = newFridays;
+    db.config.school.totalWeeks = totalCount;
+    db.config.school.firstFriday = firstFridayStr;
+    saveErphDatabase(db);
+
+    initWeekOptions();
+    renderCalendarFridays();
+    renderAdminWeeksTable();
+    renderMonitoringColumns();
+    updateFridayDisplay();
+  }
+
+  // Render Jadual Pengurusan Takwim di Konsol Super Admin
+  function renderAdminWeeksTable() {
+    const tbody = elements.adminWeeksTbody;
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const query = (elements.adminSearchWeek ? elements.adminSearchWeek.value : "").toLowerCase().trim();
+
+    const activeWeeks = db.config.fridays2026.filter(f => !f.isCuti);
+    const holidayWeeks = db.config.fridays2026.filter(f => f.isCuti);
+
+    if (elements.adminTotalFridaysCount) elements.adminTotalFridaysCount.textContent = db.config.fridays2026.length;
+    if (elements.adminActiveWeeksCount) elements.adminActiveWeeksCount.textContent = activeWeeks.length;
+    if (elements.adminHolidayWeeksCount) elements.adminHolidayWeeksCount.textContent = holidayWeeks.length;
+
+    db.config.fridays2026.forEach((f, originalIdx) => {
+      // Filter search
+      const weekStr = f.minggu ? `minggu ${f.minggu} m${f.minggu}` : "cuti";
+      const cutiStr = (f.cutiName || "").toLowerCase();
+      const dateStr = f.tarikh.toLowerCase();
+      const labelStr = f.label.toLowerCase();
+
+      if (query && !weekStr.includes(query) && !cutiStr.includes(query) && !dateStr.includes(query) && !labelStr.includes(query)) {
+        return;
+      }
+
+      const isCuti = Boolean(f.isCuti);
+      const isCurrentSchoolWeek = (f.minggu === state.activeWeek);
+
+      const tr = document.createElement("tr");
+      tr.className = `transition ${isCuti ? 'bg-amber-50/40 hover:bg-amber-50' : isCurrentSchoolWeek ? 'bg-sky-50/60 font-bold' : 'hover:bg-slate-50'}`;
+
+      tr.innerHTML = `
+        <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-400 text-xs">${originalIdx + 1}</td>
+        <td class="py-2.5 px-3">
+          <input type="date" class="admin-row-date border border-slate-300 rounded px-2 py-1 text-xs font-mono bg-white focus:ring-1 focus:ring-sky-500" value="${f.tarikh}" data-idx="${originalIdx}">
+        </td>
+        <td class="py-2.5 px-3 font-semibold text-slate-700 whitespace-nowrap admin-row-label-text">
+          ${f.label}
+        </td>
+        <td class="py-2.5 px-3">
+          ${isCuti ? `
+            <span class="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-900 font-black text-[11px] border border-amber-300">
+              🏖️ CUTI
+            </span>
+          ` : `
+            <div class="flex items-center space-x-1.5">
+              <span class="text-slate-400 font-black text-xs">M</span>
+              <input type="number" class="admin-row-week-input w-16 border border-slate-300 rounded px-2 py-1 text-xs font-black font-mono text-center bg-white focus:ring-2 focus:ring-amber-500" value="${f.minggu || ''}" min="1" max="60" data-idx="${originalIdx}" title="Ubah nombor minggu & tekan Enter untuk auto-cascade">
+            </div>
+          `}
+        </td>
+        <td class="py-2.5 px-3">
+          <select class="admin-row-cuti-select border rounded px-2 py-1 text-xs font-bold ${isCuti ? 'bg-amber-100 border-amber-300 text-amber-950' : 'bg-emerald-50 border-emerald-300 text-emerald-900'} cursor-pointer" data-idx="${originalIdx}">
+            <option value="false" ${!isCuti ? 'selected' : ''}>🟢 Persekolahan (Wajib e-RPH)</option>
+            <option value="true" ${isCuti ? 'selected' : ''}>🏖️ Cuti Sekolah (Dikecualikan)</option>
+          </select>
+        </td>
+        <td class="py-2.5 px-3">
+          <input type="text" class="admin-row-cuti-name border border-slate-300 rounded px-2 py-1 text-xs w-full ${isCuti ? 'bg-white font-bold text-amber-900' : 'bg-slate-50 text-slate-400'}" placeholder="${isCuti ? 'cth: Cuti Penggal 1...' : '— (Minggu Biasa)'}" value="${f.cutiName || ''}" data-idx="${originalIdx}" ${!isCuti ? 'disabled' : ''}>
+        </td>
+        <td class="py-2.5 px-3 text-center">
+          <div class="flex items-center justify-center gap-1.5">
+            <button type="button" class="btn-cascade-from-row px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded font-bold text-[10px] transition flex items-center gap-1 cursor-pointer" data-idx="${originalIdx}" title="Kira semula urutan minggu-minggu seterusnya dari sini">
+              <i data-lucide="zap" class="w-3 h-3 text-amber-600"></i>
+              <span>Auto-Cascade</span>
+            </button>
+            <button type="button" class="btn-delete-week-row p-1 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded transition cursor-pointer" data-idx="${originalIdx}" title="Padam baris Jumaat ini">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </td>
+      `;
+
+      // Event listener: Edit nombor minggu (Contoh dari 35 tukar ke 30 -> auto-cascade 31, 32, 33...)
+      const inputWeek = tr.querySelector(".admin-row-week-input");
+      if (inputWeek) {
+        inputWeek.addEventListener("change", (e) => {
+          const val = parseInt(e.target.value);
+          if (!isNaN(val) && val > 0) {
+            cascadeRenumberWeeks(originalIdx, val);
+          }
+        });
+        inputWeek.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const val = parseInt(e.target.value);
+            if (!isNaN(val) && val > 0) {
+              cascadeRenumberWeeks(originalIdx, val);
+            }
+          }
+        });
+      }
+
+      // Event listener: Tukar jenis minggu (Persekolahan vs Cuti Sekolah)
+      const selectCuti = tr.querySelector(".admin-row-cuti-select");
+      if (selectCuti) {
+        selectCuti.addEventListener("change", (e) => {
+          const targetCuti = (e.target.value === "true");
+          const targetItem = db.config.fridays2026[originalIdx];
+          targetItem.isCuti = targetCuti;
+          if (targetCuti) {
+            if (!targetItem.cutiName) targetItem.cutiName = "Cuti Persekolahan";
+            cascadeRenumberWeeks(originalIdx, null);
+          } else {
+            // Kembali ke minggu persekolahan
+            let prevW = 0;
+            for (let k = originalIdx - 1; k >= 0; k--) {
+              if (!db.config.fridays2026[k].isCuti && db.config.fridays2026[k].minggu) {
+                prevW = db.config.fridays2026[k].minggu;
+                break;
+              }
+            }
+            cascadeRenumberWeeks(originalIdx, prevW + 1);
+          }
+        });
+      }
+
+      // Event listener: Edit nama cuti
+      const inputCutiName = tr.querySelector(".admin-row-cuti-name");
+      if (inputCutiName) {
+        inputCutiName.addEventListener("change", (e) => {
+          db.config.fridays2026[originalIdx].cutiName = e.target.value.trim();
+          saveErphDatabase(db);
+          initWeekOptions();
+          updateFridayDisplay();
+        });
+      }
+
+      // Event listener: Edit tarikh Jumaat
+      const inputDate = tr.querySelector(".admin-row-date");
+      if (inputDate) {
+        inputDate.addEventListener("change", (e) => {
+          const newDate = e.target.value;
+          if (newDate) {
+            db.config.fridays2026[originalIdx].tarikh = newDate;
+            db.config.fridays2026[originalIdx].label = formatMalayDateLabel(newDate);
+            saveErphDatabase(db);
+            initWeekOptions();
+            renderCalendarFridays();
+            renderAdminWeeksTable();
+            updateFridayDisplay();
+          }
+        });
+      }
+
+      // Event listener: Butang Auto-Cascade dari baris ini
+      const btnCascade = tr.querySelector(".btn-cascade-from-row");
+      if (btnCascade) {
+        btnCascade.addEventListener("click", () => {
+          const curWeek = f.minggu || null;
+          cascadeRenumberWeeks(originalIdx, curWeek);
+        });
+      }
+
+      // Event listener: Padam baris Jumaat
+      const btnDelete = tr.querySelector(".btn-delete-week-row");
+      if (btnDelete) {
+        btnDelete.addEventListener("click", () => {
+          Swal.fire({
+            title: "Padam Baris Jumaat?",
+            text: `Padam ${f.label} (${isCuti ? f.cutiName : 'Minggu ' + f.minggu}) dari takwim?`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Ya, Padam",
+            cancelButtonText: "Batal",
+            confirmButtonColor: "#ef4444"
+          }).then(res => {
+            if (res.isConfirmed) {
+              db.config.fridays2026.splice(originalIdx, 1);
+              autoCascadeAllWeeks();
+            }
+          });
+        });
+      }
+
+      tbody.appendChild(tr);
+    });
+
+    lucide.createIcons();
+  }
+
+  // ==============================================================
   // TAB 6: KONSOL PENTADBIR SISTEM (SUPER ADMIN)
   // ==============================================================
   function renderAdminConsole() {
+    // 1. Muatkan Tetapan Takwim Sesi
+    if (elements.adminSchoolStartDate) {
+      elements.adminSchoolStartDate.value = db.config.school.startDate || "2026-01-05";
+    }
+    if (elements.adminFirstFridayDate) {
+      elements.adminFirstFridayDate.value = db.config.school.firstFriday || "2026-01-09";
+    }
+    if (elements.adminTotalWeeksInput) {
+      elements.adminTotalWeeksInput.value = db.config.school.totalWeeks || 43;
+    }
+    if (elements.adminCurrentWeekInput) {
+      elements.adminCurrentWeekInput.value = db.config.school.currentWeek || state.activeWeek || 7;
+    }
+
+    // 2. Render Jadual Takwim & Urutan Minggu
+    renderAdminWeeksTable();
+
+    // 3. Render Jadual Staf Master
     const tbody = elements.adminStaffTbody;
     tbody.innerHTML = "";
 
@@ -2202,12 +2730,12 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         "No. Kad Pengenalan": s.ic,
         "Sesi": s.session,
         "Pentadbir Penyelia": sup.name,
-        "Minggu": `Minggu ${weekNum}`,
+        "Minggu": fInfo.isCuti ? `[CUTI] ${fInfo.cutiName || 'Cuti Persekolahan'}` : `Minggu ${fInfo.minggu || weekNum}`,
         "Tarikh Jumaat": fInfo.label,
-        "Status e-RPH": isH ? "HIJAU (BERJAYA UPLOAD)" : "MERAH (BELUM UPLOAD)",
-        "Waktu Kemaskini": isH ? up.uploadedAt : "—",
-        "Nama Fail / Pautan": isH ? (up.fileUrl || up.fileName) : "—",
-        "Ulasan Pentadbir": isH ? (up.ulasan || "Menunggu Semakan") : "—"
+        "Status e-RPH": fInfo.isCuti ? "DIKECUALIKAN (CUTI SEKOLAH)" : (isH ? "HIJAU (BERJAYA UPLOAD)" : "MERAH (BELUM UPLOAD)"),
+        "Waktu Kemaskini": fInfo.isCuti ? "— (Cuti Persekolahan)" : (isH ? up.uploadedAt : "—"),
+        "Nama Fail / Pautan": fInfo.isCuti ? "Dikecualikan" : (isH ? (up.fileUrl || up.fileName) : "—"),
+        "Ulasan Pentadbir": fInfo.isCuti ? (fInfo.cutiName || "Cuti Persekolahan") : (isH ? (up.ulasan || "Menunggu Semakan") : "—")
       };
     });
 
@@ -2245,12 +2773,148 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   });
 
   elements.headerWeekSelect.addEventListener("change", (e) => {
-    state.activeWeek = parseInt(e.target.value);
+    const val = e.target.value;
+    state.activeWeek = (typeof val === "string" && val.startsWith("cuti-")) ? val : (parseInt(val) || val);
     updateFridayDisplay();
     renderMonitoringColumns();
     if (state.activeTab === "portal-guru") renderTeacherPortal();
     if (state.activeTab === "konsol-admin") renderAdminConsole();
   });
+
+  // ==============================================================
+  // EVENT LISTENERS PENGURUSAN TAKWIM SESI & AUTO-CASCADE
+  // ==============================================================
+
+  // 1. Simpan Tetapan Sesi Persekolahan
+  if (elements.btnAdminSaveSession) {
+    elements.btnAdminSaveSession.addEventListener("click", () => {
+      const sDate = elements.adminSchoolStartDate.value;
+      const fDate = elements.adminFirstFridayDate.value;
+      const tWeeks = parseInt(elements.adminTotalWeeksInput.value) || 43;
+      const cWeek = parseInt(elements.adminCurrentWeekInput.value) || 7;
+
+      db.config.school.startDate = sDate;
+      db.config.school.firstFriday = fDate;
+      db.config.school.totalWeeks = tWeeks;
+      db.config.school.currentWeek = cWeek;
+      saveErphDatabase(db);
+
+      Swal.fire({
+        icon: "success",
+        title: "Tetapan Sesi Disimpan",
+        text: `Tarikh Buka Sekolah: ${sDate || 'Ditetapkan'} • Minggu Semasa: M${cWeek}`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+      initWeekOptions();
+      updateFridayDisplay();
+      renderMonitoringColumns();
+    });
+  }
+
+  // 2. Apabila Admin ubah Tarikh Mula Buka Sekolah, automatik hitung Tarikh Jumaat Pertama
+  if (elements.adminSchoolStartDate) {
+    elements.adminSchoolStartDate.addEventListener("change", (e) => {
+      const val = e.target.value;
+      if (val) {
+        const d = new Date(val + "T00:00:00");
+        const day = d.getDay(); // 0=Ahad, 1=Isnin, 5=Jumaat
+        const diff = (5 - day + 7) % 7;
+        d.setDate(d.getDate() + diff);
+
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const dayStr = String(d.getDate()).padStart(2, "0");
+        if (elements.adminFirstFridayDate) {
+          elements.adminFirstFridayDate.value = `${y}-${m}-${dayStr}`;
+        }
+      }
+    });
+  }
+
+  // 3. Jana Semula Tarikh Jumaat Takwim
+  if (elements.btnAdminGenerateFridays) {
+    elements.btnAdminGenerateFridays.addEventListener("click", () => {
+      const fDate = elements.adminFirstFridayDate ? elements.adminFirstFridayDate.value : "2026-01-09";
+      const tWeeks = elements.adminTotalWeeksInput ? (parseInt(elements.adminTotalWeeksInput.value) || 43) : 43;
+
+      if (!fDate) {
+        Swal.fire("Sila Pilih Tarikh", "Sila masukkan tarikh Jumaat pertama sesi persekolahan.", "warning");
+        return;
+      }
+
+      Swal.fire({
+        title: "Jana Semula Takwim Jumaat?",
+        text: `Sistem akan menjana semula ${tWeeks} tarikh Jumaat (setiap 7 hari) bermula dari ${fDate}.`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Ya, Jana Takwim",
+        cancelButtonText: "Batal",
+        confirmButtonColor: "#0284c7"
+      }).then(res => {
+        if (res.isConfirmed) {
+          generateSchoolFridays(fDate, tWeeks);
+          Swal.fire("Selesai", `Sebanyak ${tWeeks} tarikh Jumaat berjaya dijana dan dikira secara berurutan.`, "success");
+        }
+      });
+    });
+  }
+
+  // 4. Auto-Cascade Semua Minggu
+  if (elements.btnAdminAutoCascadeAll) {
+    elements.btnAdminAutoCascadeAll.addEventListener("click", () => {
+      autoCascadeAllWeeks();
+    });
+  }
+
+  // 5. Tambah Baris Jumaat Baru
+  if (elements.btnAdminAddWeekRow) {
+    elements.btnAdminAddWeekRow.addEventListener("click", () => {
+      let nextDate = new Date();
+      if (db.config.fridays2026.length > 0) {
+        const last = db.config.fridays2026[db.config.fridays2026.length - 1];
+        nextDate = new Date(last.tarikh + "T00:00:00");
+        nextDate.setDate(nextDate.getDate() + 7);
+      }
+      const y = nextDate.getFullYear();
+      const m = String(nextDate.getMonth() + 1).padStart(2, "0");
+      const d = String(nextDate.getDate()).padStart(2, "0");
+      const dateStr = `${y}-${m}-${d}`;
+      const labelStr = formatMalayDateLabel(nextDate);
+
+      const maxW = Math.max(0, ...db.config.fridays2026.filter(f => !f.isCuti && f.minggu).map(f => f.minggu));
+
+      db.config.fridays2026.push({
+        minggu: maxW + 1,
+        tarikh: dateStr,
+        label: labelStr,
+        isCuti: false,
+        cutiName: ""
+      });
+      db.config.school.totalWeeks = maxW + 1;
+      saveErphDatabase(db);
+
+      initWeekOptions();
+      renderCalendarFridays();
+      renderAdminWeeksTable();
+      updateFridayDisplay();
+
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: "Baris Ditambah",
+        text: `Minggu ${maxW + 1} (${labelStr}) telah ditambah ke dalam takwim.`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    });
+  }
+
+  // 6. Carian Minggu Takwim
+  if (elements.adminSearchWeek) {
+    elements.adminSearchWeek.addEventListener("input", renderAdminWeeksTable);
+  }
 
   elements.navBtnAdminConsole.addEventListener("click", (e) => {
     e.preventDefault();
