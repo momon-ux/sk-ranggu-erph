@@ -227,4 +227,9 @@ body {
     border: 1px solid #334155 !important;
     padding: 2px 2px !important;
   }
+
+  .teacher-monitor-row {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
 }

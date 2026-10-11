@@ -17,6 +17,10 @@ document.addEventListener("DOMContentLoaded", () => {
     currentUser: null, // Null secara default sehingga pengguna log masuk
     isSuperAdminAuthenticated: false,
     filterSearch: "",
+    monitoringViewMode: "baris", // "baris" (Default) | "jadual" | "kolum"
+    monitoringSearch: "",
+    monitoringPentadbirFilter: "ALL", // "ALL" | "1" | "2" | "3" | "4" | "5"
+    monitoringStatusFilter: "ALL", // "ALL" | "HIJAU" | "MERAH"
     timetableMode: "guru", // "guru" | "kelas" | "induk"
     timetableSelectedGuru: null,
     timetableSelectedKelas: "4 I",
@@ -426,6 +430,13 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     statTotalMerah: document.getElementById("stat-total-merah"),
     statTotalPct: document.getElementById("stat-total-pct"),
     pentadbirColumnsWrapper: document.getElementById("pentadbir-columns-wrapper"),
+    btnViewModeBaris: document.getElementById("btn-view-mode-baris"),
+    btnViewModeJadual: document.getElementById("btn-view-mode-jadual"),
+    btnViewModeKolum: document.getElementById("btn-view-mode-kolum"),
+    monitoringSearchInput: document.getElementById("monitoring-search-input"),
+    btnClearMonitoringSearch: document.getElementById("btn-clear-monitoring-search"),
+    monitoringPentadbirFilterGroup: document.getElementById("monitoring-pentadbir-filter-group"),
+    monitoringStatusFilterGroup: document.getElementById("monitoring-status-filter-group"),
 
     // Tab 2 Portal Guru Elements
     portalAvatarWrapper: document.getElementById("portal-avatar-wrapper"),
@@ -1232,6 +1243,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     }
 
     const container = elements.pentadbirColumnsWrapper;
+    if (!container) return;
     container.innerHTML = "";
 
     const activeFriday = getFridayInfo(state.activeWeek);
@@ -1241,7 +1253,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     // Paparkan Notis Banner Pengecualian Cuti Persekolahan
     if (isHolidayWeek) {
       const holidayBanner = document.createElement("div");
-      holidayBanner.className = "col-span-full mb-2 p-4 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs";
+      holidayBanner.className = "col-span-full mb-3 p-4 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs";
       holidayBanner.innerHTML = `
         <div class="flex items-center space-x-3.5">
           <div class="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold text-xl shadow-xs flex-shrink-0">
@@ -1263,20 +1275,9 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       container.appendChild(holidayBanner);
     }
 
-    // Ambil semua guru aktif
+    // Ambil data guru aktif & rekod penghantaran minggu ini
     const activeTeachers = db.staffList.filter(s => s.status === "Aktif");
     const weekUploads = db.uploads.filter(u => u.minggu === weekNum);
-
-    // Tentukan lajur yang dipaparkan mengikut peranan
-    let columnsToRender = db.pentadbir;
-    if (isGpk) {
-      // GPK HANYA DAPAT MELIHAT LAJUR SELIAAN BELIAU SENDIRI SAHAJA!
-      columnsToRender = db.pentadbir.filter(col => col.id === state.currentUser.id);
-      elements.pentadbirColumnsWrapper.className = "max-w-2xl mx-auto w-full space-y-4";
-    } else {
-      // Guru Besar & Super Admin melihat kesemua 5 lajur
-      elements.pentadbirColumnsWrapper.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-start";
-    }
 
     // Kira statistik paparan
     let targetStaffForStats = [];
@@ -1302,205 +1303,672 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     const totalActive = targetStaffForStats.length || 1;
     const overallPct = isHolidayWeek ? 100 : Math.round((totalHijau / totalActive) * 100);
 
-    if (isHolidayWeek) {
-      elements.statTotalHijau.textContent = "Cuti Persekolahan";
-      elements.statTotalMerah.textContent = "0 Guru Tertunggak (Dikecualikan)";
-      elements.statTotalPct.textContent = "100% Cuti Sekolah";
-    } else if (isGpk) {
-      elements.statTotalHijau.textContent = `${totalHijau} Guru Seliaan Hijau`;
-      elements.statTotalMerah.textContent = `${totalMerah} Guru Seliaan Merah`;
-      elements.statTotalPct.textContent = `${overallPct}% Selesai`;
-    } else {
-      elements.statTotalHijau.textContent = `${totalHijau} Guru Hijau (Sekolah)`;
-      elements.statTotalMerah.textContent = `${totalMerah} Guru Merah (Sekolah)`;
-      elements.statTotalPct.textContent = `${overallPct}% Keseluruhan`;
+    if (elements.statTotalHijau && elements.statTotalMerah && elements.statTotalPct) {
+      if (isHolidayWeek) {
+        elements.statTotalHijau.textContent = "Cuti Persekolahan";
+        elements.statTotalMerah.textContent = "0 Guru Tertunggak (Dikecualikan)";
+        elements.statTotalPct.textContent = "100% Cuti Sekolah";
+      } else if (isGpk) {
+        elements.statTotalHijau.textContent = `${totalHijau} Guru Seliaan Hijau`;
+        elements.statTotalMerah.textContent = `${totalMerah} Guru Seliaan Merah`;
+        elements.statTotalPct.textContent = `${overallPct}% Selesai`;
+      } else {
+        elements.statTotalHijau.textContent = `${totalHijau} Guru Hijau (Sekolah)`;
+        elements.statTotalMerah.textContent = `${totalMerah} Guru Merah (Sekolah)`;
+        elements.statTotalPct.textContent = `${overallPct}% Keseluruhan`;
+      }
     }
 
-    // Render setiap lajur yang dibenarkan
-    columnsToRender.forEach(col => {
-      // Cari guru-guru seliaan di bawah pentadbir ini
-      let columnStaff = [];
-      if (col.id === 1) {
-        // Guru Besar menyelia 4 Penolong Kanan + rekod Guru Besar sendiri
-        const gpkStaff = db.staffList.filter(s => [2, 3, 4, 5].includes(s.id));
-        const gbRecord = db.staffList.filter(s => s.id === 1);
-        columnStaff = [...gbRecord, ...gpkStaff];
-      } else {
-        columnStaff = db.staffList.filter(s => s.supervisorId === col.id && s.status === "Aktif");
-      }
+    // KEMASKINI GAYA BUTANG TOOLBAR MOD PAPARAN & PENAPIS
+    if (elements.btnViewModeBaris && elements.btnViewModeJadual && elements.btnViewModeKolum) {
+      const mode = state.monitoringViewMode;
+      elements.btnViewModeBaris.className = (mode === "baris")
+        ? "px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center space-x-1.5 bg-sky-600 text-white shadow-xs cursor-pointer"
+        : "px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 text-slate-700 hover:text-slate-950 cursor-pointer";
 
-      // Kira bilangan hijau & merah dalam lajur ini
-      let colHijau = 0;
-      let colMerah = 0;
-      if (isHolidayWeek) {
-        colHijau = columnStaff.length;
-        colMerah = 0;
+      elements.btnViewModeJadual.className = (mode === "jadual")
+        ? "px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center space-x-1.5 bg-sky-600 text-white shadow-xs cursor-pointer"
+        : "px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 text-slate-700 hover:text-slate-950 cursor-pointer";
+
+      elements.btnViewModeKolum.className = (mode === "kolum")
+        ? "px-3.5 py-1.5 rounded-lg text-xs font-black transition flex items-center space-x-1.5 bg-sky-600 text-white shadow-xs cursor-pointer"
+        : "px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 text-slate-700 hover:text-slate-950 cursor-pointer";
+    }
+
+    // Kawal Penapis Pentadbir (Jika GPK, sembunyikan penapis pentadbir lain)
+    if (elements.monitoringPentadbirFilterGroup) {
+      if (isGpk) {
+        elements.monitoringPentadbirFilterGroup.classList.add("hidden");
       } else {
-        columnStaff.forEach(s => {
-          const up = weekUploads.find(u => u.guruId === s.id);
-          if (up && up.status === "HIJAU") colHijau++;
-          else colMerah++;
+        elements.monitoringPentadbirFilterGroup.classList.remove("hidden");
+        document.querySelectorAll(".btn-filter-pentadbir").forEach(btn => {
+          const val = btn.dataset.pentadbirFilter;
+          if (val === String(state.monitoringPentadbirFilter)) {
+            btn.className = "btn-filter-pentadbir px-2.5 py-1 rounded-lg text-xs font-black transition bg-slate-900 text-white shadow-2xs";
+          } else {
+            btn.className = "btn-filter-pentadbir px-2.5 py-1 rounded-lg text-xs font-bold transition bg-slate-100 hover:bg-slate-200 text-slate-700";
+          }
         });
       }
-      const colTotal = columnStaff.length || 1;
-      const colPct = isHolidayWeek ? 100 : Math.round((colHijau / colTotal) * 100);
+    }
 
-      // Cipta Elemen Lajur
-      const colCard = document.createElement("div");
-      colCard.className = "bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col";
+    // Butang Penapis Status e-RPH
+    document.querySelectorAll(".btn-filter-status").forEach(btn => {
+      const val = btn.dataset.statusFilter;
+      if (val === state.monitoringStatusFilter) {
+        if (val === "HIJAU") {
+          btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-black transition bg-emerald-600 text-white shadow-2xs";
+        } else if (val === "MERAH") {
+          btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-black transition bg-rose-600 text-white shadow-2xs";
+        } else {
+          btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-black transition bg-slate-900 text-white shadow-2xs";
+        }
+      } else {
+        if (val === "HIJAU") {
+          btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200";
+        } else if (val === "MERAH") {
+          btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200";
+        } else {
+          btn.className = "btn-filter-status px-2.5 py-1 rounded-lg text-xs font-bold transition bg-slate-100 hover:bg-slate-200 text-slate-700";
+        }
+      }
+    });
 
-      // Header Lajur
-      colCard.innerHTML = `
-        <div class="${col.headerBg} text-white p-3.5 space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="text-[9px] font-black uppercase tracking-wider bg-black/20 px-2 py-0.5 rounded-full">${col.shortTitle}</span>
-            <span class="text-[11px] font-black">${isHolidayWeek ? `${columnStaff.length}/${columnStaff.length} (Cuti 100%)` : `${colHijau}/${columnStaff.length} Hantar (${colPct}%)`}</span>
+    // Butang Kosongkan Carian
+    if (elements.btnClearMonitoringSearch) {
+      if (state.monitoringSearch) {
+        elements.btnClearMonitoringSearch.classList.remove("hidden");
+      } else {
+        elements.btnClearMonitoringSearch.classList.add("hidden");
+      }
+    }
+
+    // Tentukan Kumpulan Pentadbir yang dipaparkan
+    let columnsToRender = db.pentadbir;
+    if (isGpk) {
+      columnsToRender = db.pentadbir.filter(col => col.id === state.currentUser.id);
+    } else if (state.monitoringPentadbirFilter !== "ALL") {
+      columnsToRender = db.pentadbir.filter(col => String(col.id) === String(state.monitoringPentadbirFilter));
+    }
+
+    // Fungsi Penapis Senarai Guru (Carian & Status)
+    function filterTeacherList(staffArr) {
+      return staffArr.filter(teacher => {
+        // 1. Penapis Status
+        if (state.monitoringStatusFilter !== "ALL") {
+          const up = weekUploads.find(u => u.guruId === teacher.id);
+          const isUp = Boolean(up && up.status === "HIJAU");
+          if (state.monitoringStatusFilter === "HIJAU" && !isUp) return false;
+          if (state.monitoringStatusFilter === "MERAH" && isUp) return false;
+        }
+
+        // 2. Penapis Kata Kunci Carian
+        if (state.monitoringSearch) {
+          const q = state.monitoringSearch.toLowerCase().trim();
+          const matchName = (teacher.name || "").toLowerCase().includes(q);
+          const matchCode = (teacher.code || "").toLowerCase().includes(q);
+          const matchRole = (teacher.role || "").toLowerCase().includes(q);
+          const matchIc = (teacher.ic || "").toLowerCase().includes(q);
+          if (!matchName && !matchCode && !matchRole && !matchIc) return false;
+        }
+
+        return true;
+      });
+    }
+
+    // =========================================================================
+    // MOD 1: PAPARAN BARIS MENGIKUT PENTADBIR (DEFAULT - SEMUA NAMA KELIHATAN)
+    // =========================================================================
+    if (state.monitoringViewMode === "baris") {
+      container.className = "space-y-5 w-full";
+
+      columnsToRender.forEach(col => {
+        let rawStaff = [];
+        if (col.id === 1) {
+          const gpkStaff = db.staffList.filter(s => [2, 3, 4, 5].includes(s.id));
+          const gbRecord = db.staffList.filter(s => s.id === 1);
+          rawStaff = [...gbRecord, ...gpkStaff];
+        } else {
+          rawStaff = db.staffList.filter(s => s.supervisorId === col.id && s.status === "Aktif");
+        }
+
+        // Statistik Pentadbir Ini
+        let colHijau = 0;
+        let colMerah = 0;
+        if (isHolidayWeek) {
+          colHijau = rawStaff.length;
+          colMerah = 0;
+        } else {
+          rawStaff.forEach(s => {
+            const up = weekUploads.find(u => u.guruId === s.id);
+            if (up && up.status === "HIJAU") colHijau++;
+            else colMerah++;
+          });
+        }
+        const colTotal = rawStaff.length || 1;
+        const colPct = isHolidayWeek ? 100 : Math.round((colHijau / colTotal) * 100);
+
+        // Tapis mengikut carian & status
+        const filteredStaff = filterTeacherList(rawStaff);
+        if (filteredStaff.length === 0 && (state.monitoringSearch || state.monitoringStatusFilter !== "ALL")) {
+          // Jika tiada hasil dalam kumpulan ini semasa menapis, teruskan ke pentadbir lain
+          return;
+        }
+
+        // Cipta Kad Seksyen Baris Pentadbir
+        const sectionCard = document.createElement("div");
+        sectionCard.className = "bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col";
+
+        // Header Seksyen Pentadbir
+        const headerDiv = document.createElement("div");
+        headerDiv.className = `${col.headerBg} text-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs`;
+        headerDiv.innerHTML = `
+          <div class="flex items-center gap-3.5">
+            <span class="text-xs font-black uppercase tracking-wider bg-black/25 px-3 py-1.5 rounded-xl border border-white/20 shadow-xs flex-shrink-0">${col.shortTitle}</span>
+            <div>
+              <h3 class="font-black text-sm sm:text-base tracking-wide leading-tight break-words">${col.name}</h3>
+              <p class="text-xs text-white/90 font-medium break-words mt-0.5">${col.role}</p>
+            </div>
           </div>
-          <h3 class="font-black text-xs sm:text-sm tracking-wide leading-tight truncate" title="${col.name}">${col.name}</h3>
-          <p class="text-[10px] text-white/80 font-medium">${col.role}</p>
+          <div class="flex items-center gap-2 self-start sm:self-auto">
+            <div class="bg-black/20 backdrop-blur-xs px-3.5 py-1.5 rounded-xl border border-white/10 text-right">
+              <div class="text-[9.5px] uppercase font-bold text-white/80">Kadar Penghantaran</div>
+              <div class="text-xs sm:text-sm font-black">${isHolidayWeek ? `${rawStaff.length}/${rawStaff.length} Guru (Cuti 100%)` : `${colHijau}/${rawStaff.length} Guru (${colPct}%)`}</div>
+            </div>
+          </div>
+        `;
+        sectionCard.appendChild(headerDiv);
+
+        // Bekas Senarai Baris Guru
+        const listDiv = document.createElement("div");
+        listDiv.className = "divide-y divide-slate-100";
+
+        if (filteredStaff.length === 0) {
+          listDiv.innerHTML = `
+            <div class="p-6 text-center text-xs text-slate-500 font-medium bg-slate-50">
+              Tiada guru yang sepadan dengan kriteria carian atau penapis dalam kumpulan ini.
+            </div>
+          `;
+        } else {
+          filteredStaff.forEach((teacher, idx) => {
+            const isTeacherGb = (teacher.id === 1);
+            const canViewGbFolder = ((state.currentUser && state.currentUser.id === 1) || isSuper);
+            const up = weekUploads.find(u => u.guruId === teacher.id);
+            const isUploaded = (up && up.status === "HIJAU");
+
+            let timestampDisplay = "Belum memuat naik e-RPH";
+            if (isHolidayWeek) {
+              timestampDisplay = `Cuti Persekolahan (Dikecualikan)`;
+            } else if (isUploaded && up.uploadedAt) {
+              timestampDisplay = `Dikemaskini: ${up.uploadedAt}`;
+            }
+
+            const rowDiv = document.createElement("div");
+            rowDiv.className = `teacher-monitor-row p-3.5 sm:p-4 hover:bg-slate-50/90 transition flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 ${isHolidayWeek ? 'bg-amber-50/20' : isUploaded ? 'bg-emerald-50/25' : 'bg-rose-50/25'}`;
+
+            rowDiv.innerHTML = `
+              <!-- Maklumat Utama Guru (Foto, Kod, Sesi, Nama Penuh Tanpa Terpotong & Jawatan) -->
+              <div class="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+                <span class="text-xs font-mono font-bold text-slate-400 w-6 text-center flex-shrink-0 pt-1 sm:pt-0">${idx + 1}</span>
+                
+                ${teacher.avatar ? `
+                  <img src="${teacher.avatar}" alt="${teacher.name}" class="w-11 h-11 rounded-2xl object-cover flex-shrink-0 border-2 border-slate-200 shadow-xs">
+                ` : `
+                  <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-sm flex items-center justify-center flex-shrink-0 shadow-xs border-2 border-sky-300">
+                    ${teacher.name.charAt(0)}
+                  </div>
+                `}
+
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2 mb-0.5">
+                    <span class="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
+                      ${teacher.code}
+                    </span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">
+                      ${teacher.session || 'Pagi'}
+                    </span>
+                  </div>
+
+                  <!-- NAMA GURU PENUH: TIADA TRUNCATE! SEMUA HURUF KELIHATAN DENGAN JELAS -->
+                  <h4 class="font-black text-sm sm:text-base text-slate-900 break-words leading-snug">
+                    ${teacher.name}
+                  </h4>
+                  <p class="text-xs text-slate-600 font-medium break-words mt-0.5">
+                    ${teacher.role} • No. K/P: <span class="font-mono text-slate-500">${teacher.ic || '-'}</span>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Maklumat Masa, Badge Status & Tindakan -->
+              <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 flex-shrink-0 self-stretch sm:self-auto justify-between sm:justify-end border-t lg:border-t-0 pt-2.5 lg:pt-0 border-slate-100">
+                <div class="text-left sm:text-right min-w-[130px]">
+                  <div class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Tarikh & Waktu</div>
+                  <div class="text-xs font-semibold ${isHolidayWeek ? 'text-amber-800' : isUploaded ? 'text-emerald-800 font-bold' : 'text-slate-500'}">
+                    ${timestampDisplay}
+                  </div>
+                </div>
+
+                <!-- Status Badge -->
+                <div class="w-36 sm:w-44 text-center">
+                  ${isHolidayWeek ? `
+                    <div class="w-full py-2 px-3 rounded-xl bg-amber-500 text-white font-black text-xs shadow-xs flex items-center justify-center gap-1.5">
+                      <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+                      <span>CUTI SEKOLAH</span>
+                    </div>
+                  ` : isUploaded ? `
+                    <div class="w-full py-2 px-3 rounded-xl bg-emerald-600 text-white font-black text-xs shadow-xs flex items-center justify-center gap-1.5">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                      <span>HIJAU - BERJAYA</span>
+                    </div>
+                  ` : `
+                    <div class="w-full py-2 px-3 rounded-xl bg-rose-600 text-white font-black text-xs shadow-xs flex items-center justify-center gap-1.5">
+                      <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                      <span>MERAH - BELUM HANTAR</span>
+                    </div>
+                  `}
+                </div>
+
+                <!-- Butang Tindakan -->
+                <div class="flex items-center gap-1.5">
+                  ${(isTeacherGb && !canViewGbFolder) ? `
+                    <span class="text-[10px] text-slate-400 italic px-2.5 py-1.5 bg-slate-100 rounded-lg">Folder Sulit GB</span>
+                  ` : `
+                    <button data-teacher-id="${teacher.id}" class="btn-open-review px-3 py-2 rounded-xl ${isUploaded ? 'bg-sky-600 hover:bg-sky-700 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'} font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+                      <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+                      <span>${isUploaded ? 'Buka e-RPH' : 'Perincian'}</span>
+                    </button>
+                  `}
+
+                  ${isSuper ? `
+                    <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau <-> Merah)" class="btn-toggle-status-super p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer">
+                      <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-amber-600"></i>
+                    </button>
+                    ${isUploaded ? `
+                      <button data-teacher-id="${teacher.id}" title="Padam e-RPH Senyap" class="btn-silent-delete-super p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    ` : ''}
+                  ` : ''}
+                </div>
+              </div>
+            `;
+
+            listDiv.appendChild(rowDiv);
+          });
+        }
+
+        sectionCard.appendChild(listDiv);
+        container.appendChild(sectionCard);
+      });
+
+      if (container.children.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center text-slate-500 bg-white rounded-2xl border border-slate-200 shadow-xs">
+            <i data-lucide="search-x" class="w-10 h-10 mx-auto text-slate-400 mb-2"></i>
+            <h4 class="font-bold text-sm text-slate-700">Tiada Rekod Guru Ditemui</h4>
+            <p class="text-xs text-slate-500 mt-1">Sila laraskan semula kata kunci carian atau pilihan penapis anda.</p>
+          </div>
+        `;
+      }
+    }
+
+    // =========================================================================
+    // MOD 2: PAPARAN JADUAL PENUH SEMUA GURU (FORMAT JADUAL MASTER)
+    // =========================================================================
+    else if (state.monitoringViewMode === "jadual") {
+      container.className = "w-full";
+
+      // Kumpul semua guru yang terlibat
+      let masterStaffList = [];
+      columnsToRender.forEach(col => {
+        let rawStaff = [];
+        if (col.id === 1) {
+          const gpkStaff = db.staffList.filter(s => [2, 3, 4, 5].includes(s.id));
+          const gbRecord = db.staffList.filter(s => s.id === 1);
+          rawStaff = [...gbRecord, ...gpkStaff];
+        } else {
+          rawStaff = db.staffList.filter(s => s.supervisorId === col.id && s.status === "Aktif");
+        }
+        rawStaff.forEach(s => {
+          if (!masterStaffList.some(item => item.id === s.id)) {
+            masterStaffList.push({ ...s, supervisorCol: col });
+          }
+        });
+      });
+
+      const filteredStaff = filterTeacherList(masterStaffList);
+
+      const tableCard = document.createElement("div");
+      tableCard.className = "bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden";
+
+      tableCard.innerHTML = `
+        <div class="p-4 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="font-black text-sm sm:text-base">Jadual Lengkap Pemantauan e-RPH</h3>
+            <p class="text-xs text-slate-400">Senarai setiap guru dalam baris mendatar yang kemas dan jelas</p>
+          </div>
+          <span class="px-3 py-1 bg-slate-800 text-white rounded-xl text-xs font-bold border border-slate-700 self-start sm:self-auto">
+            ${filteredStaff.length} Guru Dipaparkan
+          </span>
         </div>
 
-        <div class="p-2.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-600">
-          <span>Kumpulan Guru Seliaan</span>
-          <span class="text-sky-700">${columnStaff.length} Guru</span>
-        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold text-[11px] uppercase tracking-wider">
+                <th class="py-3 px-3 text-center w-12">Bil</th>
+                <th class="py-3 px-4 min-w-[260px]">Maklumat Guru (Nama Penuh & Jawatan)</th>
+                <th class="py-3 px-3 min-w-[130px]">Pentadbir</th>
+                <th class="py-3 px-3 text-center min-w-[170px]">Status Minggu ${weekNum}</th>
+                <th class="py-3 px-3 text-right min-w-[140px]">Tarikh & Masa</th>
+                <th class="py-3 px-4 text-center min-w-[140px]">Tindakan</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              ${filteredStaff.length === 0 ? `
+                <tr>
+                  <td colspan="6" class="p-8 text-center text-slate-500 font-medium">
+                    Tiada guru ditemui mengikut tapisan carian atau status semasa.
+                  </td>
+                </tr>
+              ` : filteredStaff.map((teacher, idx) => {
+                const isTeacherGb = (teacher.id === 1);
+                const canViewGbFolder = ((state.currentUser && state.currentUser.id === 1) || isSuper);
+                const up = weekUploads.find(u => u.guruId === teacher.id);
+                const isUploaded = (up && up.status === "HIJAU");
 
-        <!-- Body Senarai Guru di Bawah Pentadbir Ini -->
-        <div class="p-2 space-y-2 flex-1 max-h-[680px] overflow-y-auto" id="col-body-${col.id}">
+                let timestampDisplay = "Belum muat naik";
+                if (isHolidayWeek) {
+                  timestampDisplay = `Cuti Sekolah`;
+                } else if (isUploaded && up.uploadedAt) {
+                  timestampDisplay = up.uploadedAt;
+                }
+
+                const supervisorCol = teacher.supervisorCol || db.pentadbir.find(c => c.id === teacher.supervisorId) || db.pentadbir[0];
+
+                return `
+                  <tr class="hover:bg-slate-50/90 transition ${isHolidayWeek ? 'bg-amber-50/10' : isUploaded ? 'bg-emerald-50/15' : 'bg-rose-50/15'}">
+                    <td class="py-3 px-3 text-center font-mono font-bold text-slate-400">${idx + 1}</td>
+                    
+                    <td class="py-3 px-4">
+                      <div class="flex items-center gap-3">
+                        ${teacher.avatar ? `
+                          <img src="${teacher.avatar}" alt="${teacher.name}" class="w-10 h-10 rounded-xl object-cover flex-shrink-0 border border-slate-200">
+                        ` : `
+                          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0 border border-sky-300">
+                            ${teacher.name.charAt(0)}
+                          </div>
+                        `}
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5 mb-0.5">
+                            <span class="text-[9.5px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">${teacher.code}</span>
+                            <span class="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">${teacher.session || 'Pagi'}</span>
+                          </div>
+                          <!-- NAMA GURU PENUH: TIADA TRUNCATE! -->
+                          <div class="font-black text-slate-900 text-xs sm:text-sm break-words">${teacher.name}</div>
+                          <div class="text-[11px] text-slate-500 font-medium break-words">${teacher.role} • <span class="font-mono">${teacher.ic || '-'}</span></div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td class="py-3 px-3">
+                      <span class="inline-block px-2 py-0.5 rounded-lg text-[10.5px] font-black text-white ${supervisorCol.bgClass}">
+                        ${supervisorCol.shortTitle}
+                      </span>
+                      <div class="text-[10px] text-slate-500 font-bold truncate max-w-[140px]" title="${supervisorCol.name}">${supervisorCol.name}</div>
+                    </td>
+
+                    <td class="py-3 px-3 text-center">
+                      ${isHolidayWeek ? `
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-900 border border-amber-300">
+                          <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-600"></i>
+                          <span>Cuti Sekolah</span>
+                        </span>
+                      ` : isUploaded ? `
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                          <span>Hijau (Hantar)</span>
+                        </span>
+                      ` : `
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-100 text-rose-800 border border-rose-300">
+                          <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-600"></i>
+                          <span>Merah (Belum)</span>
+                        </span>
+                      `}
+                    </td>
+
+                    <td class="py-3 px-3 text-right font-medium text-slate-600 font-mono text-[11px]">
+                      ${timestampDisplay}
+                    </td>
+
+                    <td class="py-3 px-4 text-center">
+                      <div class="flex items-center justify-center gap-1.5">
+                        ${(isTeacherGb && !canViewGbFolder) ? `
+                          <span class="text-[10px] text-slate-400 italic">Folder Sulit</span>
+                        ` : `
+                          <button data-teacher-id="${teacher.id}" class="btn-open-review px-2.5 py-1.5 rounded-lg ${isUploaded ? 'bg-sky-600 hover:bg-sky-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'} font-bold text-xs flex items-center gap-1 cursor-pointer shadow-xs">
+                            <i data-lucide="folder" class="w-3 h-3"></i>
+                            <span>${isUploaded ? 'Buka' : 'Perincian'}</span>
+                          </button>
+                        `}
+
+                        ${isSuper ? `
+                          <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau <-> Merah)" class="btn-toggle-status-super p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer">
+                            <i data-lucide="refresh-cw" class="w-3 h-3 text-amber-600"></i>
+                          </button>
+                          ${isUploaded ? `
+                            <button data-teacher-id="${teacher.id}" title="Padam e-RPH Senyap" class="btn-silent-delete-super p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer">
+                              <i data-lucide="trash-2" class="w-3 h-3"></i>
+                            </button>
+                          ` : ''}
+                        ` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
         </div>
       `;
 
-      container.appendChild(colCard);
-      const colBody = colCard.querySelector(`#col-body-${col.id}`);
+      container.appendChild(tableCard);
+    }
 
-      // Render kad setiap guru di bawah pentadbir ini
-      columnStaff.forEach(teacher => {
-        // PERATURAN PRIVASI KHAS GURU BESAR:
-        // "tiada siapa boleh lihat folder penghantaran rph guru besar kecuali guru besar dan pentadbir sistem"
-        const isTeacherGb = (teacher.id === 1);
-        const canViewGbFolder = ((state.currentUser && state.currentUser.id === 1) || isSuper);
+    // =========================================================================
+    // MOD 3: PAPARAN 5 KOLUM KAD (DENGAN NAMA PENUH DIJAMIN TIDAK TERPOTONG)
+    // =========================================================================
+    else {
+      container.className = isGpk
+        ? "max-w-2xl mx-auto w-full space-y-4"
+        : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-start";
 
-        const up = weekUploads.find(u => u.guruId === teacher.id);
-        const isUploaded = (up && up.status === "HIJAU");
-
-        const teacherCard = document.createElement("div");
-        const cardBgClass = isHolidayWeek
-          ? 'bg-amber-50/40 border-amber-200'
-          : isUploaded
-            ? 'bg-emerald-50/40 border-emerald-300'
-            : 'bg-rose-50/40 border-rose-200';
-
-        teacherCard.className = `teacher-monitor-card p-3 rounded-xl border ${cardBgClass} space-y-2 text-xs relative`;
-
-        // Maklumat Masa Kemaskini
-        let timestampDisplay = "Belum memuat naik e-RPH";
-        if (isHolidayWeek) {
-          timestampDisplay = `Cuti Persekolahan (Dikecualikan)`;
-        } else if (isUploaded && up.uploadedAt) {
-          timestampDisplay = `Dikemaskini: ${up.uploadedAt}`;
+      columnsToRender.forEach(col => {
+        let rawStaff = [];
+        if (col.id === 1) {
+          const gpkStaff = db.staffList.filter(s => [2, 3, 4, 5].includes(s.id));
+          const gbRecord = db.staffList.filter(s => s.id === 1);
+          rawStaff = [...gbRecord, ...gpkStaff];
+        } else {
+          rawStaff = db.staffList.filter(s => s.supervisorId === col.id && s.status === "Aktif");
         }
 
-        teacherCard.innerHTML = `
-          <div class="flex items-start gap-2.5">
-            <!-- Thumbnail Foto Profil Guru -->
-            ${teacher.avatar ? `
-              <img src="${teacher.avatar}" alt="${teacher.name}" class="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-slate-200 shadow-xs">
-            ` : `
-              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0 shadow-xs border border-sky-300">
-                ${teacher.name.charAt(0)}
-              </div>
-            `}
-            <div class="min-w-0 flex-1">
-              <span class="text-[9px] font-mono font-bold text-slate-400 block">${teacher.code} • ${teacher.session || 'Pagi'}</span>
-              <h4 class="font-extrabold text-xs text-slate-900 leading-snug truncate" title="${teacher.name}">
-                ${teacher.name}
-              </h4>
-              <p class="text-[10px] text-slate-500 truncate" title="${teacher.role}">
-                ${teacher.role}
-              </p>
+        let colHijau = 0;
+        let colMerah = 0;
+        if (isHolidayWeek) {
+          colHijau = rawStaff.length;
+          colMerah = 0;
+        } else {
+          rawStaff.forEach(s => {
+            const up = weekUploads.find(u => u.guruId === s.id);
+            if (up && up.status === "HIJAU") colHijau++;
+            else colMerah++;
+          });
+        }
+        const colTotal = rawStaff.length || 1;
+        const colPct = isHolidayWeek ? 100 : Math.round((colHijau / colTotal) * 100);
+
+        const filteredStaff = filterTeacherList(rawStaff);
+
+        const colCard = document.createElement("div");
+        colCard.className = "bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col";
+
+        // Header Lajur (Tiada potongan teks pada nama pentadbir)
+        colCard.innerHTML = `
+          <div class="${col.headerBg} text-white p-3.5 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] font-black uppercase tracking-wider bg-black/20 px-2 py-0.5 rounded-full">${col.shortTitle}</span>
+              <span class="text-[11px] font-black">${isHolidayWeek ? `${rawStaff.length}/${rawStaff.length} (Cuti 100%)` : `${colHijau}/${rawStaff.length} Hantar (${colPct}%)`}</span>
             </div>
+            <h3 class="font-black text-xs sm:text-sm tracking-wide leading-tight break-words" title="${col.name}">${col.name}</h3>
+            <p class="text-[10px] text-white/85 font-medium break-words">${col.role}</p>
           </div>
 
-          <!-- Status Button (Merah / Hijau / Cuti) -->
-          <div class="pt-1">
-            ${isHolidayWeek ? `
-              <div class="w-full py-1.5 px-2.5 rounded-lg bg-amber-500 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
-                <i data-lucide="sun" class="w-3.5 h-3.5"></i>
-                <span>CUTI SEKOLAH - DIKECUALIKAN</span>
-              </div>
-            ` : isUploaded ? `
-              <div class="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
-                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-                <span>HIJAU - BERJAYA UPLOAD</span>
-              </div>
-            ` : `
-              <div class="w-full py-1.5 px-2.5 rounded-lg bg-rose-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
-                <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
-                <span>MERAH - BELUM UPLOAD</span>
-              </div>
-            `}
+          <div class="p-2.5 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-600">
+            <span>Kumpulan Guru Seliaan</span>
+            <span class="text-sky-700">${filteredStaff.length} Guru</span>
           </div>
 
-          <!-- Timestamp Text Dinyatakan Dengan Jelas -->
-          <div class="text-[10px] text-slate-600 font-semibold flex items-center justify-between pt-0.5">
-            <span class="truncate ${isHolidayWeek ? 'text-amber-800 font-bold' : isUploaded ? 'text-emerald-800 font-bold' : 'text-rose-700 font-medium'}">
-              <i data-lucide="clock" class="w-3 h-3 inline mr-0.5"></i>
-              ${timestampDisplay}
-            </span>
-          </div>
-
-          <!-- Tindakan Butang -->
-          <div class="pt-1 flex items-center justify-between gap-1 border-t border-slate-200/60">
-            ${(isTeacherGb && !canViewGbFolder) ? `
-              <span class="text-[9px] text-slate-400 italic">Folder Sulit Guru Besar</span>
-            ` : `
-              <button data-teacher-id="${teacher.id}" class="btn-open-review text-[10px] font-bold text-sky-700 hover:text-sky-950 flex items-center gap-1">
-                <i data-lucide="folder" class="w-3 h-3"></i>
-                <span>${isUploaded ? 'Buka e-RPH' : 'Perincian'}</span>
-              </button>
-            `}
-
-            <!-- Kuasa Khas Pentadbir Sistem (Super Admin) -->
-            ${isSuper ? `
-              <div class="flex items-center space-x-1">
-                <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau <-> Merah)" class="btn-toggle-status-super p-1 rounded hover:bg-slate-200 text-slate-700 transition">
-                  <i data-lucide="refresh-cw" class="w-3 h-3 text-amber-600"></i>
-                </button>
-                ${isUploaded ? `
-                  <button data-teacher-id="${teacher.id}" title="Padam e-RPH Senyap" class="btn-silent-delete-super p-1 rounded hover:bg-rose-100 text-rose-700 transition">
-                    <i data-lucide="trash-2" class="w-3 h-3"></i>
-                  </button>
-                ` : ''}
-              </div>
-            ` : ''}
+          <div class="p-2 space-y-2 flex-1 max-h-[720px] overflow-y-auto" id="col-body-${col.id}">
           </div>
         `;
 
-        // Event Listener: Buka Modal Semakan
-        const btnOpenReview = teacherCard.querySelector(".btn-open-review");
-        if (btnOpenReview) {
-          btnOpenReview.addEventListener("click", () => {
-            openReviewErphModal(teacher, up);
+        container.appendChild(colCard);
+        const colBody = colCard.querySelector(`#col-body-${col.id}`);
+
+        if (filteredStaff.length === 0) {
+          colBody.innerHTML = `
+            <div class="p-4 text-center text-[11px] text-slate-400 font-medium">
+              Tiada guru sepadan.
+            </div>
+          `;
+        } else {
+          filteredStaff.forEach(teacher => {
+            const isTeacherGb = (teacher.id === 1);
+            const canViewGbFolder = ((state.currentUser && state.currentUser.id === 1) || isSuper);
+            const up = weekUploads.find(u => u.guruId === teacher.id);
+            const isUploaded = (up && up.status === "HIJAU");
+
+            const teacherCard = document.createElement("div");
+            const cardBgClass = isHolidayWeek
+              ? 'bg-amber-50/40 border-amber-200'
+              : isUploaded
+                ? 'bg-emerald-50/40 border-emerald-300'
+                : 'bg-rose-50/40 border-rose-200';
+
+            teacherCard.className = `teacher-monitor-card p-3 rounded-xl border ${cardBgClass} space-y-2 text-xs relative`;
+
+            let timestampDisplay = "Belum memuat naik e-RPH";
+            if (isHolidayWeek) {
+              timestampDisplay = `Cuti Persekolahan (Dikecualikan)`;
+            } else if (isUploaded && up.uploadedAt) {
+              timestampDisplay = `Dikemaskini: ${up.uploadedAt}`;
+            }
+
+            teacherCard.innerHTML = `
+              <div class="flex items-start gap-2.5">
+                ${teacher.avatar ? `
+                  <img src="${teacher.avatar}" alt="${teacher.name}" class="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-slate-200 shadow-xs">
+                ` : `
+                  <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0 shadow-xs border border-sky-300">
+                    ${teacher.name.charAt(0)}
+                  </div>
+                `}
+                <div class="min-w-0 flex-1">
+                  <span class="text-[9px] font-mono font-bold text-slate-400 block">${teacher.code} • ${teacher.session || 'Pagi'}</span>
+                  <!-- NAMA GURU: BREAK-WORDS & SEMUA HURUF KELIHATAN -->
+                  <h4 class="font-black text-xs text-slate-900 leading-snug break-words" title="${teacher.name}">
+                    ${teacher.name}
+                  </h4>
+                  <p class="text-[10px] text-slate-500 break-words mt-0.5 leading-tight" title="${teacher.role}">
+                    ${teacher.role}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Status Button -->
+              <div class="pt-1">
+                ${isHolidayWeek ? `
+                  <div class="w-full py-1.5 px-2.5 rounded-lg bg-amber-500 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
+                    <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+                    <span>CUTI SEKOLAH</span>
+                  </div>
+                ` : isUploaded ? `
+                  <div class="w-full py-1.5 px-2.5 rounded-lg bg-emerald-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                    <span>HIJAU - BERJAYA</span>
+                  </div>
+                ` : `
+                  <div class="w-full py-1.5 px-2.5 rounded-lg bg-rose-600 text-white font-black text-center text-xs shadow-xs flex items-center justify-center gap-1.5">
+                    <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                    <span>MERAH - BELUM HANTAR</span>
+                  </div>
+                `}
+              </div>
+
+              <div class="text-[10px] text-slate-600 font-semibold flex items-center justify-between pt-0.5">
+                <span class="break-words ${isHolidayWeek ? 'text-amber-800 font-bold' : isUploaded ? 'text-emerald-800 font-bold' : 'text-rose-700 font-medium'}">
+                  <i data-lucide="clock" class="w-3 h-3 inline mr-0.5"></i>
+                  ${timestampDisplay}
+                </span>
+              </div>
+
+              <div class="pt-1 flex items-center justify-between gap-1 border-t border-slate-200/60">
+                ${(isTeacherGb && !canViewGbFolder) ? `
+                  <span class="text-[9px] text-slate-400 italic">Folder Sulit GB</span>
+                ` : `
+                  <button data-teacher-id="${teacher.id}" class="btn-open-review text-[10px] font-bold text-sky-700 hover:text-sky-950 flex items-center gap-1 cursor-pointer">
+                    <i data-lucide="folder" class="w-3 h-3"></i>
+                    <span>${isUploaded ? 'Buka e-RPH' : 'Perincian'}</span>
+                  </button>
+                `}
+
+                ${isSuper ? `
+                  <div class="flex items-center space-x-1">
+                    <button data-teacher-id="${teacher.id}" title="Tukar Status (Hijau <-> Merah)" class="btn-toggle-status-super p-1 rounded hover:bg-slate-200 text-slate-700 transition cursor-pointer">
+                      <i data-lucide="refresh-cw" class="w-3 h-3 text-amber-600"></i>
+                    </button>
+                    ${isUploaded ? `
+                      <button data-teacher-id="${teacher.id}" title="Padam e-RPH Senyap" class="btn-silent-delete-super p-1 rounded hover:bg-rose-100 text-rose-700 transition cursor-pointer">
+                        <i data-lucide="trash-2" class="w-3 h-3"></i>
+                      </button>
+                    ` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+
+            colBody.appendChild(teacherCard);
           });
         }
+      });
+    }
 
-        // Event Listener: Super Admin Toggle Status
-        const btnToggleSuper = teacherCard.querySelector(".btn-toggle-status-super");
-        if (btnToggleSuper) {
-          btnToggleSuper.addEventListener("click", () => {
-            toggleTeacherStatusSuperAdmin(teacher.id);
-          });
+    // =========================================================================
+    // SAMBUNGKAN EVENT LISTENERS PADA SEMUA BUTANG TINDAKAN
+    // =========================================================================
+    container.querySelectorAll(".btn-open-review").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const teacherId = parseInt(btn.dataset.teacherId);
+        const teacher = db.staffList.find(s => s.id === teacherId);
+        if (teacher) {
+          const up = weekUploads.find(u => u.guruId === teacher.id);
+          openReviewErphModal(teacher, up);
         }
+      });
+    });
 
-        // Event Listener: Super Admin Silent Delete
-        const btnDeleteSuper = teacherCard.querySelector(".btn-silent-delete-super");
-        if (btnDeleteSuper) {
-          btnDeleteSuper.addEventListener("click", () => {
-            silentDeleteErphSuperAdmin(teacher.id);
-          });
-        }
+    container.querySelectorAll(".btn-toggle-status-super").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const teacherId = parseInt(btn.dataset.teacherId);
+        toggleTeacherStatusSuperAdmin(teacherId);
+      });
+    });
 
-        colBody.appendChild(teacherCard);
+    container.querySelectorAll(".btn-silent-delete-super").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const teacherId = parseInt(btn.dataset.teacherId);
+        silentDeleteErphSuperAdmin(teacherId);
       });
     });
 
@@ -4473,6 +4941,59 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       }
     });
   }
+
+  // ==============================================================
+  // PENGENDALI TOOLBAR MOD PAPARAN PEMANTAUAN (BARIS / JADUAL / KOLUM)
+  // ==============================================================
+  if (elements.btnViewModeBaris) {
+    elements.btnViewModeBaris.addEventListener("click", () => {
+      state.monitoringViewMode = "baris";
+      renderMonitoringColumns();
+    });
+  }
+
+  if (elements.btnViewModeJadual) {
+    elements.btnViewModeJadual.addEventListener("click", () => {
+      state.monitoringViewMode = "jadual";
+      renderMonitoringColumns();
+    });
+  }
+
+  if (elements.btnViewModeKolum) {
+    elements.btnViewModeKolum.addEventListener("click", () => {
+      state.monitoringViewMode = "kolum";
+      renderMonitoringColumns();
+    });
+  }
+
+  if (elements.monitoringSearchInput) {
+    elements.monitoringSearchInput.addEventListener("input", (e) => {
+      state.monitoringSearch = e.target.value;
+      renderMonitoringColumns();
+    });
+  }
+
+  if (elements.btnClearMonitoringSearch) {
+    elements.btnClearMonitoringSearch.addEventListener("click", () => {
+      if (elements.monitoringSearchInput) elements.monitoringSearchInput.value = "";
+      state.monitoringSearch = "";
+      renderMonitoringColumns();
+    });
+  }
+
+  document.querySelectorAll(".btn-filter-pentadbir").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.monitoringPentadbirFilter = btn.dataset.pentadbirFilter;
+      renderMonitoringColumns();
+    });
+  });
+
+  document.querySelectorAll(".btn-filter-status").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.monitoringStatusFilter = btn.dataset.statusFilter;
+      renderMonitoringColumns();
+    });
+  });
 
   // ==============================================================
   // BOOTSTRAP: JALANKAN ENJIN REAL-TIME & SEMAK SESI LOG MASUK
