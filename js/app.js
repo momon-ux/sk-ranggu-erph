@@ -94,6 +94,145 @@ document.addEventListener("DOMContentLoaded", () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   }
 
+  // Helper Pemampatan Gambar Profil Guru (Resize ke 160x160 JPEG Kualiti Tinggi & Saiz Sangat Ringan)
+  function compressImageToBase64(file, maxWidth = 160, maxHeight = 160, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      if (!file || !file.type.startsWith("image/")) {
+        reject(new Error("Fail yang dipilih bukan imej yang sah (Sila pilih format JPG, PNG atau WebP)."));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const width = img.width;
+          const height = img.height;
+          const minDim = Math.min(width, height);
+          const startX = (width - minDim) / 2;
+          const startY = (height - minDim) / 2;
+
+          const canvas = document.createElement("canvas");
+          canvas.width = maxWidth;
+          canvas.height = maxHeight;
+          const ctx = canvas.getContext("2d");
+
+          ctx.clearRect(0, 0, maxWidth, maxHeight);
+          // Lukis keratan tengah segi empat tepat ke dalam kanvas 160x160
+          ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, maxWidth, maxHeight);
+
+          try {
+            const dataUrl = canvas.toDataURL("image/jpeg", quality);
+            resolve(dataUrl);
+          } catch (err) {
+            resolve(canvas.toDataURL("image/png"));
+          }
+        };
+        img.onerror = () => reject(new Error("Gagal membaca data imej. Sila gunakan fail gambar yang sah."));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error("Gagal membaca fail dari peranti anda."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Pengendali Muat Naik & Penukaran Gambar Profil Guru
+  async function handleAvatarUpload(file, targetStaffId = null) {
+    if (!file) return;
+    try {
+      const dataUrl = await compressImageToBase64(file, 160, 160, 0.82);
+      const staffId = targetStaffId || (state.currentUser ? state.currentUser.id : null);
+      if (!staffId) return;
+
+      const targetStaff = db.staffList.find(s => s.id === staffId);
+      if (targetStaff) {
+        targetStaff.avatar = dataUrl;
+      }
+
+      if (state.currentUser && state.currentUser.id === staffId) {
+        state.currentUser.avatar = dataUrl;
+        const savedSession = sessionStorage.getItem("SKR_LOGGED_USER");
+        if (savedSession) {
+          try {
+            const parsed = JSON.parse(savedSession);
+            parsed.user.avatar = dataUrl;
+            sessionStorage.setItem("SKR_LOGGED_USER", JSON.stringify(parsed));
+          } catch (err) {}
+        }
+      }
+
+      saveErphDatabase(db);
+      updateAuthDisplay();
+      if (state.activeTab === "portal-guru") renderTeacherPortal();
+      if (state.activeTab === "pemantauan") renderMonitoringColumns();
+      if (state.activeTab === "konsol-admin") renderAdminConsole();
+
+      safeSwal({
+        icon: "success",
+        title: "Foto Profil Dikemaskini",
+        text: `Gambar profil ${targetStaff ? targetStaff.name : ''} telah berjaya disimpan dan dipaparkan dalam sistem.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+      lucide.createIcons();
+    } catch (err) {
+      safeSwal({
+        icon: "error",
+        title: "Ralat Memuat Naik Foto",
+        text: err.message || "Gagal memproses fail gambar. Sila cuba lagi.",
+        confirmButtonColor: "#e11d48"
+      });
+    }
+  }
+
+  // Pengendali Padam & Kembalikan Ikon Asal Profil
+  function handleAvatarRemove(targetStaffId = null) {
+    const staffId = targetStaffId || (state.currentUser ? state.currentUser.id : null);
+    if (!staffId) return;
+    const targetStaff = db.staffList.find(s => s.id === staffId);
+    if (!targetStaff) return;
+
+    safeSwal({
+      title: "Padam Foto Profil?",
+      text: `Adakah anda pasti mahu memadam gambar profil ${targetStaff.name}? Ikon akan digantikan dengan singkatan nama.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Padam",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#e11d48"
+    }).then(result => {
+      if (result.isConfirmed) {
+        delete targetStaff.avatar;
+        if (state.currentUser && state.currentUser.id === staffId) {
+          delete state.currentUser.avatar;
+          const savedSession = sessionStorage.getItem("SKR_LOGGED_USER");
+          if (savedSession) {
+            try {
+              const parsed = JSON.parse(savedSession);
+              delete parsed.user.avatar;
+              sessionStorage.setItem("SKR_LOGGED_USER", JSON.stringify(parsed));
+            } catch (err) {}
+          }
+        }
+
+        saveErphDatabase(db);
+        updateAuthDisplay();
+        if (state.activeTab === "portal-guru") renderTeacherPortal();
+        if (state.activeTab === "pemantauan") renderMonitoringColumns();
+        if (state.activeTab === "konsol-admin") renderAdminConsole();
+
+        safeSwal({
+          toast: true,
+          position: "top-end",
+          icon: "info",
+          title: "Foto profil dipadamkan.",
+          timer: 1500,
+          showConfirmButton: false
+        });
+        lucide.createIcons();
+      }
+    });
+  }
+
   // ==============================================================
   // ENJIN STORAN DOKUMEN e-RPH (INDEXEDDB FILE STORAGE)
   // Menyimpan dokumen sebenar (PDF / Word / Excel) tanpa had saiz LocalStorage
@@ -259,6 +398,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     authDisplayName: document.getElementById("auth-display-name"),
     authDisplayRole: document.getElementById("auth-display-role"),
     userBadgeIcon: document.getElementById("user-badge-icon"),
+    sidebarUserCard: document.getElementById("sidebar-user-card"),
     btnAppLogout: document.getElementById("btn-app-logout"),
     btnHeaderLogout: document.getElementById("btn-header-logout"),
     btnRefreshApp: document.getElementById("btn-refresh-app"),
@@ -280,9 +420,14 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     pentadbirColumnsWrapper: document.getElementById("pentadbir-columns-wrapper"),
 
     // Tab 2 Portal Guru Elements
+    portalAvatarWrapper: document.getElementById("portal-avatar-wrapper"),
+    portalAvatarInput: document.getElementById("portal-avatar-input"),
     portalTeacherAvatar: document.getElementById("portal-teacher-avatar"),
     portalTeacherName: document.getElementById("portal-teacher-name"),
     portalTeacherDetails: document.getElementById("portal-teacher-details"),
+    btnPortalPickAvatar: document.getElementById("btn-portal-pick-avatar"),
+    portalAvatarSep: document.getElementById("portal-avatar-sep"),
+    btnPortalRemoveAvatar: document.getElementById("btn-portal-remove-avatar"),
     portalUploadWeekTitle: document.getElementById("portal-upload-week-title"),
     portalCurrentStatusBadge: document.getElementById("portal-current-status-badge"),
     btnPortalChangePwd: document.getElementById("btn-portal-change-pwd"),
@@ -366,6 +511,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
     modalReviewErph: document.getElementById("modal-review-erph"),
     btnCloseReviewModal: document.getElementById("btn-close-review-modal"),
+    modalReviewAvatar: document.getElementById("modal-review-avatar"),
     modalReviewGuruName: document.getElementById("modal-review-guru-name"),
     modalReviewWeekLabel: document.getElementById("modal-review-week-label"),
     modalReviewStatusBox: document.getElementById("modal-review-status-box"),
@@ -382,6 +528,10 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     modalAdminManageStaff: document.getElementById("modal-admin-manage-staff"),
     btnCloseManageStaff: document.getElementById("btn-close-manage-staff"),
     formManageStaff: document.getElementById("form-manage-staff"),
+    adminStaffModalAvatarPreview: document.getElementById("admin-staff-modal-avatar-preview"),
+    adminStaffModalAvatarInput: document.getElementById("admin-staff-modal-avatar-input"),
+    btnAdminModalPickAvatar: document.getElementById("btn-admin-modal-pick-avatar"),
+    btnAdminModalRemoveAvatar: document.getElementById("btn-admin-modal-remove-avatar"),
     staffFormId: document.getElementById("staff-form-id"),
     staffFormName: document.getElementById("staff-form-name"),
     staffFormIc: document.getElementById("staff-form-ic"),
@@ -405,7 +555,13 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     if (savedSession) {
       try {
         const sessionData = JSON.parse(savedSession);
-        state.currentUser = sessionData.user;
+        // Pastikan menyegerakkan rekod profil terkini daripada db.staffList (termasuk avatar)
+        const latestStaff = db.staffList.find(s => s.id === sessionData.user?.id);
+        if (latestStaff) {
+          state.currentUser = { ...sessionData.user, ...latestStaff, isSuperAdmin: sessionData.isSuperAdmin };
+        } else {
+          state.currentUser = sessionData.user;
+        }
         state.isSuperAdminAuthenticated = sessionData.isSuperAdmin;
 
         // Buka App Layout, sembunyikan Gateway
@@ -434,6 +590,12 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   }
 
   function handleSuccessfulLogin(userObj, isSuper = false) {
+    // Sinkronkan sebarang avatar profil sedia ada dari senarai staf
+    const existingStaff = db.staffList.find(s => s.id === userObj.id);
+    if (existingStaff && existingStaff.avatar) {
+      userObj.avatar = existingStaff.avatar;
+    }
+
     state.currentUser = userObj;
     state.isSuperAdminAuthenticated = isSuper;
 
@@ -935,19 +1097,24 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     const isGpk = (!isSuper && [2, 3, 4, 5].includes(state.currentUser.id));
     const isTeacher = (!isSuper && !isGb && !isGpk);
 
-    // Badge Icon
-    if (isSuper) {
-      elements.userBadgeIcon.textContent = "TS";
-      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-amber-500 text-white font-black flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
-    } else if (isGb) {
-      elements.userBadgeIcon.textContent = "GB";
-      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-amber-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
-    } else if (isGpk) {
-      elements.userBadgeIcon.textContent = "PK";
-      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-sky-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+    // Badge Icon (Foto Profil atau Singkatan Peranan)
+    if (state.currentUser.avatar) {
+      elements.userBadgeIcon.innerHTML = `<img src="${state.currentUser.avatar}" alt="${state.currentUser.name}" class="w-full h-full object-cover rounded-lg">`;
+      elements.userBadgeIcon.className = "w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xs border border-sky-400 bg-white";
     } else {
-      elements.userBadgeIcon.textContent = "G";
-      elements.userBadgeIcon.className = "w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+      if (isSuper) {
+        elements.userBadgeIcon.textContent = "TS";
+        elements.userBadgeIcon.className = "w-8 h-8 rounded-lg bg-amber-500 text-white font-black flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+      } else if (isGb) {
+        elements.userBadgeIcon.textContent = "GB";
+        elements.userBadgeIcon.className = "w-8 h-8 rounded-lg bg-amber-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+      } else if (isGpk) {
+        elements.userBadgeIcon.textContent = "PK";
+        elements.userBadgeIcon.className = "w-8 h-8 rounded-lg bg-sky-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+      } else {
+        elements.userBadgeIcon.textContent = "G";
+        elements.userBadgeIcon.className = "w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs";
+      }
     }
 
     // KAWALAN PENGASINGAN PAPARAN MENU SISI (SIDEBAR VIEW ISOLATION):
@@ -1187,7 +1354,15 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         }
 
         teacherCard.innerHTML = `
-          <div class="flex items-start justify-between gap-1">
+          <div class="flex items-start gap-2.5">
+            <!-- Thumbnail Foto Profil Guru -->
+            ${teacher.avatar ? `
+              <img src="${teacher.avatar}" alt="${teacher.name}" class="w-9 h-9 rounded-xl object-cover flex-shrink-0 border border-slate-200 shadow-xs">
+            ` : `
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0 shadow-xs border border-sky-300">
+                ${teacher.name.charAt(0)}
+              </div>
+            `}
             <div class="min-w-0 flex-1">
               <span class="text-[9px] font-mono font-bold text-slate-400 block">${teacher.code} • ${teacher.session || 'Pagi'}</span>
               <h4 class="font-extrabold text-xs text-slate-900 leading-snug truncate" title="${teacher.name}">
@@ -1298,7 +1473,17 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     if (!state.currentUser) return;
     const teacher = state.currentUser;
 
-    elements.portalTeacherAvatar.textContent = teacher.name.charAt(0);
+    if (teacher.avatar) {
+      elements.portalTeacherAvatar.innerHTML = `<img src="${teacher.avatar}" alt="${teacher.name}" class="w-full h-full object-cover rounded-2xl">`;
+      elements.portalTeacherAvatar.className = "w-14 h-14 rounded-2xl bg-white shadow-sm overflow-hidden border-2 border-sky-400 flex items-center justify-center";
+      if (elements.btnPortalRemoveAvatar) elements.btnPortalRemoveAvatar.classList.remove("hidden");
+      if (elements.portalAvatarSep) elements.portalAvatarSep.classList.remove("hidden");
+    } else {
+      elements.portalTeacherAvatar.textContent = teacher.name.charAt(0);
+      elements.portalTeacherAvatar.className = "w-14 h-14 rounded-2xl bg-sky-600 text-white font-extrabold flex items-center justify-center text-xl shadow-sm overflow-hidden border-2 border-sky-300";
+      if (elements.btnPortalRemoveAvatar) elements.btnPortalRemoveAvatar.classList.add("hidden");
+      if (elements.portalAvatarSep) elements.portalAvatarSep.classList.add("hidden");
+    }
     elements.portalTeacherName.textContent = teacher.name;
     elements.portalTeacherDetails.textContent = `No. K/P: ${teacher.ic || '-'} • ${teacher.role}`;
 
@@ -2260,7 +2445,18 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
 
       tr.innerHTML = `
         <td class="py-2.5 px-3 font-mono font-bold text-slate-500">${staff.code}</td>
-        <td class="py-2.5 px-3 font-bold text-slate-900">${staff.name}</td>
+        <td class="py-2.5 px-3 font-bold text-slate-900">
+          <div class="flex items-center space-x-2">
+            ${staff.avatar ? `
+              <img src="${staff.avatar}" class="w-6 h-6 rounded-full object-cover border border-slate-200 flex-shrink-0">
+            ` : `
+              <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center flex-shrink-0">
+                ${staff.name.charAt(0)}
+              </div>
+            `}
+            <span class="truncate">${staff.name}</span>
+          </div>
+        </td>
         <td class="py-2.5 px-3 font-mono text-[11px] text-slate-600">${staff.ic || '—'}</td>
         <td class="py-2.5 px-3 text-sky-800 font-semibold text-[11px]">${supervisor.name}</td>
         <td class="py-2.5 px-3 text-center">
@@ -2460,8 +2656,24 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   }
 
   // 3. Buka Modal Edit Staff
+  let adminModalStaffAvatar = null;
+
+  function updateAdminModalAvatarPreview(name = "G") {
+    if (!elements.adminStaffModalAvatarPreview) return;
+    if (adminModalStaffAvatar) {
+      elements.adminStaffModalAvatarPreview.innerHTML = `<img src="${adminModalStaffAvatar}" class="w-full h-full object-cover rounded-xl">`;
+      elements.adminStaffModalAvatarPreview.className = "w-12 h-12 rounded-xl overflow-hidden border border-slate-300 flex-shrink-0 bg-white shadow-xs";
+      if (elements.btnAdminModalRemoveAvatar) elements.btnAdminModalRemoveAvatar.classList.remove("hidden");
+    } else {
+      elements.adminStaffModalAvatarPreview.textContent = (name || "G").charAt(0).toUpperCase();
+      elements.adminStaffModalAvatarPreview.className = "w-12 h-12 rounded-xl bg-sky-600 text-white font-black text-lg flex items-center justify-center overflow-hidden border border-slate-300 flex-shrink-0 shadow-xs";
+      if (elements.btnAdminModalRemoveAvatar) elements.btnAdminModalRemoveAvatar.classList.add("hidden");
+    }
+  }
+
   function openEditStaffModal(staff = null) {
     elements.staffReasonWrapper.classList.add("hidden");
+    if (elements.adminStaffModalAvatarInput) elements.adminStaffModalAvatarInput.value = "";
 
     if (staff) {
       elements.modalStaffTitle.textContent = "Kemaskini Maklumat Guru";
@@ -2473,6 +2685,8 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       elements.staffFormSupervisor.value = staff.supervisorId || "2";
       elements.staffFormStatus.value = staff.status || "Aktif";
       elements.staffFormReason.value = staff.inactiveReason || "";
+      adminModalStaffAvatar = staff.avatar || null;
+      updateAdminModalAvatarPreview(staff.name);
       if (staff.status !== "Aktif") {
         elements.staffReasonWrapper.classList.remove("hidden");
       }
@@ -2487,10 +2701,34 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
       elements.staffFormSupervisor.value = "2";
       elements.staffFormStatus.value = "Aktif";
       elements.staffFormReason.value = "";
+      adminModalStaffAvatar = null;
+      updateAdminModalAvatarPreview("G");
       elements.btnAdminRemoveStaff.classList.add("hidden");
     }
 
     elements.modalAdminManageStaff.classList.remove("hidden");
+    lucide.createIcons();
+  }
+
+  if (elements.adminStaffModalAvatarInput) {
+    elements.adminStaffModalAvatarInput.addEventListener("change", async (e) => {
+      if (e.target.files && e.target.files[0]) {
+        try {
+          adminModalStaffAvatar = await compressImageToBase64(e.target.files[0], 160, 160, 0.82);
+          updateAdminModalAvatarPreview(elements.staffFormName.value || "G");
+        } catch (err) {
+          safeSwal({ icon: "error", title: "Ralat Imej", text: err.message });
+        }
+      }
+    });
+  }
+
+  if (elements.btnAdminModalRemoveAvatar) {
+    elements.btnAdminModalRemoveAvatar.addEventListener("click", () => {
+      adminModalStaffAvatar = null;
+      if (elements.adminStaffModalAvatarInput) elements.adminStaffModalAvatarInput.value = "";
+      updateAdminModalAvatarPreview(elements.staffFormName.value || "G");
+    });
   }
 
   elements.staffFormStatus.addEventListener("change", () => {
@@ -2525,6 +2763,20 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         target.supervisorId = supVal;
         target.status = statusVal;
         target.inactiveReason = reasonVal;
+        target.avatar = adminModalStaffAvatar;
+
+        if (state.currentUser && state.currentUser.id === target.id) {
+          state.currentUser.avatar = adminModalStaffAvatar;
+          const savedSession = sessionStorage.getItem("SKR_LOGGED_USER");
+          if (savedSession) {
+            try {
+              const parsed = JSON.parse(savedSession);
+              parsed.user.avatar = adminModalStaffAvatar;
+              sessionStorage.setItem("SKR_LOGGED_USER", JSON.stringify(parsed));
+            } catch (err) {}
+          }
+          updateAuthDisplay();
+        }
       }
     } else {
       // Tambah guru baru
@@ -2539,6 +2791,7 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
         status: statusVal,
         session: sessionVal,
         inactiveReason: reasonVal,
+        avatar: adminModalStaffAvatar,
         customPassword: null
       });
     }
@@ -2598,6 +2851,16 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
   // ==============================================================
   function openReviewErphModal(teacher, uploadRecord) {
     activeReviewUploadId = uploadRecord ? uploadRecord.id : null;
+
+    if (elements.modalReviewAvatar) {
+      if (teacher.avatar) {
+        elements.modalReviewAvatar.innerHTML = `<img src="${teacher.avatar}" alt="${teacher.name}" class="w-full h-full object-cover rounded-xl">`;
+        elements.modalReviewAvatar.className = "w-10 h-10 rounded-xl overflow-hidden border border-slate-700 flex-shrink-0 bg-white";
+      } else {
+        elements.modalReviewAvatar.textContent = teacher.name.charAt(0);
+        elements.modalReviewAvatar.className = "w-10 h-10 rounded-xl bg-sky-600 text-white font-black text-sm flex items-center justify-center overflow-hidden border border-slate-700 flex-shrink-0";
+      }
+    }
 
     elements.modalReviewGuruName.textContent = teacher.name;
     elements.modalReviewWeekLabel.textContent = `Minggu ${state.activeWeek} • ${getFridayInfo(state.activeWeek).label}`;
@@ -2970,6 +3233,50 @@ Dokumen ini disahkan dimuat naik ke dalam Sistem e-RPH Rasmi SK Ranggu.
     elements.btnCalToday.addEventListener("click", () => {
       calendarViewDate = new Date();
       renderInteractiveMonthlyCalendar();
+    });
+  }
+
+  // ==============================================================
+  // PENGENDALI PENUKARAN FOTO PROFIL (PORTAL GURU & SIDEBAR)
+  // ==============================================================
+  if (elements.portalAvatarWrapper) {
+    elements.portalAvatarWrapper.addEventListener("click", () => {
+      if (elements.portalAvatarInput) elements.portalAvatarInput.click();
+    });
+  }
+
+  if (elements.btnPortalPickAvatar) {
+    elements.btnPortalPickAvatar.addEventListener("click", () => {
+      if (elements.portalAvatarInput) elements.portalAvatarInput.click();
+    });
+  }
+
+  if (elements.btnPortalRemoveAvatar) {
+    elements.btnPortalRemoveAvatar.addEventListener("click", () => {
+      handleAvatarRemove();
+    });
+  }
+
+  if (elements.portalAvatarInput) {
+    elements.portalAvatarInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleAvatarUpload(e.target.files[0]);
+        e.target.value = "";
+      }
+    });
+  }
+
+  if (elements.sidebarUserCard) {
+    elements.sidebarUserCard.addEventListener("click", () => {
+      if (elements.portalAvatarInput) {
+        elements.portalAvatarInput.click();
+      }
+    });
+  }
+
+  if (elements.btnAdminModalPickAvatar) {
+    elements.btnAdminModalPickAvatar.addEventListener("click", () => {
+      if (elements.adminStaffModalAvatarInput) elements.adminStaffModalAvatarInput.click();
     });
   }
 

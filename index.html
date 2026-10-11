@@ -307,10 +307,15 @@
 
       <!-- Active User & Authentication Footer -->
       <div class="p-3 border-t border-slate-800 bg-slate-900/80 space-y-2">
-        <div class="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/60">
-          <div class="flex items-center space-x-2 min-w-0">
-            <div id="user-badge-icon" class="w-7 h-7 rounded-lg bg-amber-500 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
-              GB
+        <div id="sidebar-user-card" class="bg-slate-800/90 hover:bg-slate-800 rounded-xl p-2.5 border border-slate-700/60 hover:border-sky-500/50 transition cursor-pointer group" title="Klik untuk tukar foto profil anda">
+          <div class="flex items-center space-x-2.5 min-w-0">
+            <div class="relative flex-shrink-0">
+              <div id="user-badge-icon" class="w-8 h-8 rounded-lg bg-amber-500 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs overflow-hidden">
+                GB
+              </div>
+              <span class="absolute -bottom-1 -right-1 bg-sky-500 text-white p-0.5 rounded-full shadow-xs border border-slate-900 group-hover:scale-110 transition" title="Tukar Foto">
+                <i data-lucide="camera" class="w-2.5 h-2.5"></i>
+              </span>
             </div>
             <div class="min-w-0 flex-1">
               <p id="auth-display-name" class="text-xs font-bold text-white truncate">Yunus bin Patarai</p>
@@ -446,18 +451,39 @@
         <section id="tab-portal-guru" class="tab-content hidden space-y-5">
           <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div class="flex items-center space-x-3">
-                <div class="w-12 h-12 rounded-xl bg-sky-600 text-white font-extrabold flex items-center justify-center text-lg shadow-sm" id="portal-teacher-avatar">
-                  G
+              <div class="flex items-center space-x-3.5">
+                <div class="relative group cursor-pointer flex-shrink-0" id="portal-avatar-wrapper" title="Klik untuk tukar foto profil">
+                  <div class="w-14 h-14 rounded-2xl bg-sky-600 text-white font-extrabold flex items-center justify-center text-xl shadow-sm overflow-hidden border-2 border-sky-300" id="portal-teacher-avatar">
+                    G
+                  </div>
+                  <div class="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold">
+                    <i data-lucide="camera" class="w-5 h-5 drop-shadow"></i>
+                  </div>
+                  <span class="absolute -bottom-1 -right-1 bg-sky-600 group-hover:bg-sky-700 text-white p-1 rounded-full shadow-md border-2 border-white transition flex items-center justify-center">
+                    <i data-lucide="camera" class="w-3 h-3"></i>
+                  </span>
                 </div>
                 <div>
                   <h3 class="font-extrabold text-base text-slate-900" id="portal-teacher-name">Nama Guru</h3>
                   <p class="text-xs text-slate-500 font-medium" id="portal-teacher-details">No. K/P: - • Gred & Jawatan: -</p>
+                  <div class="flex items-center gap-2 mt-1.5">
+                    <button type="button" id="btn-portal-pick-avatar" class="text-[11px] font-bold text-sky-700 hover:text-sky-900 hover:underline flex items-center gap-1 cursor-pointer">
+                      <i data-lucide="image" class="w-3 h-3"></i>
+                      <span>Tukar Foto Profil</span>
+                    </button>
+                    <span class="text-slate-300 text-xs hidden" id="portal-avatar-sep">•</span>
+                    <button type="button" id="btn-portal-remove-avatar" class="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline flex items-center gap-1 cursor-pointer hidden">
+                      <i data-lucide="trash-2" class="w-3 h-3"></i>
+                      <span>Padam Foto</span>
+                    </button>
+                  </div>
                 </div>
+                <!-- Hidden file input for portal avatar -->
+                <input type="file" id="portal-avatar-input" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
               </div>
 
               <!-- Change Password Button -->
-              <button id="btn-portal-change-pwd" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-300 transition flex items-center space-x-1.5">
+              <button id="btn-portal-change-pwd" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-300 transition flex items-center space-x-1.5 cursor-pointer">
                 <i data-lucide="key" class="w-3.5 h-3.5 text-sky-600"></i>
                 <span>Jana / Tukar Kata Laluan</span>
               </button>
@@ -1120,9 +1146,14 @@
   <div id="modal-review-erph" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
     <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden modal-animate text-xs">
       <div class="bg-slate-900 text-white p-4 flex items-center justify-between">
-        <div>
-          <h4 class="font-bold text-sm text-white" id="modal-review-guru-name">Nama Guru</h4>
-          <p class="text-[10px] text-slate-400" id="modal-review-week-label">Minggu 7 • Jumaat, 20 Feb 2026</p>
+        <div class="flex items-center space-x-3">
+          <div id="modal-review-avatar" class="w-10 h-10 rounded-xl bg-sky-600 text-white font-black text-sm flex items-center justify-center overflow-hidden border border-slate-700 flex-shrink-0">
+            G
+          </div>
+          <div>
+            <h4 class="font-bold text-sm text-white" id="modal-review-guru-name">Nama Guru</h4>
+            <p class="text-[10px] text-slate-400" id="modal-review-week-label">Minggu 7 • Jumaat, 20 Feb 2026</p>
+          </div>
         </div>
         <button id="btn-close-review-modal" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
@@ -1190,6 +1221,27 @@
 
       <form id="form-manage-staff" class="p-5 space-y-3">
         <input type="hidden" id="staff-form-id">
+        <!-- Avatar Preview & Upload Controls in Admin Modal -->
+        <div class="flex items-center space-x-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div id="admin-staff-modal-avatar-preview" class="w-12 h-12 rounded-xl bg-sky-600 text-white font-black text-lg flex items-center justify-center overflow-hidden border border-slate-300 flex-shrink-0">
+            G
+          </div>
+          <div class="flex-1 min-w-0">
+            <span class="block font-bold text-slate-700 text-xs">Foto Profil Guru</span>
+            <span class="text-[10px] text-slate-500 block">Format gambar JPG, PNG, atau WebP</span>
+            <div class="flex items-center gap-2 mt-1">
+              <button type="button" id="btn-admin-modal-pick-avatar" class="text-[11px] font-bold text-sky-700 hover:text-sky-900 hover:underline flex items-center gap-1 cursor-pointer">
+                <i data-lucide="camera" class="w-3 h-3"></i>
+                <span>Tukar Foto</span>
+              </button>
+              <button type="button" id="btn-admin-modal-remove-avatar" class="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline flex items-center gap-1 cursor-pointer hidden">
+                <i data-lucide="trash-2" class="w-3 h-3"></i>
+                <span>Padam Foto</span>
+              </button>
+            </div>
+            <input type="file" id="admin-staff-modal-avatar-input" accept="image/*" class="hidden">
+          </div>
+        </div>
         <div>
           <label class="block font-bold text-slate-700 mb-1">Nama Penuh Guru</label>
           <input type="text" id="staff-form-name" required class="w-full border p-2 rounded-lg bg-slate-50 uppercase font-bold">
@@ -1249,8 +1301,8 @@
     </div>
   </div>
 
-  <!-- Scripts (Cache-busting version v=2.5) -->
-  <script src="js/data.js?v=2.5"></script>
-  <script src="js/app.js?v=2.5"></script>
+  <!-- Scripts (Cache-busting version v=2.6) -->
+  <script src="js/data.js?v=2.6"></script>
+  <script src="js/app.js?v=2.6"></script>
 </body>
 </html>
