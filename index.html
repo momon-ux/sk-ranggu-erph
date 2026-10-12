@@ -702,90 +702,704 @@
         </section>
 
         <!-- ============================================================== -->
+        <!-- ============================================================== -->
         <!-- TAB 3: CARTA ORGANISASI e-RPH SK RANGGU 2026                   -->
         <!-- ============================================================== -->
         <section id="tab-carta-organisasi" class="tab-content hidden space-y-6">
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div class="text-center max-w-2xl mx-auto space-y-1">
-              <span class="text-xs font-bold text-sky-700 uppercase tracking-widest bg-sky-50 px-2.5 py-1 rounded-full border border-sky-200">
-                Jawatankuasa Pengurusan & Pemantauan e-RPH 2026
-              </span>
-              <h3 class="font-black text-lg text-slate-900 mt-2">CARTA ORGANISASI e-RPH SK RANGGU</h3>
-              <p class="text-xs text-slate-500">
-                Struktur Penyeliaan Bertingkat Semakan Rancangan Pelajaran Harian Digital Sekolah Kebangsaan Ranggu, Tawau
-              </p>
+          <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-6">
+            <!-- Header Rasmi Carta Organisasi -->
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4 pb-5 border-b border-slate-200">
+              <div class="flex items-center gap-3.5 text-center md:text-left">
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <img src="assets/logo-kpm.png" alt="Logo KPM" class="h-12 w-auto object-contain drop-shadow" onerror="this.style.display='none'">
+                  <img src="assets/logo-skrg.png" alt="Logo SK Ranggu" class="h-14 w-auto object-contain drop-shadow" onerror="this.src='https://ui-avatars.com/api/?name=SK+Ranggu&background=0284c7&color=fff'">
+                </div>
+                <div>
+                  <span class="text-[10px] font-black uppercase tracking-widest text-sky-800 bg-sky-100 px-3 py-0.5 rounded-full border border-sky-300">
+                    Jawatankuasa Pengurusan & Pemantauan e-RPH 2026
+                  </span>
+                  <h2 class="text-lg md:text-xl font-black text-slate-900 tracking-tight mt-1">
+                    CARTA ORGANISASI e-RPH SK RANGGU
+                  </h2>
+                  <p class="text-xs text-slate-500 font-semibold">
+                    Sekolah Kebangsaan Ranggu, Tawau (XBA3037) • Struktur Hierarki Penyeliaan Bertingkat & Senarai Lengkap Guru
+                  </p>
+                </div>
+              </div>
+
+              <!-- Butang Cetak & Tindakan -->
+              <div class="flex items-center gap-2">
+                <button id="btn-print-org-chart" type="button" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition cursor-pointer">
+                  <i data-lucide="printer" class="w-4 h-4 text-amber-400"></i>
+                  <span>Cetak Carta Rasmi</span>
+                </button>
+              </div>
             </div>
 
-            <!-- Org Chart Visual Hierarchy -->
-            <div class="pt-4 flex flex-col items-center space-y-6">
-              
-              <!-- Tier 1: Guru Besar & Pentadbir Sistem -->
-              <div class="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-2xl">
-                <!-- Guru Besar Box -->
-                <div class="org-box bg-gradient-to-br from-amber-500 to-yellow-600 text-white p-4 rounded-2xl shadow-md border-2 border-amber-300 w-full sm:w-80 text-center">
-                  <span class="text-[10px] uppercase font-black bg-white/20 px-2 py-0.5 rounded-full tracking-wider">Peneraju Sekolah</span>
-                  <h4 class="font-black text-sm mt-1.5">YUNUS BIN PATARAI</h4>
-                  <p class="text-xs text-amber-100 font-semibold">Guru Besar SK Ranggu</p>
-                  <div class="text-[10px] bg-black/15 mt-2 py-1 px-2 rounded-lg font-mono">
-                    No. K/P: 721005-12-5911
-                  </div>
-                </div>
+            <!-- Palang Penapis Kumpulan Guru -->
+            <div class="org-filter-bar flex items-center justify-between flex-wrap gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-xs font-bold text-slate-600 mr-1">Penapis Kumpulan:</span>
+                <button type="button" data-org-filter="all" class="org-filter-btn px-3 py-1.5 rounded-lg text-xs font-black bg-sky-600 text-white shadow-xs transition cursor-pointer">
+                  Semua Hierarki & Guru
+                </button>
+                <button type="button" data-org-filter="pk1" class="org-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer">
+                  PK 1 Pentadbiran (11)
+                </button>
+                <button type="button" data-org-filter="pkhem" class="org-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer">
+                  PK HEM (9)
+                </button>
+                <button type="button" data-org-filter="pkkoku" class="org-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer">
+                  PK Kokurikulum (10)
+                </button>
+                <button type="button" data-org-filter="pkpetang" class="org-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 transition cursor-pointer">
+                  PK Petang (16)
+                </button>
+              </div>
+              <div class="text-xs text-slate-500 font-bold">
+                Jumlah Warga Pendidik: <span class="text-slate-900 font-black">5 Pentadbir + 46 Guru Akademik</span>
+              </div>
+            </div>
 
-                <!-- Pentadbir Sistem Box -->
-                <div class="org-box bg-gradient-to-br from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-md border-2 border-sky-400 w-full sm:w-80 text-center">
-                  <span class="text-[10px] uppercase font-black bg-sky-500/30 text-sky-300 px-2 py-0.5 rounded-full tracking-wider">Pembangun Sistem</span>
-                  <h4 class="font-black text-sm mt-1.5">TS. MOHAMMAD FIKREY</h4>
-                  <p class="text-xs text-sky-200 font-semibold">Pembangun Sistem e-RPH</p>
-                  <div class="text-[10px] bg-sky-950/70 mt-2 py-1 px-2 rounded-lg font-semibold text-sky-300 border border-sky-800/60">
-                    Kawalan Penuh & Sekuriti Sistem
+            <!-- Visual Hierarki Pohon Carta Organisasi -->
+            <div class="pt-2 flex flex-col items-center space-y-6">
+              
+              <!-- TIER 1: PENGERUSI (GURU BESAR) TUNGGAL DI PUNCAK CARTA -->
+              <div class="w-full max-w-md">
+                <div class="org-box bg-gradient-to-br from-amber-500 via-amber-600 to-yellow-600 text-white p-5 rounded-2xl shadow-md border-2 border-amber-300 text-center relative mx-auto">
+                  <span class="inline-block bg-white/20 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border border-white/30 mb-1.5">
+                    PENGERUSI
+                  </span>
+                  <h3 class="text-base md:text-lg font-black tracking-wide leading-tight">YUNUS BIN PATARAI</h3>
+                  <p class="text-xs text-amber-100 font-bold mt-0.5">Guru Besar SK Ranggu (Peneraju Sekolah)</p>
+                  <div class="mt-2.5 inline-flex items-center gap-2 bg-black/20 text-white px-3 py-1 rounded-lg text-[10px] font-mono">
+                    <span>No. K/P: 721005-12-5911</span>
+                    <span>•</span>
+                    <span class="font-sans font-semibold">Pengesah Tertinggi e-RPH</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Connecting Line -->
+              <!-- Garisan Penyambung ke Tier 2 -->
               <div class="w-0.5 h-6 bg-slate-300"></div>
 
-              <!-- Tier 2: 4 Penolong Kanan -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
-                <!-- GPK 1 -->
-                <div class="org-box bg-white p-3.5 rounded-xl border-2 border-sky-500 shadow-xs text-center space-y-1">
-                  <span class="text-[9px] font-black uppercase bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full">PK Pentadbiran</span>
-                  <h5 class="font-black text-xs text-slate-900">PN. HJH. RAHMATIAH MOHD JUDA</h5>
-                  <p class="text-[11px] text-slate-500 font-semibold">Kurikulum & Pagi</p>
-                  <div class="text-[10px] text-sky-700 font-bold bg-sky-50 py-1 rounded">11 Guru Seliaan</div>
+              <!-- TIER 2: BARISAN 4 PENOLONG KANAN (TIMBALAN & NAIB PENGERUSI) -->
+              <div class="w-full">
+                <div class="hidden lg:block w-3/4 mx-auto h-0.5 bg-slate-300 relative mb-3">
+                  <div class="absolute -top-1 left-0 w-2.5 h-2.5 rounded-full bg-sky-500"></div>
+                  <div class="absolute -top-1 left-1/3 w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                  <div class="absolute -top-1 left-2/3 w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+                  <div class="absolute -top-1 right-0 w-2.5 h-2.5 rounded-full bg-purple-500"></div>
                 </div>
 
-                <!-- GPK HEM -->
-                <div class="org-box bg-white p-3.5 rounded-xl border-2 border-emerald-500 shadow-xs text-center space-y-1">
-                  <span class="text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">PK Hal Ehwal Murid</span>
-                  <h5 class="font-black text-xs text-slate-900">PN. KOMALA JOSEPH</h5>
-                  <p class="text-[11px] text-slate-500 font-semibold">HEM & Disiplin</p>
-                  <div class="text-[10px] text-emerald-700 font-bold bg-emerald-50 py-1 rounded">10 Guru Seliaan</div>
-                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  <!-- PK Pentadbiran -->
+                  <div class="org-box bg-white p-4 rounded-2xl border-2 border-sky-500 shadow-xs flex flex-col justify-between space-y-2">
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-[9px] font-black uppercase bg-sky-100 text-sky-800 px-2.5 py-0.5 rounded-full border border-sky-200">
+                          TIMBALAN PENGERUSI
+                        </span>
+                        <span class="text-[10px] font-mono font-bold text-sky-600">PK 1</span>
+                      </div>
+                      <h4 class="font-black text-xs text-slate-900 leading-snug">PUAN HAJAH RAHMATIAH BINTI MOHD JUDA</h4>
+                      <p class="text-[11px] text-sky-700 font-bold mt-0.5">Penolong Kanan Pentadbiran</p>
+                      <p class="text-[10px] text-slate-500 font-medium">Penyelia Kumpulan 1: Kurikulum & Akademik</p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-sky-800 bg-sky-50/70 p-2 rounded-xl">
+                      <span>Bilangan Guru:</span>
+                      <span class="bg-sky-600 text-white px-2 py-0.5 rounded-md text-[10px]">11 Guru Seliaan</span>
+                    </div>
+                  </div>
 
-                <!-- GPK KOKU -->
-                <div class="org-box bg-white p-3.5 rounded-xl border-2 border-rose-500 shadow-xs text-center space-y-1">
-                  <span class="text-[9px] font-black uppercase bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">PK Kokurikulum</span>
-                  <h5 class="font-black text-xs text-slate-900">PN. WARNAH BINTI SIRA</h5>
-                  <p class="text-[11px] text-slate-500 font-semibold">Kokurikulum & Sukan</p>
-                  <div class="text-[10px] text-rose-700 font-bold bg-rose-50 py-1 rounded">10 Guru Seliaan</div>
-                </div>
+                  <!-- PK HEM -->
+                  <div class="org-box bg-white p-4 rounded-2xl border-2 border-emerald-500 shadow-xs flex flex-col justify-between space-y-2">
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          NAIB PENGERUSI I
+                        </span>
+                        <span class="text-[10px] font-mono font-bold text-emerald-600">PK HEM</span>
+                      </div>
+                      <h4 class="font-black text-xs text-slate-900 leading-snug">PUAN KOMALA BINTI JOSEPH</h4>
+                      <p class="text-[11px] text-emerald-700 font-bold mt-0.5">Penolong Kanan Hal Ehwal Murid</p>
+                      <p class="text-[10px] text-slate-500 font-medium">Penyelia Kumpulan 2: HEM & Disiplin</p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-emerald-800 bg-emerald-50/70 p-2 rounded-xl">
+                      <span>Bilangan Guru:</span>
+                      <span class="bg-emerald-600 text-white px-2 py-0.5 rounded-md text-[10px]">9 Guru Seliaan</span>
+                    </div>
+                  </div>
 
-                <!-- GPK PETANG -->
-                <div class="org-box bg-white p-3.5 rounded-xl border-2 border-purple-500 shadow-xs text-center space-y-1">
-                  <span class="text-[9px] font-black uppercase bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">PK Sidang Petang</span>
-                  <h5 class="font-black text-xs text-slate-900">TN. HJ. EMRAN HJ. SELAMAT</h5>
-                  <p class="text-[11px] text-slate-500 font-semibold">Tahap 1 (Thn 1, 2, 3)</p>
-                  <div class="text-[10px] text-purple-700 font-bold bg-purple-50 py-1 rounded">16 Guru Seliaan</div>
+                  <!-- PK KOKU -->
+                  <div class="org-box bg-white p-4 rounded-2xl border-2 border-rose-500 shadow-xs flex flex-col justify-between space-y-2">
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-[9px] font-black uppercase bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-full border border-rose-200">
+                          NAIB PENGERUSI II
+                        </span>
+                        <span class="text-[10px] font-mono font-bold text-rose-600">PK KOKU</span>
+                      </div>
+                      <h4 class="font-black text-xs text-slate-900 leading-snug">PUAN WARNAH BINTI SIRA</h4>
+                      <p class="text-[11px] text-rose-700 font-bold mt-0.5">Penolong Kanan Kokurikulum</p>
+                      <p class="text-[10px] text-slate-500 font-medium">Penyelia Kumpulan 3: Kokurikulum & Sukan</p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-rose-800 bg-rose-50/70 p-2 rounded-xl">
+                      <span>Bilangan Guru:</span>
+                      <span class="bg-rose-600 text-white px-2 py-0.5 rounded-md text-[10px]">10 Guru Seliaan</span>
+                    </div>
+                  </div>
+
+                  <!-- PK PETANG -->
+                  <div class="org-box bg-white p-4 rounded-2xl border-2 border-purple-500 shadow-xs flex flex-col justify-between space-y-2">
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-[9px] font-black uppercase bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full border border-purple-200">
+                          NAIB PENGERUSI III
+                        </span>
+                        <span class="text-[10px] font-mono font-bold text-purple-600">PK PETANG</span>
+                      </div>
+                      <h4 class="font-black text-xs text-slate-900 leading-snug">TUAN HJ. EMRAN BIN HJ. SELAMAT</h4>
+                      <p class="text-[11px] text-purple-700 font-bold mt-0.5">Penolong Kanan Sidang Petang</p>
+                      <p class="text-[10px] text-slate-500 font-medium">Penyelia Kumpulan 4: Sidang Petang Tahap 1</p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-purple-800 bg-purple-50/70 p-2 rounded-xl">
+                      <span>Bilangan Guru:</span>
+                      <span class="bg-purple-600 text-white px-2 py-0.5 rounded-md text-[10px]">16 Guru Seliaan</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <!-- Tier 3: Seluruh Pendidik SK Ranggu -->
-              <div class="w-full bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
-                <p class="text-xs font-bold text-slate-700">
-                  52 Guru Akademik SK Ranggu menghantar e-RPH pada setiap hari <strong class="text-rose-600">JUMAAT</strong> mengikut pentadbir penyelia masing-masing.
+              <!-- TIER 2.5: JAWATANKUASA KERJA & PENYELARAS UTAMA e-RPH -->
+              <div class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="award" class="w-4 h-4 text-sky-600"></i>
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-800">
+                      Jawatankuasa Kerja & Penyelaras Utama e-RPH
+                    </h4>
+                  </div>
+                  <span class="text-[11px] text-slate-500 font-semibold">Tugas Khas Pengurusan Sistem & Kurikulum</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <!-- Penyelaras ICT & DELIMa -->
+                  <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                    <span class="text-[9px] font-black uppercase text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">Penyelaras ICT & DELIMa</span>
+                    <p class="font-black text-xs text-slate-900 mt-0.5">RONI BIN BACHO</p>
+                    <p class="text-[10px] text-slate-500 font-medium">Ketua Panitia RBT • Pengurusan DELIMa & ICT</p>
+                  </div>
+                  <!-- Setiausaha Kurikulum -->
+                  <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                    <span class="text-[9px] font-black uppercase text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">Setiausaha Kurikulum</span>
+                    <p class="font-black text-xs text-slate-900 mt-0.5">ANI BINTI PATOLA</p>
+                    <p class="text-[10px] text-slate-500 font-medium">Penyelaras Kurikulum & Fail Panitia</p>
+                  </div>
+                  <!-- Penyelaras Jadual Waktu -->
+                  <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                    <span class="text-[9px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Penyelaras Jadual Waktu</span>
+                    <p class="font-black text-xs text-slate-900 mt-0.5">NURUL ANISA & AINATUN</p>
+                    <p class="text-[10px] text-slate-500 font-medium">Penyelaras Jadual Waktu Sesi Pagi & Petang</p>
+                  </div>
+                  <!-- Guru Bimbingan & Kaunseling -->
+                  <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1">
+                    <span class="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Bimbingan & Kaunseling</span>
+                    <p class="font-black text-xs text-slate-900 mt-0.5">AMRAN BIN ABD LATIF</p>
+                    <p class="text-[10px] text-slate-500 font-medium">Guru Bimbingan & Kaunseling Sepenuh Masa (GBKSM)</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TIER 3: SENARAI LENGKAP SEMUA 46 GURU AKADEMIK MENGIKUT 4 KUMPULAN PENTADBIR -->
+              <div class="w-full space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <div>
+                    <h4 class="text-sm font-black text-slate-900 uppercase tracking-wide">
+                      Senarai Penuh Guru Mengikut Kumpulan Pentadbir Penyelia
+                    </h4>
+                    <p class="text-xs text-slate-500 font-medium">
+                      Semua nama guru dipaparkan secara terperinci mengikut kumpulan semakan masing-masing
+                    </p>
+                  </div>
+                  <span class="text-xs font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-lg border border-slate-200">
+                    46 Guru Akademik Lengkap
+                  </span>
+                </div>
+
+                <!-- 4 Kolum Lengkap Guru Mengikut Pentadbir -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                  
+                  <!-- KOLUM 1: SELIAAN PK PENTADBIRAN (11 GURU) -->
+                  <div class="org-supervisor-col bg-slate-50/80 rounded-2xl border-2 border-sky-400 p-3 space-y-2.5 shadow-2xs" data-supervisor-key="pk1">
+                    <div class="bg-gradient-to-r from-sky-600 to-blue-700 text-white p-2.5 rounded-xl text-center">
+                      <span class="text-[9px] font-black uppercase tracking-wider block opacity-90">KUMPULAN SELIAAN 1</span>
+                      <h5 class="text-xs font-black">PK PENTADBIRAN</h5>
+                      <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block mt-0.5 font-bold">11 Orang Guru</span>
+                    </div>
+                    <div class="space-y-1.5">
+                      <!-- G06 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G06</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">AG KU KEMAINDDRA BIN PG MOHD TAIB</p>
+                        <p class="text-[10px] text-slate-500">Guru Kelas 6 Iltizam • Bahasa Inggeris</p>
+                      </div>
+                      <!-- G08 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G08</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">AINATUN NADHIRAH BINTI DHARMAWI</p>
+                        <p class="text-[10px] text-slate-500">Guru Kelas 3 Jayyid • Jadual Petang</p>
+                      </div>
+                      <!-- G09 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G09</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">ANI BINTI PATOLA</p>
+                        <p class="text-[10px] text-slate-500">Setiausaha Kurikulum • Penyelaras SPBT</p>
+                      </div>
+                      <!-- G10 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G10</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">ASMADI BIN LAJJAKASI</p>
+                        <p class="text-[10px] text-slate-500">Pegawai Aset & Maklumat • Peperiksaan</p>
+                      </div>
+                      <!-- G11 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G11</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">BAJAM BINTI LADUNG</p>
+                        <p class="text-[10px] text-slate-500">Setiausaha Pentadbiran • Guru Kelas 6 Mumtaz</p>
+                      </div>
+                      <!-- G12 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G12</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">DARMAWATI BTE LOKKONG</p>
+                        <p class="text-[10px] text-slate-500">Penolong SU HEM • Transisi Tahun 1</p>
+                      </div>
+                      <!-- G13 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G13</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">EVALORENNA BINTI LAMINSIN</p>
+                        <p class="text-[10px] text-slate-500">Setiausaha Kokurikulum • Penyelaras LDP</p>
+                      </div>
+                      <!-- G14 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G14</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">FARIDAH BINTI SUNU</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia Pend Moral • Guru 1 Khoir</p>
+                      </div>
+                      <!-- G15 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G15</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">HALIM BIN BIDI</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Kebajikan Murid • Rumah Ungu</p>
+                      </div>
+                      <!-- G16 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G16</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">HAMSIAH BINTI HAMID</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia BI • Guru Kelas 5 Mumtaz</p>
+                      </div>
+                      <!-- G17 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-sky-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">G17</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">HASNAN BIN MAT ZIN</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia Pendidikan Islam • Tahap 2</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- KOLUM 2: SELIAAN PK HEM (9 GURU) - TANPA NAMA FIKREY -->
+                  <div class="org-supervisor-col bg-slate-50/80 rounded-2xl border-2 border-emerald-400 p-3 space-y-2.5 shadow-2xs" data-supervisor-key="pkhem">
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-2.5 rounded-xl text-center">
+                      <span class="text-[9px] font-black uppercase tracking-wider block opacity-90">KUMPULAN SELIAAN 2</span>
+                      <h5 class="text-xs font-black">PK HAL EHWAL MURID</h5>
+                      <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block mt-0.5 font-bold">9 Orang Guru</span>
+                    </div>
+                    <div class="space-y-1.5">
+                      <!-- G19 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">G19</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">JAINAH BINTI SULAIMAN</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras HIP • Guru Kelas 3 Iltizam</p>
+                      </div>
+                      <!-- G20 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">G20</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">JUNAID BIN NURDIN</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia Sains • Bantuan Yayasan Sabah</p>
+                      </div>
+                      <!-- G21 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">G21</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">MARIANA BINTI KASSIM</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Prasekolah • Permata Hati</p>
+                      </div>
+                      <!-- G22 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">G22</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">MARINI BINTI LADI</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras PLC • Guru Kelas 2 Jayyid</p>
+                      </div>
+                      <!-- G23 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">G23</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">MASTURAH BINTI TUDA</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia Matematik • Guru 4 Khoir</p>
+                      </div>
+                      <!-- G25 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">G25</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">MOHAMMAD IKHWAN BIN ABDURAIS</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Pembangunan • Guru 2 Iltizam</p>
+                      </div>
+                      <!-- G26 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">G26</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">MOHD ALFAIZAL BIN DAUD</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Data & IDME • Guru 6 Khoir</p>
+                      </div>
+                      <!-- G27 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">G27</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">MOHD MUEMIN BIN MOHD AMIN JAPAR</p>
+                        <p class="text-[10px] text-slate-500">Guru Akademik / Matapelajaran</p>
+                      </div>
+                      <!-- G28 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">G28</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">MUHAMADIAN BIN SUAIBU</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Pemulihan Khas • Rumah Biru</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- KOLUM 3: SELIAAN PK KOKURIKULUM (10 GURU) -->
+                  <div class="org-supervisor-col bg-slate-50/80 rounded-2xl border-2 border-rose-400 p-3 space-y-2.5 shadow-2xs" data-supervisor-key="pkkoku">
+                    <div class="bg-gradient-to-r from-rose-600 to-red-700 text-white p-2.5 rounded-xl text-center">
+                      <span class="text-[9px] font-black uppercase tracking-wider block opacity-90">KUMPULAN SELIAAN 3</span>
+                      <h5 class="text-xs font-black">PK KOKURIKULUM</h5>
+                      <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block mt-0.5 font-bold">10 Orang Guru</span>
+                    </div>
+                    <div class="space-y-1.5">
+                      <!-- G29 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G29</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">NECHI BINTI SERUNAI</p>
+                        <p class="text-[10px] text-slate-500">AJK RMT • Guru Akademik</p>
+                      </div>
+                      <!-- G30 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G30</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">NOOR SYAFIQAH NADHIRAH</p>
+                        <p class="text-[10px] text-slate-500">Guru Kelas 1 Iltizam • Bahasa Inggeris</p>
+                      </div>
+                      <!-- G31 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G31</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">NORIMAH BINTI JOYO REJO</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras 3K (Kebersihan & Kesihatan)</p>
+                      </div>
+                      <!-- G32 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G32</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">NORLINA BINTI BAGWAS</p>
+                        <p class="text-[10px] text-slate-500">Setiausaha HEM • Guru Kelas 1 Jayyid</p>
+                      </div>
+                      <!-- G33 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G33</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">NOZE BINTI TUKIJAN</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Disiplin • Guru Kelas 4 Jayyid</p>
+                      </div>
+                      <!-- G34 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G34</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">NUR FAEZAH BINTI BANTALANI</p>
+                        <p class="text-[10px] text-slate-500">Guru Kelas 3 Mumtaz • Sains</p>
+                      </div>
+                      <!-- G35 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G35</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">NURUL ANISA BINTI SAPARUDIN</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Jadual Pagi • Guru 4 Mumtaz</p>
+                      </div>
+                      <!-- G36 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G36</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">RASMAWATI BINTI TAUSE</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Kurikulum Tahap 1 • Guru 1 Mumtaz</p>
+                      </div>
+                      <!-- G37 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G37</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">RINI BINTI DAUD</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia Sejarah • Guru Kelas 5 Jayyid</p>
+                      </div>
+                      <!-- G38 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">G38</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">ROBIATUL AIDAWYAH</p>
+                        <p class="text-[10px] text-slate-500">Guru Akademik / Matapelajaran</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- KOLUM 4: SELIAAN PK SIDANG PETANG (16 GURU) -->
+                  <div class="org-supervisor-col bg-slate-50/80 rounded-2xl border-2 border-purple-400 p-3 space-y-2.5 shadow-2xs" data-supervisor-key="pkpetang">
+                    <div class="bg-gradient-to-r from-purple-600 to-indigo-700 text-white p-2.5 rounded-xl text-center">
+                      <span class="text-[9px] font-black uppercase tracking-wider block opacity-90">KUMPULAN SELIAAN 4</span>
+                      <h5 class="text-xs font-black">PK SIDANG PETANG</h5>
+                      <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block mt-0.5 font-bold">16 Orang Guru</span>
+                    </div>
+                    <div class="space-y-1.5">
+                      <!-- G39 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G39</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">RONI BIN BACHO</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia RBT • Penyelaras ICT & DELIMa</p>
+                      </div>
+                      <!-- G40 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G40</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">ROSIDIAN BIN IDRIS</p>
+                        <p class="text-[10px] text-slate-500">Setiausaha Sukan • Guru Kelas 4 Iltizam</p>
+                      </div>
+                      <!-- G41 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G41</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">ROSMINAH BINTI SAPAR</p>
+                        <p class="text-[10px] text-slate-500">Guru Perpustakaan & Media (GPM)</p>
+                      </div>
+                      <!-- G42 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G42</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">RUHAYA BINTI AHMAD</p>
+                        <p class="text-[10px] text-slate-500">Guru Kelas 3 Khoir • Matematik</p>
+                      </div>
+                      <!-- G43 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G43</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">S.LILI BINTI LADI</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Intervensi • Guru Kelas 2 Khoir</p>
+                      </div>
+                      <!-- G44 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G44</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">SABRIAH @ HABIBAH BINTI ABDUL SABAR</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia Bahasa Melayu • Penyelaras BAP</p>
+                      </div>
+                      <!-- G45 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G45</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">SALSABILA BINTI SHAHRUDDIN</p>
+                        <p class="text-[10px] text-slate-500">Guru Akademik / Matapelajaran</p>
+                      </div>
+                      <!-- G46 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G46</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">SITI JAWARA BINTI LUKMAN</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia PSV • Guru Kelas 2 Mumtaz</p>
+                      </div>
+                      <!-- G47 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G47</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">SITI NAURIN FADZILAH BINTI JALAL</p>
+                        <p class="text-[10px] text-slate-500">Guru Bimbingan & Kaunseling (UBK)</p>
+                      </div>
+                      <!-- G48 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G48</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">SITI RABIA BIN IBRAHIM</p>
+                        <p class="text-[10px] text-slate-500">Guru Akademik / Matapelajaran</p>
+                      </div>
+                      <!-- G49 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G49</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">SUNARTI BINTI TAPPA</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia Bahasa Arab</p>
+                      </div>
+                      <!-- G50 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G50</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">TANJANG BIN TURE</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia Pend Muzik • Guru 5 Khoir</p>
+                      </div>
+                      <!-- G51 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G51</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">WAFA FARHANA BINTI ABD KADIR</p>
+                        <p class="text-[10px] text-slate-500">Ketua Panitia PJPK • Penyelaras Bola Jaring</p>
+                      </div>
+                      <!-- G52 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G52</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">WAN MUHAMAD YUSUF BIN WAN ABDUL AZIZ</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Pembangunan • Guru 5 Iltizam</p>
+                      </div>
+                      <!-- G53 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G53</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Pagi</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">YUSNI BINTI WAHJUDIN</p>
+                        <p class="text-[10px] text-slate-500">Guru Prasekolah Mutiara Hati</p>
+                      </div>
+                      <!-- G54 -->
+                      <div class="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs hover:border-purple-400 transition">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[9px] font-mono font-black text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">G54</span>
+                          <span class="text-[9px] text-slate-500 font-semibold">Petang</span>
+                        </div>
+                        <p class="text-xs font-black text-slate-900 mt-0.5">ZAMRIE BIN OMAR ALI</p>
+                        <p class="text-[10px] text-slate-500">Penyelaras Keselamatan • Disiplin Petang</p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- NOTA KAKI & PANDUAN PENGHANTARAN RASMI -->
+              <div class="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-1">
+                <p class="text-xs font-bold text-slate-800">
+                  Semua guru akademik SK Ranggu wajib memuat naik dan menghantar semakan e-RPH pada setiap hari <strong class="text-rose-600">JUMAAT</strong> mengikut pentadbir penyelia masing-masing.
+                </p>
+                <p class="text-[11px] text-slate-500">
+                  Guru Bimbingan & Kaunseling Sepenuh Masa (GBKSM) diselia secara langsung oleh Guru Besar (Peneraju Sekolah).
                 </p>
               </div>
+
             </div>
           </div>
         </section>
@@ -1697,9 +2311,9 @@
     </div>
   </div>
 
-  <!-- Scripts (Cache-busting version v=3.4) -->
-  <script src="js/timetable-data.js?v=3.4"></script>
-  <script src="js/data.js?v=3.4"></script>
-  <script src="js/app.js?v=3.4"></script>
+  <!-- Scripts (Cache-busting version v=3.5) -->
+  <script src="js/timetable-data.js?v=3.5"></script>
+  <script src="js/data.js?v=3.5"></script>
+  <script src="js/app.js?v=3.5"></script>
 </body>
 </html>

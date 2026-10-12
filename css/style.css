@@ -232,4 +232,25 @@ body {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
+
+  /* Sokongan Cetakan Rasmi Carta Organisasi */
+  body.printing-org-chart #tab-carta-organisasi {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: white !important;
+  }
+  body.printing-org-chart #tab-jadual-rujukan {
+    display: none !important;
+  }
+  body.printing-org-chart .org-filter-bar,
+  body.printing-org-chart #btn-print-org-chart {
+    display: none !important;
+  }
+  body.printing-org-chart .org-supervisor-col {
+    display: block !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
 }

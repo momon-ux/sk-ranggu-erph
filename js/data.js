@@ -217,12 +217,12 @@ const INITIAL_STAFF_LIST = [
 const INITIAL_UPLOADS_DATA = [];
 
 // Helper Functions untuk LocalStorage
-const ERPH_DATA_VERSION = "3.4";
+const ERPH_DATA_VERSION = "3.5";
 
 function getErphDatabase() {
   const savedVersion = localStorage.getItem("SKR_ERPH_DATA_VERSION");
   if (savedVersion !== ERPH_DATA_VERSION) {
-    // Sinkronkan versi data terkini (v3.4: penetapan peranan Ts. Mohammad Fikrey sebagai Pembangun Sistem sahaja)
+    // Sinkronkan versi data terkini (v3.5: carta organisasi lengkap 4 lajur guru dan pembuangan nama Fikrey dari carta)
     localStorage.setItem("SKR_ERPH_DATA_VERSION", ERPH_DATA_VERSION);
     
     // Pastikan konfigurasi sekolah menggunakan currentWeek: 'auto' dan mengekalkan fridays2026
